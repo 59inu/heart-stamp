@@ -1,11 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { ClaudeService } from '../services/claudeService';
 import { DiaryEntry } from '../types/diary';
+import { DiaryDatabase } from '../services/database';
 
 const router = Router();
-
-// In-memory storage for demonstration (in production, use a real database)
-const diaries: Map<string, DiaryEntry> = new Map();
 
 // Claude service instance
 let claudeService: ClaudeService;
@@ -18,7 +16,14 @@ export function initializeClaudeService(apiKey: string) {
 router.post('/diaries', async (req: Request, res: Response) => {
   try {
     const diaryEntry: DiaryEntry = req.body;
-    diaries.set(diaryEntry._id, diaryEntry);
+
+    // 기존 일기가 있으면 업데이트, 없으면 생성
+    const existing = DiaryDatabase.getById(diaryEntry._id);
+    if (existing) {
+      DiaryDatabase.update(diaryEntry._id, diaryEntry);
+    } else {
+      DiaryDatabase.create(diaryEntry);
+    }
 
     res.status(201).json({
       success: true,
@@ -38,7 +43,7 @@ router.post('/diaries', async (req: Request, res: Response) => {
 router.get('/diaries/:id/ai-comment', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const diary = diaries.get(id);
+    const diary = DiaryDatabase.getById(id);
 
     if (!diary) {
       return res.status(404).json({
@@ -67,7 +72,7 @@ router.get('/diaries/:id/ai-comment', async (req: Request, res: Response) => {
 router.post('/diaries/:id/analyze', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const diary = diaries.get(id);
+    const diary = DiaryDatabase.getById(id);
 
     if (!diary) {
       return res.status(404).json({
@@ -85,10 +90,11 @@ router.post('/diaries/:id/analyze', async (req: Request, res: Response) => {
 
     const analysis = await claudeService.analyzeDiary(diary.content, diary.date);
 
-    diary.aiComment = analysis.comment;
-    diary.stampType = analysis.stampType;
-    diary.syncedWithServer = true;
-    diaries.set(id, diary);
+    DiaryDatabase.update(id, {
+      aiComment: analysis.comment,
+      stampType: analysis.stampType,
+      syncedWithServer: true,
+    });
 
     res.json({
       success: true,
@@ -110,9 +116,7 @@ router.post('/diaries/:id/analyze', async (req: Request, res: Response) => {
 // Get all diaries that need AI analysis
 router.get('/diaries/pending', async (req: Request, res: Response) => {
   try {
-    const pendingDiaries = Array.from(diaries.values()).filter(
-      (diary) => !diary.aiComment
-    );
+    const pendingDiaries = DiaryDatabase.getPending();
 
     res.json({
       success: true,
@@ -127,5 +131,4 @@ router.get('/diaries/pending', async (req: Request, res: Response) => {
   }
 });
 
-export { diaries };
 export default router;

@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { ClaudeService } from '../services/claudeService';
 import { PushNotificationService } from '../services/pushNotificationService';
-import { diaries } from '../routes/diaryRoutes';
+import { DiaryDatabase } from '../services/database';
 
 export class AIAnalysisJob {
   private claudeService: ClaudeService;
@@ -20,14 +20,14 @@ export class AIAnalysisJob {
   start() {
     console.log('Starting AI Analysis Job scheduler...');
 
-    // Run at 10:35 PM every day (for testing)
-    cron.schedule('35 22 * * *', async () => {
-      console.log('Running scheduled batch analysis at 10:35 PM...');
+    // Run at 10:52 PM every day (for testing)
+    cron.schedule('52 22 * * *', async () => {
+      console.log('Running scheduled batch analysis at 10:52 PM...');
       await this.runBatchAnalysis();
     });
 
     console.log('AI Analysis Job scheduler started.');
-    console.log('- Scheduled: Every day at 10:35 PM');
+    console.log('- Scheduled: Every day at 10:52 PM');
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
@@ -42,9 +42,7 @@ export class AIAnalysisJob {
 
     try {
       // Get all diaries without AI comments
-      const pendingDiaries = Array.from(diaries.values()).filter(
-        (diary) => !diary.aiComment
-      );
+      const pendingDiaries = DiaryDatabase.getPending();
 
       console.log(`Found ${pendingDiaries.length} diaries to analyze`);
 
@@ -57,11 +55,11 @@ export class AIAnalysisJob {
             diary.date
           );
 
-          diary.aiComment = analysis.comment;
-          diary.stampType = analysis.stampType;
-          diary.syncedWithServer = true;
-
-          diaries.set(diary._id, diary);
+          DiaryDatabase.update(diary._id, {
+            aiComment: analysis.comment,
+            stampType: analysis.stampType,
+            syncedWithServer: true,
+          });
 
           console.log(`Successfully analyzed diary ${diary._id}`);
 

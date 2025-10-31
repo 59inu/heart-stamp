@@ -45,6 +45,8 @@ backend/.env
 # backend
 backend/dist/
 backend/node_modules/
+backend/*.db
+backend/*.db-*
 
 # Realm
 default.realm*
