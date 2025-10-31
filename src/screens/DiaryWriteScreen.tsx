@@ -101,7 +101,16 @@ export const DiaryWriteScreen: React.FC = () => {
       });
     }
 
-    Alert.alert('저장 완료', '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙', [
+    // 과거 날짜인지 확인
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const diaryDate = format(selectedDate, 'yyyy-MM-dd');
+    const isPastDate = diaryDate < today;
+
+    const message = isPastDate
+      ? '일기가 저장되었습니다.\n분명 훗날 읽으며 웃고 울게 될거에요.'
+      : '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙';
+
+    Alert.alert('저장 완료', message, [
       { text: '확인', onPress: () => navigation.goBack() },
     ]);
   };
