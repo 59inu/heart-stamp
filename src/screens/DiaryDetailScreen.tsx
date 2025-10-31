@@ -260,13 +260,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   moodRed: {
-    backgroundColor: '#ff4444',
+    backgroundColor: '#FFB3BA',
   },
   moodYellow: {
-    backgroundColor: '#ffbb33',
+    backgroundColor: '#FFF4B0',
   },
   moodGreen: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#B4E7CE',
   },
   moodTagText: {
     fontSize: 14,
