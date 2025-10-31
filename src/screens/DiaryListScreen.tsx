@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   Image,
   Modal,
   ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -24,6 +27,9 @@ import { getStampImage } from '../utils/stampUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
+const ITEM_HEIGHT = 50;
+const WHEEL_HEIGHT = 250;
+
 export const DiaryListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
@@ -33,6 +39,8 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const yearScrollRef = useRef<ScrollView>(null);
 
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
@@ -223,14 +231,64 @@ export const DiaryListScreen: React.FC = () => {
     setShowMonthPicker(false);
   };
 
+  // 휠 피커 스크롤 이벤트
+  const handleYearScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setScrollY(event.nativeEvent.contentOffset.y);
+  };
+
+  // 연도 선택 시 스크롤 위치 계산
+  const scrollToYear = (year: number, years: number[]) => {
+    const index = years.indexOf(year);
+    if (index !== -1 && yearScrollRef.current) {
+      yearScrollRef.current.scrollTo({
+        y: index * ITEM_HEIGHT,
+        animated: true,
+      });
+    }
+  };
+
+  // 연도 피커가 열릴 때 현재 연도로 스크롤
+  useEffect(() => {
+    if (showYearPicker) {
+      setTimeout(() => {
+        const currentYear = currentDate.getFullYear();
+        const startYear = currentYear - 20;
+        const endYear = currentYear + 5;
+        const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
+        scrollToYear(currentYear, years);
+      }, 100);
+    }
+  }, [showYearPicker]);
+
   const renderMonthYearPicker = () => {
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
-    // 2020년부터 현재 연도 +2년까지 표시
-    const startYear = 2020;
-    const endYear = new Date().getFullYear() + 2;
+    // 과거 20년부터 미래 5년까지 표시
+    const startYear = currentYear - 20;
+    const endYear = currentYear + 5;
     const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
     const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+    // 휠 피커 스타일 계산
+    const getYearItemStyle = (index: number) => {
+      const centerOffset = scrollY + WHEEL_HEIGHT / 2;
+      const itemCenter = index * ITEM_HEIGHT + ITEM_HEIGHT / 2;
+      const distance = Math.abs(centerOffset - itemCenter);
+
+      // 중앙으로부터의 거리에 따라 스케일과 투명도 계산
+      const maxDistance = WHEEL_HEIGHT / 2;
+      const normalizedDistance = Math.min(distance / maxDistance, 1);
+
+      const scale = 1 + (1 - normalizedDistance) * 0.5; // 1.0 ~ 1.5
+      const opacity = 0.3 + (1 - normalizedDistance) * 0.7; // 0.3 ~ 1.0
+      const fontSize = 16 + (1 - normalizedDistance) * 12; // 16 ~ 28
+
+      return {
+        transform: [{ scale }],
+        opacity,
+        fontSize,
+      };
+    };
 
     return (
       <Modal
@@ -266,30 +324,61 @@ export const DiaryListScreen: React.FC = () => {
               {showMonthPicker && <Ionicons name="chevron-down" size={20} color="#333" />}
             </TouchableOpacity>
 
-            <ScrollView style={styles.pickerScroll}>
-              {showYearPicker ? (
-                <View style={styles.yearList}>
-                  {years.map((year) => (
-                    <TouchableOpacity
-                      key={year}
-                      style={[
-                        styles.yearItem,
-                        year === currentYear && styles.yearItemSelected,
-                      ]}
-                      onPress={() => handleYearSelect(year)}
-                    >
-                      <Text
-                        style={[
-                          styles.yearItemText,
-                          year === currentYear && styles.yearItemTextSelected,
-                        ]}
+            {showYearPicker ? (
+              <View style={styles.wheelContainer}>
+                {/* 중앙 하이라이트 인디케이터 */}
+                <View style={styles.wheelIndicatorTop} />
+                <View style={styles.wheelIndicatorBottom} />
+
+                <ScrollView
+                  ref={yearScrollRef}
+                  style={styles.wheelScroll}
+                  contentContainerStyle={{
+                    paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
+                  }}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={handleYearScroll}
+                  scrollEventThrottle={16}
+                  snapToInterval={ITEM_HEIGHT}
+                  decelerationRate="fast"
+                  onMomentumScrollEnd={(event) => {
+                    const offsetY = event.nativeEvent.contentOffset.y;
+                    const index = Math.round(offsetY / ITEM_HEIGHT);
+                    if (years[index]) {
+                      // 자동으로 선택 (선택 효과만, 실제 적용은 아이템 클릭 시)
+                    }
+                  }}
+                >
+                  {years.map((year, index) => {
+                    const itemStyle = getYearItemStyle(index);
+                    const isCenter = Math.abs(scrollY + WHEEL_HEIGHT / 2 - (index * ITEM_HEIGHT + ITEM_HEIGHT / 2)) < ITEM_HEIGHT / 2;
+
+                    return (
+                      <TouchableOpacity
+                        key={year}
+                        style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
+                        onPress={() => handleYearSelect(year)}
                       >
-                        {year}년
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
+                        <Text
+                          style={[
+                            styles.wheelItemText,
+                            {
+                              fontSize: itemStyle.fontSize,
+                              opacity: itemStyle.opacity,
+                              fontWeight: isCenter ? 'bold' : '400',
+                              color: isCenter ? '#4CAF50' : '#333',
+                            },
+                          ]}
+                        >
+                          {year}년
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : (
+              <ScrollView style={styles.pickerScroll}>
                 <View style={styles.pickerGrid}>
                   {months.map((month, index) => (
                     <TouchableOpacity
@@ -311,8 +400,8 @@ export const DiaryListScreen: React.FC = () => {
                     </TouchableOpacity>
                   ))}
                 </View>
-              )}
-            </ScrollView>
+              </ScrollView>
+            )}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -649,27 +738,38 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  yearList: {
-    paddingVertical: 8,
+  wheelContainer: {
+    height: WHEEL_HEIGHT,
+    marginTop: 16,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  yearItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    marginBottom: 8,
+  wheelScroll: {
+    flex: 1,
+  },
+  wheelIndicatorTop: {
+    position: 'absolute',
+    top: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#4CAF50',
+    zIndex: 10,
+  },
+  wheelIndicatorBottom: {
+    position: 'absolute',
+    top: WHEEL_HEIGHT / 2 + ITEM_HEIGHT / 2,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#4CAF50',
+    zIndex: 10,
+  },
+  wheelItem: {
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  yearItemSelected: {
-    backgroundColor: '#4CAF50',
-  },
-  yearItemText: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: '500',
-  },
-  yearItemTextSelected: {
-    color: '#fff',
-    fontWeight: 'bold',
+  wheelItemText: {
+    textAlign: 'center',
   },
 });
