@@ -66,7 +66,27 @@ export const DiaryDetailScreen: React.FC = () => {
   }
 
   const handleEdit = () => {
-    navigation.navigate('DiaryWrite', { entryId: entry._id });
+    // AI 코멘트가 있으면 경고 표시
+    if (entry.aiComment) {
+      Alert.alert(
+        '일기 수정',
+        '수정해도 선생님 코멘트는 업데이트되지 않아요',
+        [
+          {
+            text: '취소',
+            style: 'cancel',
+          },
+          {
+            text: '수정',
+            onPress: () => {
+              navigation.navigate('DiaryWrite', { entryId: entry._id });
+            },
+          },
+        ]
+      );
+    } else {
+      navigation.navigate('DiaryWrite', { entryId: entry._id });
+    }
   };
 
   const handleDelete = () => {
