@@ -268,20 +268,20 @@ export const DiaryListScreen: React.FC = () => {
 
             <ScrollView style={styles.pickerScroll}>
               {showYearPicker ? (
-                <View style={styles.pickerGrid}>
+                <View style={styles.yearList}>
                   {years.map((year) => (
                     <TouchableOpacity
                       key={year}
                       style={[
-                        styles.pickerItem,
-                        year === currentYear && styles.pickerItemSelected,
+                        styles.yearItem,
+                        year === currentYear && styles.yearItemSelected,
                       ]}
                       onPress={() => handleYearSelect(year)}
                     >
                       <Text
                         style={[
-                          styles.pickerItemText,
-                          year === currentYear && styles.pickerItemTextSelected,
+                          styles.yearItemText,
+                          year === currentYear && styles.yearItemTextSelected,
                         ]}
                       >
                         {year}년
@@ -646,6 +646,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   pickerItemTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  yearList: {
+    paddingVertical: 8,
+  },
+  yearItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  yearItemSelected: {
+    backgroundColor: '#4CAF50',
+  },
+  yearItemText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
+  yearItemTextSelected: {
     color: '#fff',
     fontWeight: 'bold',
   },
