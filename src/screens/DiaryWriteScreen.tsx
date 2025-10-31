@@ -51,7 +51,7 @@ export const DiaryWriteScreen: React.FC = () => {
   const moodTags: Record<MoodType, string[]> = {
     red: ['화나요', '짜증나요', '분노해요', '억울해요'],
     yellow: ['외로워요', '권태로워요', '무기력해요', '무력해요', '불안해요', '우울해요'],
-    green: ['행복해요', '기뻐요', '평온해요', '만족해요', '감사해요', '설레요'],
+    green: ['행복해요', '기뻐요', '즐거워요', '신나요', '평온해요', '만족해요', '감사해요', '설레요'],
   };
 
   useEffect(() => {
@@ -63,6 +63,8 @@ export const DiaryWriteScreen: React.FC = () => {
           setContent(entry.content);
           setSelectedDate(new Date(entry.date));
           setWeather(entry.weather || null);
+          setSelectedMood(entry.mood || null);
+          setSelectedMoodTag(entry.moodTag || null);
         }
       } else {
         // 새 일기: 자동으로 현재 날씨 가져오기
