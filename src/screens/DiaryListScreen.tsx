@@ -240,12 +240,14 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   calendar: {
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   selectedDateSection: {
     backgroundColor: '#fff',
     padding: 16,
+    marginTop: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
