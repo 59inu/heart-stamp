@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
   Image,
   Modal,
 } from 'react-native';
@@ -194,6 +195,63 @@ export const DiaryListScreen: React.FC = () => {
     });
   }, [diaries, selectedDate]);
 
+  // 현재 월의 신호등 통계
+  const currentMonthMoodStats = useMemo(() => {
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
+    // 현재 월의 일기들만 필터링
+    const monthDiaries = diaries.filter((diary) => {
+      const diaryDate = new Date(diary.date);
+      return (
+        diaryDate.getFullYear() === currentYear &&
+        diaryDate.getMonth() === currentMonth &&
+        diary.mood // 신호등이 있는 일기만
+      );
+    });
+
+    const total = monthDiaries.length;
+    if (total === 0) {
+      return { red: 0, yellow: 0, green: 0, total: 0 };
+    }
+
+    const red = monthDiaries.filter((d) => d.mood === 'red').length;
+    const yellow = monthDiaries.filter((d) => d.mood === 'yellow').length;
+    const green = monthDiaries.filter((d) => d.mood === 'green').length;
+
+    return { red, yellow, green, total };
+  }, [diaries, currentDate]);
+
+  // 이달의 감정 요약 문구
+  const moodSummaryText = useMemo(() => {
+    const { red, yellow, green, total } = currentMonthMoodStats;
+    if (total === 0) return null;
+
+    // 모두 같은 경우 (다채로운 감정)
+    if (red === yellow && yellow === green) {
+      return '다채로운 감정들과 함께하고 있네요. 응원해요 💪';
+    }
+
+    const max = Math.max(red, yellow, green);
+
+    if (green === max) {
+      return '이번 달은 행복한 날이 가장 많았어요 ✨';
+    } else if (red === max) {
+      return '이번 달은 힘든 날이 많았네요. 안아주고 싶어요 🫂';
+    } else {
+      return '이번 달은 조금 우울한 날이 많았어요. 괜찮아요 🌙';
+    }
+  }, [currentMonthMoodStats]);
+
+  // 오늘 일기 작성 여부
+  const hasTodayDiary = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return diaries.some((diary) => {
+      const diaryDate = format(new Date(diary.date), 'yyyy-MM-dd');
+      return diaryDate === today;
+    });
+  }, [diaries]);
+
   const handleDateSelect = (date: DateData) => {
     setSelectedDate(date.dateString);
   };
@@ -305,7 +363,52 @@ export const DiaryListScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {renderMonthYearPicker()}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {renderMonthYearPicker()}
+
+      {/* 이달의 신호등 통계 막대 */}
+      {currentMonthMoodStats.total > 0 && (
+        <View style={styles.moodStatsContainer}>
+          <View style={styles.moodStatsBar}>
+            {currentMonthMoodStats.red > 0 && (
+              <View
+                style={[
+                  styles.moodStatsSegment,
+                  styles.moodStatsRed,
+                  {
+                    flex: currentMonthMoodStats.red,
+                  },
+                ]}
+              />
+            )}
+            {currentMonthMoodStats.yellow > 0 && (
+              <View
+                style={[
+                  styles.moodStatsSegment,
+                  styles.moodStatsYellow,
+                  {
+                    flex: currentMonthMoodStats.yellow,
+                  },
+                ]}
+              />
+            )}
+            {currentMonthMoodStats.green > 0 && (
+              <View
+                style={[
+                  styles.moodStatsSegment,
+                  styles.moodStatsGreen,
+                  {
+                    flex: currentMonthMoodStats.green,
+                  },
+                ]}
+              />
+            )}
+          </View>
+          {moodSummaryText && (
+            <Text style={styles.moodSummaryText}>{moodSummaryText}</Text>
+          )}
+        </View>
+      )}
 
       <Calendar
         current={format(currentDate, 'yyyy-MM-dd')}
@@ -411,11 +514,17 @@ export const DiaryListScreen: React.FC = () => {
                 {selectedDiary.content.replace(/\n/g, ' ')}
               </Text>
             </View>
-            {selectedDiary.aiComment && (
+            {selectedDiary.aiComment ? (
               <View style={styles.aiCommentPreview}>
                 <Text style={styles.aiCommentLabel}>✨ 선생님 코멘트</Text>
                 <Text style={styles.aiCommentPreviewText}>
                   {selectedDiary.aiComment}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.noAiCommentPreview}>
+                <Text style={styles.noAiCommentPreviewText}>
+                  선생님이 일기를 읽고 있어요📖
                 </Text>
               </View>
             )}
@@ -439,6 +548,17 @@ export const DiaryListScreen: React.FC = () => {
           </View>
         )}
       </View>
+      </ScrollView>
+
+      {/* 빠른 작성 버튼 - 오늘 일기가 없을 때만 표시 */}
+      {!hasTodayDiary && (
+        <TouchableOpacity
+          style={styles.floatingButton}
+          onPress={() => navigation.navigate('DiaryWrite', { date: new Date() })}
+        >
+          <Ionicons name="create" size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
@@ -450,7 +570,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -460,6 +580,9 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 4,
+  },
+  scrollView: {
+    flex: 1,
   },
   calendar: {
     paddingBottom: 16,
@@ -486,8 +609,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selectedDateText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#333',
   },
   weatherIconSmall: {
@@ -553,6 +676,17 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 18,
   },
+  noAiCommentPreview: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  noAiCommentPreviewText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+  },
   moodIndicatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -565,13 +699,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   moodRed: {
-    backgroundColor: '#ff4444',
+    backgroundColor: '#FFB3BA',
   },
   moodYellow: {
-    backgroundColor: '#ffbb33',
+    backgroundColor: '#FFF4B0',
   },
   moodGreen: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#B4E7CE',
   },
   moodTagText: {
     fontSize: 12,
@@ -663,5 +797,53 @@ const styles = StyleSheet.create({
   },
   yearArrowButton: {
     padding: 8,
+  },
+  moodStatsContainer: {
+    marginHorizontal: 20,
+    marginVertical: 16,
+  },
+  moodStatsBar: {
+    flexDirection: 'row',
+    height: 8,
+    backgroundColor: '#fff',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  moodSummaryText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  moodStatsSegment: {
+    height: '100%',
+  },
+  moodStatsRed: {
+    backgroundColor: '#FFB3BA',
+  },
+  moodStatsYellow: {
+    backgroundColor: '#FFF4B0',
+  },
+  moodStatsGreen: {
+    backgroundColor: '#B4E7CE',
+  },
+  floatingButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
 });
