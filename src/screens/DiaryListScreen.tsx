@@ -29,23 +29,37 @@ export const DiaryListScreen: React.FC = () => {
   );
 
   const loadDiaries = useCallback(async () => {
-    const entries = await DiaryStorage.getAll();
+    let entries = await DiaryStorage.getAll();
 
-    // 서버에서 AI 코멘트 동기화
-    for (const entry of entries) {
-      if (!entry.aiComment) {
-        try {
-          const serverData = await apiService.syncDiaryFromServer(entry._id);
-          if (serverData && serverData.aiComment) {
-            // 로컬 스토리지 업데이트
-            await DiaryStorage.update(entry._id, {
-              aiComment: serverData.aiComment,
-              stampType: serverData.stampType as StampType,
-            });
-          }
-        } catch (error) {
-          console.log('서버 동기화 오류 (무시):', error);
+    // 로컬에 일기가 없으면 서버에서 전체 가져오기
+    if (entries.length === 0) {
+      try {
+        const serverDiaries = await apiService.getAllDiaries();
+        console.log(`📥 서버에서 ${serverDiaries.length}개 일기 가져오기`);
+
+        for (const diary of serverDiaries) {
+          await DiaryStorage.saveFromServer(diary);
         }
+
+        entries = await DiaryStorage.getAll();
+      } catch (error) {
+        console.error('서버에서 일기 가져오기 실패:', error);
+      }
+    }
+
+    // 서버에서 AI 코멘트 동기화 (항상 최신 데이터 가져오기)
+    for (const entry of entries) {
+      try {
+        const serverData = await apiService.syncDiaryFromServer(entry._id);
+        if (serverData && serverData.aiComment) {
+          // 로컬 스토리지 업데이트
+          await DiaryStorage.update(entry._id, {
+            aiComment: serverData.aiComment,
+            stampType: serverData.stampType as StampType,
+          });
+        }
+      } catch (error) {
+        console.log('서버 동기화 오류 (무시):', error);
       }
     }
 
@@ -301,7 +315,7 @@ const styles = StyleSheet.create({
     width: 125,
     height: 125,
     position: 'absolute',
-    top: -10,
+    top: 30,
     right: -10,
     opacity: 0.85,
     zIndex: 1,
