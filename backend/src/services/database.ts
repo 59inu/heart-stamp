@@ -11,6 +11,7 @@ db.exec(`
     _id TEXT PRIMARY KEY,
     date TEXT NOT NULL,
     content TEXT NOT NULL,
+    weather TEXT,
     aiComment TEXT,
     stampType TEXT,
     createdAt TEXT NOT NULL,
@@ -19,20 +20,29 @@ db.exec(`
   )
 `);
 
+// 마이그레이션: 기존 테이블에 weather 컬럼 추가 (이미 존재하면 무시)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN weather TEXT`);
+  console.log('✅ Added weather column to existing database');
+} catch (error) {
+  // 컬럼이 이미 존재하면 에러 발생 (무시)
+}
+
 console.log('✅ SQLite database initialized');
 
 export class DiaryDatabase {
   // 일기 저장
   static create(diary: DiaryEntry): DiaryEntry {
     const stmt = db.prepare(`
-      INSERT INTO diaries (_id, date, content, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO diaries (_id, date, content, weather, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       diary._id,
       diary.date,
       diary.content,
+      diary.weather || null,
       diary.aiComment || null,
       diary.stampType || null,
       diary.createdAt,
@@ -51,6 +61,10 @@ export class DiaryDatabase {
     if (updates.content !== undefined) {
       fields.push('content = ?');
       values.push(updates.content);
+    }
+    if (updates.weather !== undefined) {
+      fields.push('weather = ?');
+      values.push(updates.weather);
     }
     if (updates.aiComment !== undefined) {
       fields.push('aiComment = ?');
