@@ -77,6 +77,7 @@ export const DiaryListScreen: React.FC = () => {
   // 캘린더에 표시할 날짜 마킹
   const markedDates = useMemo(() => {
     const marked: { [key: string]: any } = {};
+    const today = format(new Date(), 'yyyy-MM-dd');
 
     diaries.forEach((diary) => {
       const dateKey = format(new Date(diary.date), 'yyyy-MM-dd');
@@ -169,7 +170,7 @@ export const DiaryListScreen: React.FC = () => {
               marginTop: 6,
               fontSize: 16,
               fontWeight: '300',
-              color: '#e0e0e0',
+              color: '#bbb',
             },
           },
         }}
