@@ -250,11 +250,19 @@ export const DiaryListScreen: React.FC = () => {
   // 연도 피커가 열릴 때 현재 연도로 스크롤
   useEffect(() => {
     if (showYearPicker) {
+      const currentYear = currentDate.getFullYear();
+      const startYear = currentYear - 20;
+      const endYear = currentYear + 5;
+      const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
+      const index = years.indexOf(currentYear);
+
+      // 초기 scrollY 설정
+      if (index !== -1) {
+        setScrollY(index * ITEM_HEIGHT);
+      }
+
+      // 스크롤 위치로 이동
       setTimeout(() => {
-        const currentYear = currentDate.getFullYear();
-        const startYear = currentYear - 20;
-        const endYear = currentYear + 5;
-        const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
         scrollToYear(currentYear, years);
       }, 100);
     }
