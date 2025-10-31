@@ -9,15 +9,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { DiaryEntry } from '../models/DiaryEntry';
+import { DiaryEntry, WeatherType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { apiService } from '../services/apiService';
 import { DiaryStorage } from '../services/diaryStorage';
+import { WeatherService } from '../services/weatherService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryWrite'>;
 type DiaryWriteRouteProp = RouteProp<RootStackParamList, 'DiaryWrite'>;
@@ -31,8 +33,12 @@ export const DiaryWriteScreen: React.FC = () => {
     route.params?.date || new Date()
   );
   const [existingEntry, setExistingEntry] = useState<DiaryEntry | null>(null);
+  const [weather, setWeather] = useState<WeatherType | null>(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
 
   const entryId = route.params?.entryId;
+
+  const weatherOptions: WeatherType[] = ['sunny', 'cloudy', 'rainy', 'snowy', 'stormy'];
 
   useEffect(() => {
     const loadEntry = async () => {
@@ -42,11 +48,24 @@ export const DiaryWriteScreen: React.FC = () => {
           setExistingEntry(entry);
           setContent(entry.content);
           setSelectedDate(new Date(entry.date));
+          setWeather(entry.weather || null);
         }
+      } else {
+        // 새 일기: 자동으로 현재 날씨 가져오기
+        fetchWeather();
       }
     };
     loadEntry();
   }, [entryId]);
+
+  const fetchWeather = async () => {
+    setLoadingWeather(true);
+    const currentWeather = await WeatherService.getCurrentWeather();
+    if (currentWeather) {
+      setWeather(currentWeather);
+    }
+    setLoadingWeather(false);
+  };
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -59,6 +78,7 @@ export const DiaryWriteScreen: React.FC = () => {
     if (existingEntry) {
       const updated = await DiaryStorage.update(existingEntry._id, {
         content,
+        weather: weather || undefined,
         syncedWithServer: false,
       });
       savedEntry = updated!;
@@ -66,6 +86,7 @@ export const DiaryWriteScreen: React.FC = () => {
       savedEntry = await DiaryStorage.create({
         date: selectedDate.toISOString(),
         content,
+        weather: weather || undefined,
         syncedWithServer: false,
       });
     }
@@ -99,6 +120,38 @@ export const DiaryWriteScreen: React.FC = () => {
           <TouchableOpacity onPress={handleSave}>
             <Text style={styles.saveButton}>저장</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.weatherSection}>
+          <Text style={styles.weatherLabel}>날씨</Text>
+          {loadingWeather ? (
+            <ActivityIndicator size="small" color="#4CAF50" />
+          ) : (
+            <View style={styles.weatherButtons}>
+              {weatherOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.weatherButton,
+                    weather === option && styles.weatherButtonSelected,
+                  ]}
+                  onPress={() => setWeather(option)}
+                >
+                  <Text style={styles.weatherEmoji}>
+                    {WeatherService.getWeatherEmoji(option)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.weatherText,
+                      weather === option && styles.weatherTextSelected,
+                    ]}
+                  >
+                    {WeatherService.getWeatherLabel(option)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.editorContainer}>
@@ -163,6 +216,47 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  weatherSection: {
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  weatherLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  weatherButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  weatherButton: {
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 12,
+    minWidth: 60,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  weatherButtonSelected: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#e8f5e9',
+  },
+  weatherEmoji: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  weatherText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  weatherTextSelected: {
     color: '#4CAF50',
     fontWeight: '600',
   },
