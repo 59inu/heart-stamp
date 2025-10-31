@@ -44,13 +44,14 @@ export const DiaryWriteScreen: React.FC = () => {
   const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
 
   const entryId = route.params?.entryId;
+  const MAX_CHARS = 700;
 
   const weatherOptions: WeatherType[] = ['sunny', 'cloudy', 'rainy', 'snowy', 'stormy'];
 
   // 감정 태그 매핑
   const moodTags: Record<MoodType, string[]> = {
-    red: ['화나요', '짜증나요', '분노해요', '억울해요'],
-    yellow: ['외로워요', '권태로워요', '무기력해요', '무력해요', '불안해요', '우울해요'],
+    red: ['속상해요', '화나요', '짜증나요', '우울해요', '피곤해요', '지쳐요', '불안해요', '외로워요'],
+    yellow: ['그저그래요', '무덤덤해요', '복잡해요', '애매해요', '어색해요', '심심해요', '권태로워요', '멍해요'],
     green: ['행복해요', '기뻐요', '즐거워요', '신나요', '평온해요', '만족해요', '감사해요', '설레요'],
   };
 
@@ -199,27 +200,15 @@ export const DiaryWriteScreen: React.FC = () => {
             multiline
             value={content}
             onChangeText={setContent}
+            maxLength={MAX_CHARS}
             autoFocus
           />
-        </View>
-
-        {existingEntry?.aiComment && (
-          <View style={styles.aiCommentSection}>
-            <View style={styles.aiCommentHeader}>
-              <Text style={styles.aiCommentTitle}>
-                ✨ 선생님의 코멘트
-              </Text>
-              {existingEntry.stampType && (
-                <Image
-                  source={getStampImage(existingEntry.stampType)}
-                  style={styles.stampDisplay}
-                  resizeMode="contain"
-                />
-              )}
-            </View>
-            <Text style={styles.aiCommentText}>{existingEntry.aiComment}</Text>
+          <View style={styles.charCountContainer}>
+            <Text style={styles.charCount}>
+              {content.length} / {MAX_CHARS}
+            </Text>
           </View>
-        )}
+        </View>
       </KeyboardAvoidingView>
 
       {/* 기분 선택 모달 */}
@@ -238,8 +227,7 @@ export const DiaryWriteScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.trafficLight,
-                  styles.trafficLightRed,
-                  selectedMood === 'red' && styles.trafficLightSelected,
+                  selectedMood === 'red' ? styles.trafficLightRedSelected : styles.trafficLightRed,
                 ]}
                 onPress={() => {
                   setSelectedMood('red');
@@ -252,8 +240,7 @@ export const DiaryWriteScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.trafficLight,
-                  styles.trafficLightYellow,
-                  selectedMood === 'yellow' && styles.trafficLightSelected,
+                  selectedMood === 'yellow' ? styles.trafficLightYellowSelected : styles.trafficLightYellow,
                 ]}
                 onPress={() => {
                   setSelectedMood('yellow');
@@ -266,8 +253,7 @@ export const DiaryWriteScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.trafficLight,
-                  styles.trafficLightGreen,
-                  selectedMood === 'green' && styles.trafficLightSelected,
+                  selectedMood === 'green' ? styles.trafficLightGreenSelected : styles.trafficLightGreen,
                 ]}
                 onPress={() => {
                   setSelectedMood('green');
@@ -409,6 +395,14 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlignVertical: 'top',
   },
+  charCountContainer: {
+    alignItems: 'flex-end',
+    paddingTop: 8,
+  },
+  charCount: {
+    fontSize: 12,
+    color: '#999',
+  },
   aiCommentSection: {
     backgroundColor: '#e3f2fd',
     padding: 16,
@@ -461,32 +455,61 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   trafficLight: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
     borderColor: 'transparent',
   },
   trafficLightCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#fff',
   },
   trafficLightRed: {
-    backgroundColor: '#ff4444',
+    backgroundColor: '#FFB3BA',
   },
   trafficLightYellow: {
-    backgroundColor: '#ffbb33',
+    backgroundColor: '#FFF4B0',
   },
   trafficLightGreen: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#B4E7CE',
   },
-  trafficLightSelected: {
-    borderColor: '#333',
-    borderWidth: 4,
+  trafficLightRedSelected: {
+    backgroundColor: '#FF8A94',
+    shadowColor: '#FF8A94',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  trafficLightYellowSelected: {
+    backgroundColor: '#FFE87C',
+    shadowColor: '#FFE87C',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  trafficLightGreenSelected: {
+    backgroundColor: '#8AD9B5',
+    shadowColor: '#8AD9B5',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 12,
   },
   moodTagScroll: {
     maxHeight: 200,
