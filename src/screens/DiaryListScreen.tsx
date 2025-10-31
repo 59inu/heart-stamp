@@ -12,6 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { Ionicons } from '@expo/vector-icons';
 import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
@@ -174,7 +175,12 @@ export const DiaryListScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>나의 일기장 📔</Text>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="menu" size={28} color="#333" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="stats-chart" size={24} color="#333" />
+        </TouchableOpacity>
       </View>
 
       <Calendar
@@ -291,13 +297,15 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#fff',
     padding: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  iconButton: {
+    padding: 4,
   },
   calendar: {
     paddingBottom: 16,
