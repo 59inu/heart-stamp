@@ -286,7 +286,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     position: 'relative',
-    overflow: 'hidden',
     // iOS 그림자
     shadowColor: '#4CAF50',
     shadowOffset: {
