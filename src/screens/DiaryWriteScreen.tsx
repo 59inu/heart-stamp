@@ -11,12 +11,14 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { DiaryEntry, WeatherType } from '../models/DiaryEntry';
+import { DiaryEntry, WeatherType, MoodType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { apiService } from '../services/apiService';
 import { DiaryStorage } from '../services/diaryStorage';
@@ -37,10 +39,20 @@ export const DiaryWriteScreen: React.FC = () => {
   const [existingEntry, setExistingEntry] = useState<DiaryEntry | null>(null);
   const [weather, setWeather] = useState<WeatherType | null>(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
+  const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
 
   const entryId = route.params?.entryId;
 
   const weatherOptions: WeatherType[] = ['sunny', 'cloudy', 'rainy', 'snowy', 'stormy'];
+
+  // 감정 태그 매핑
+  const moodTags: Record<MoodType, string[]> = {
+    red: ['화나요', '짜증나요', '분노해요', '억울해요'],
+    yellow: ['외로워요', '권태로워요', '무기력해요', '무력해요', '불안해요', '우울해요'],
+    green: ['행복해요', '기뻐요', '평온해요', '만족해요', '감사해요', '설레요'],
+  };
 
   useEffect(() => {
     const loadEntry = async () => {
@@ -69,18 +81,25 @@ export const DiaryWriteScreen: React.FC = () => {
     setLoadingWeather(false);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!content.trim()) {
       Alert.alert('알림', '일기 내용을 입력해주세요.');
       return;
     }
 
+    // 기분 선택 모달 표시
+    setShowMoodModal(true);
+  };
+
+  const handleMoodSave = async () => {
     let savedEntry: DiaryEntry;
 
     if (existingEntry) {
       const updated = await DiaryStorage.update(existingEntry._id, {
         content,
         weather: weather || undefined,
+        mood: selectedMood || undefined,
+        moodTag: selectedMoodTag || undefined,
         syncedWithServer: false,
       });
       savedEntry = updated!;
@@ -89,6 +108,8 @@ export const DiaryWriteScreen: React.FC = () => {
         date: selectedDate.toISOString(),
         content,
         weather: weather || undefined,
+        mood: selectedMood || undefined,
+        moodTag: selectedMoodTag || undefined,
         syncedWithServer: false,
       });
     }
@@ -100,6 +121,9 @@ export const DiaryWriteScreen: React.FC = () => {
         syncedWithServer: true,
       });
     }
+
+    // 모달 닫기
+    setShowMoodModal(false);
 
     // 과거 날짜인지 확인
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -195,6 +219,108 @@ export const DiaryWriteScreen: React.FC = () => {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* 기분 선택 모달 */}
+      <Modal
+        visible={showMoodModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMoodModal(false)}
+      >
+        <View style={styles.moodModalOverlay}>
+          <View style={styles.moodModalContent}>
+            <Text style={styles.moodModalTitle}>오늘의 기분은 어땠어요?</Text>
+
+            {/* 신호등 선택 */}
+            <View style={styles.trafficLightSection}>
+              <TouchableOpacity
+                style={[
+                  styles.trafficLight,
+                  styles.trafficLightRed,
+                  selectedMood === 'red' && styles.trafficLightSelected,
+                ]}
+                onPress={() => {
+                  setSelectedMood('red');
+                  setSelectedMoodTag(null);
+                }}
+              >
+                <View style={styles.trafficLightCircle} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.trafficLight,
+                  styles.trafficLightYellow,
+                  selectedMood === 'yellow' && styles.trafficLightSelected,
+                ]}
+                onPress={() => {
+                  setSelectedMood('yellow');
+                  setSelectedMoodTag(null);
+                }}
+              >
+                <View style={styles.trafficLightCircle} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.trafficLight,
+                  styles.trafficLightGreen,
+                  selectedMood === 'green' && styles.trafficLightSelected,
+                ]}
+                onPress={() => {
+                  setSelectedMood('green');
+                  setSelectedMoodTag(null);
+                }}
+              >
+                <View style={styles.trafficLightCircle} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 감정 태그 */}
+            {selectedMood && (
+              <ScrollView style={styles.moodTagScroll}>
+                <View style={styles.moodTagContainer}>
+                  {moodTags[selectedMood].map((tag) => (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[
+                        styles.moodTag,
+                        selectedMoodTag === tag && styles.moodTagSelected,
+                      ]}
+                      onPress={() => setSelectedMoodTag(tag)}
+                    >
+                      <Text
+                        style={[
+                          styles.moodTagText,
+                          selectedMoodTag === tag && styles.moodTagTextSelected,
+                        ]}
+                      >
+                        {tag}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+
+            {/* 버튼 */}
+            <View style={styles.moodModalButtons}>
+              <TouchableOpacity
+                style={styles.moodModalButtonCancel}
+                onPress={() => setShowMoodModal(false)}
+              >
+                <Text style={styles.moodModalButtonCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.moodModalButtonSave}
+                onPress={handleMoodSave}
+              >
+                <Text style={styles.moodModalButtonSaveText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -306,5 +432,116 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#333',
+  },
+  moodModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  moodModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: '70%',
+  },
+  moodModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  trafficLightSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 24,
+  },
+  trafficLight: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'transparent',
+  },
+  trafficLightCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+  },
+  trafficLightRed: {
+    backgroundColor: '#ff4444',
+  },
+  trafficLightYellow: {
+    backgroundColor: '#ffbb33',
+  },
+  trafficLightGreen: {
+    backgroundColor: '#4CAF50',
+  },
+  trafficLightSelected: {
+    borderColor: '#333',
+    borderWidth: 4,
+  },
+  moodTagScroll: {
+    maxHeight: 200,
+  },
+  moodTagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 24,
+  },
+  moodTag: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  moodTagSelected: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#4CAF50',
+  },
+  moodTagText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  moodTagTextSelected: {
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  moodModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  moodModalButtonCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  moodModalButtonCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  moodModalButtonSave: {
+    flex: 1,
+    paddingVertical: 14,
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  moodModalButtonSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
