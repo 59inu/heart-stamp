@@ -85,7 +85,7 @@ export const DiaryListScreen: React.FC = () => {
       const isSelected = dateKey === selectedDate;
       const hasComment = !!diary.aiComment;
 
-      // 선택된 날짜 - 초록 배경
+      // 선택된 날짜
       if (isSelected) {
         marked[dateKey] = {
           customStyles: {
@@ -94,7 +94,8 @@ export const DiaryListScreen: React.FC = () => {
               borderRadius: 16,
             },
             text: {
-              color: '#fff',
+              // 코멘트 있으면 연한 피치색, 없으면 흰색
+              color: hasComment ? '#FFDAB9' : '#fff',
               fontWeight: 'bold',
             },
           },
