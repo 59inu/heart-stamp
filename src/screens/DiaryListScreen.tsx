@@ -220,14 +220,16 @@ export const DiaryListScreen: React.FC = () => {
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            style={styles.writeButton}
-            onPress={handleWriteDiary}
-          >
-            <Text style={styles.writeButtonText}>
-              {selectedDiary ? '보기' : '작성하기'}
-            </Text>
-          </TouchableOpacity>
+          {selectedDate <= format(new Date(), 'yyyy-MM-dd') && (
+            <TouchableOpacity
+              style={styles.writeButton}
+              onPress={handleWriteDiary}
+            >
+              <Text style={styles.writeButtonText}>
+                {selectedDiary ? '보기' : '작성하기'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {selectedDiary ? (
