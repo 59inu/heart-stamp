@@ -316,6 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    minHeight: 40,
   },
   dateWithWeather: {
     flexDirection: 'row',
