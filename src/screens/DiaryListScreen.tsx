@@ -231,6 +231,12 @@ export const DiaryListScreen: React.FC = () => {
     setShowMonthPicker(false);
   };
 
+  const handleCloseModal = () => {
+    setShowMonthPicker(false);
+    setShowYearPicker(false);
+    setScrollY(0); // scrollY 리셋
+  };
+
   // 휠 피커 스크롤 이벤트
   const handleYearScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setScrollY(event.nativeEvent.contentOffset.y);
@@ -256,15 +262,21 @@ export const DiaryListScreen: React.FC = () => {
       const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
       const index = years.indexOf(currentYear);
 
-      // 초기 scrollY 설정
+      // 초기 scrollY 즉시 설정 (동기적으로)
       if (index !== -1) {
-        setScrollY(index * ITEM_HEIGHT);
-      }
+        const initialScrollY = index * ITEM_HEIGHT;
+        setScrollY(initialScrollY);
 
-      // 스크롤 위치로 이동
-      setTimeout(() => {
-        scrollToYear(currentYear, years);
-      }, 100);
+        // 스크롤 위치로 이동
+        setTimeout(() => {
+          if (yearScrollRef.current) {
+            yearScrollRef.current.scrollTo({
+              y: initialScrollY,
+              animated: false, // 초기 위치는 애니메이션 없이
+            });
+          }
+        }, 50);
+      }
     }
   }, [showYearPicker]);
 
@@ -303,18 +315,12 @@ export const DiaryListScreen: React.FC = () => {
         visible={showMonthPicker || showYearPicker}
         transparent
         animationType="fade"
-        onRequestClose={() => {
-          setShowMonthPicker(false);
-          setShowYearPicker(false);
-        }}
+        onRequestClose={handleCloseModal}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => {
-            setShowMonthPicker(false);
-            setShowYearPicker(false);
-          }}
+          onPress={handleCloseModal}
         >
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <TouchableOpacity
@@ -344,6 +350,7 @@ export const DiaryListScreen: React.FC = () => {
                   contentContainerStyle={{
                     paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
                   }}
+                  contentOffset={{ x: 0, y: years.indexOf(currentYear) * ITEM_HEIGHT }}
                   showsVerticalScrollIndicator={false}
                   onScroll={handleYearScroll}
                   scrollEventThrottle={16}
