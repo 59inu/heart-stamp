@@ -84,19 +84,35 @@ export const DiaryListScreen: React.FC = () => {
       const hasComment = !!diary.aiComment;
 
       marked[dateKey] = {
-        selected: isSelected,
-        selectedColor: '#4CAF50',
-        selectedTextColor: '#fff',
-        dots: hasComment ? [{ color: '#FFD700', selectedDotColor: '#FFD700' }] : [],
+        customStyles: {
+          container: {
+            backgroundColor: isSelected ? '#4CAF50' : 'transparent',
+            borderRadius: 16,
+            position: 'relative',
+          },
+          text: {
+            color: isSelected ? '#fff' : '#000',
+            fontWeight: 'bold',
+          },
+        },
+        marked: hasComment,
+        dotColor: hasComment ? '#FFD700' : undefined,
       };
     });
 
     // 선택된 날짜가 일기가 없는 경우에도 표시
     if (!marked[selectedDate]) {
       marked[selectedDate] = {
-        selected: true,
-        selectedColor: '#4CAF50',
-        selectedTextColor: '#fff',
+        customStyles: {
+          container: {
+            backgroundColor: '#4CAF50',
+            borderRadius: 16,
+          },
+          text: {
+            color: '#fff',
+            fontWeight: '300',
+          },
+        },
       };
     }
 
@@ -132,11 +148,13 @@ export const DiaryListScreen: React.FC = () => {
       <Calendar
         markedDates={markedDates}
         onDayPress={handleDateSelect}
-        markingType="multi-dot"
+        markingType="custom"
         theme={{
           selectedDayBackgroundColor: '#4CAF50',
           todayTextColor: '#4CAF50',
           arrowColor: '#4CAF50',
+          dotColor: '#4CAF50',
+          textDayFontWeight: '300',
           textDayFontSize: 16,
           textMonthFontWeight: 'bold',
           textDayHeaderFontWeight: '600',
@@ -152,13 +170,6 @@ export const DiaryListScreen: React.FC = () => {
               fontSize: 16,
               fontWeight: '300',
               color: '#e0e0e0',
-            },
-          },
-          'stylesheet.marking': {
-            text: {
-              fontSize: 16,
-              fontWeight: 'bold',
-              color: '#000',
             },
           },
         }}
