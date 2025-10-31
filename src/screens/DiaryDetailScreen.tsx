@@ -87,7 +87,7 @@ export const DiaryDetailScreen: React.FC = () => {
         {entry.aiComment && (
           <View style={styles.aiSection}>
             <View style={styles.aiHeader}>
-              <Text style={styles.aiTitle}>✨ AI 선생님의 코멘트</Text>
+              <Text style={styles.aiTitle}>✨ 선생님의 코멘트</Text>
               {entry.stampType && (
                 <View style={styles.stampContainer}>
                   <Text style={styles.stamp}>
@@ -106,7 +106,7 @@ export const DiaryDetailScreen: React.FC = () => {
         {!entry.aiComment && (
           <View style={styles.noAiComment}>
             <Text style={styles.noAiCommentText}>
-              밤 사이 AI 선생님이 코멘트를 달아줄 거예요! 🌙
+              밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙
             </Text>
           </View>
         )}

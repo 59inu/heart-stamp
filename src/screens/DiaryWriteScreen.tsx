@@ -78,7 +78,7 @@ export const DiaryWriteScreen: React.FC = () => {
       });
     }
 
-    Alert.alert('저장 완료', '일기가 저장되었습니다.\n밤 사이 AI 선생님이 코멘트를 달아줄 거예요! 🌙', [
+    Alert.alert('저장 완료', '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙', [
       { text: '확인', onPress: () => navigation.goBack() },
     ]);
   };
@@ -117,7 +117,7 @@ export const DiaryWriteScreen: React.FC = () => {
           <View style={styles.aiCommentSection}>
             <View style={styles.aiCommentHeader}>
               <Text style={styles.aiCommentTitle}>
-                ✨ AI 선생님의 코멘트
+                ✨ 선생님의 코멘트
               </Text>
               {existingEntry.stampType && (
                 <Text style={styles.stampDisplay}>

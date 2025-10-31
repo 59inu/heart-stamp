@@ -204,7 +204,7 @@ export const DiaryListScreen: React.FC = () => {
             </View>
             {selectedDiary.aiComment && (
               <View style={styles.aiCommentPreview}>
-                <Text style={styles.aiCommentLabel}>✨ AI 선생님 코멘트</Text>
+                <Text style={styles.aiCommentLabel}>✨ 선생님 코멘트</Text>
                 <Text style={styles.aiCommentPreviewText} numberOfLines={2}>
                   {selectedDiary.aiComment}
                 </Text>
