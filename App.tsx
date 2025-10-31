@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { NotificationService } from './src/services/notificationService';
 import { apiService } from './src/services/apiService';
@@ -8,11 +7,6 @@ import { DiaryStorage } from './src/services/diaryStorage';
 
 export default function App() {
   useEffect(() => {
-    // 임시: AsyncStorage 강제 클리어
-    AsyncStorage.clear().then(() => {
-      console.log('🗑️ AsyncStorage 완전 클리어됨!');
-    });
-
     // 푸시 알림 등록
     const registerPushNotifications = async () => {
       const token = await NotificationService.registerForPushNotifications();

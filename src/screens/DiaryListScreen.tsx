@@ -80,22 +80,18 @@ export const DiaryListScreen: React.FC = () => {
     const marked: { [key: string]: any } = {};
     const today = format(new Date(), 'yyyy-MM-dd');
 
-    console.log('📅 총 일기 개수:', diaries.length);
     diaries.forEach((diary) => {
       const dateKey = format(new Date(diary.date), 'yyyy-MM-dd');
       const isSelected = dateKey === selectedDate;
       const hasComment = !!diary.aiComment;
 
-      console.log(`날짜 ${dateKey}: 선택됨=${isSelected}, 코멘트있음=${hasComment}, 코멘트내용=${diary.aiComment ? '있음' : '없음'}`);
-
+      // 선택된 날짜 - 초록 배경
       if (isSelected) {
-        // 선택된 날짜
         marked[dateKey] = {
           customStyles: {
             container: {
               backgroundColor: '#4CAF50',
               borderRadius: 16,
-              position: 'relative',
             },
             text: {
               color: '#fff',
@@ -103,30 +99,29 @@ export const DiaryListScreen: React.FC = () => {
             },
           },
         };
-      } else if (hasComment) {
-        // AI 코멘트가 있는 날짜 - 진한 코랄 배경 + 흰색 텍스트
+      }
+      // AI 코멘트 있는 날짜 - 연한 핑크 배경
+      else if (hasComment) {
         marked[dateKey] = {
           customStyles: {
             container: {
-              backgroundColor: '#FF6B6B',
+              backgroundColor: '#FFE0E6',
               borderRadius: 16,
-              position: 'relative',
             },
             text: {
-              color: '#fff',
+              color: '#D63384',
               fontWeight: 'bold',
-              backgroundColor: '#FF6B6B',
             },
           },
         };
-      } else {
-        // 일반 일기만 있는 날짜
+      }
+      // 일반 일기 있는 날짜 - 볼드체만
+      else {
         marked[dateKey] = {
           customStyles: {
             container: {
               backgroundColor: 'transparent',
               borderRadius: 16,
-              position: 'relative',
             },
             text: {
               color: '#000',
