@@ -339,7 +339,6 @@ export const DiaryListScreen: React.FC = () => {
         onMonthChange={(date: DateData) => {
           setCurrentDate(new Date(date.year, date.month - 1, 1));
         }}
-        hideArrows={true}
         markingType="custom"
         renderHeader={(date: any) => {
           const monthYear = format(new Date(date), 'yyyy년 MM월', { locale: ko });
