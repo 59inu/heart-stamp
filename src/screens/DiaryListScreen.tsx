@@ -226,7 +226,10 @@ export const DiaryListScreen: React.FC = () => {
   const renderMonthYearPicker = () => {
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
-    const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+    // 2020년부터 현재 연도 +2년까지 표시
+    const startYear = 2020;
+    const endYear = new Date().getFullYear() + 2;
+    const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
     const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
     return (
