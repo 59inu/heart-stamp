@@ -15,6 +15,7 @@ import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
+import { WeatherService } from '../services/weatherService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
@@ -75,9 +76,16 @@ export const DiaryDetailScreen: React.FC = () => {
 
       <ScrollView style={styles.content}>
         <View style={styles.dateContainer}>
-          <Text style={styles.dateText}>
-            {format(new Date(entry.date), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
-          </Text>
+          <View style={styles.dateWithWeather}>
+            <Text style={styles.dateText}>
+              {format(new Date(entry.date), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
+            </Text>
+            {entry.weather && (
+              <Text style={styles.weatherIcon}>
+                {WeatherService.getWeatherEmoji(entry.weather)}
+              </Text>
+            )}
+          </View>
         </View>
 
         <View style={styles.diaryContent}>
@@ -145,10 +153,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  dateWithWeather: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   dateText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+  },
+  weatherIcon: {
+    fontSize: 24,
   },
   diaryContent: {
     padding: 16,

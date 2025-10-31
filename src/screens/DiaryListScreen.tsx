@@ -15,6 +15,7 @@ import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
+import { WeatherService } from '../services/weatherService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -176,9 +177,16 @@ export const DiaryListScreen: React.FC = () => {
 
       <View style={styles.selectedDateSection}>
         <View style={styles.selectedDateHeader}>
-          <Text style={styles.selectedDateText}>
-            {format(new Date(selectedDate), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
-          </Text>
+          <View style={styles.dateWithWeather}>
+            <Text style={styles.selectedDateText}>
+              {format(new Date(selectedDate), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
+            </Text>
+            {selectedDiary?.weather && (
+              <Text style={styles.weatherIconSmall}>
+                {WeatherService.getWeatherEmoji(selectedDiary.weather)}
+              </Text>
+            )}
+          </View>
           <TouchableOpacity
             style={styles.writeButton}
             onPress={handleWriteDiary}
@@ -258,10 +266,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  dateWithWeather: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   selectedDateText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+  },
+  weatherIconSmall: {
+    fontSize: 20,
   },
   writeButton: {
     backgroundColor: '#4CAF50',
