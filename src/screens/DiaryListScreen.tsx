@@ -392,6 +392,21 @@ export const DiaryListScreen: React.FC = () => {
               />
             )}
             <View style={styles.cardContent}>
+              {selectedDiary.mood && (
+                <View style={styles.moodIndicatorContainer}>
+                  <View
+                    style={[
+                      styles.moodIndicator,
+                      selectedDiary.mood === 'red' && styles.moodRed,
+                      selectedDiary.mood === 'yellow' && styles.moodYellow,
+                      selectedDiary.mood === 'green' && styles.moodGreen,
+                    ]}
+                  />
+                  {selectedDiary.moodTag && (
+                    <Text style={styles.moodTagText}>{selectedDiary.moodTag}</Text>
+                  )}
+                </View>
+              )}
               <Text style={styles.diaryContentText} numberOfLines={3} ellipsizeMode="tail">
                 {selectedDiary.content.replace(/\n/g, ' ')}
               </Text>
@@ -537,6 +552,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
     lineHeight: 18,
+  },
+  moodIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  moodIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  moodRed: {
+    backgroundColor: '#ff4444',
+  },
+  moodYellow: {
+    backgroundColor: '#ffbb33',
+  },
+  moodGreen: {
+    backgroundColor: '#4CAF50',
+  },
+  moodTagText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   noDiaryContainer: {
     alignItems: 'center',

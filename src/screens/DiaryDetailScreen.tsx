@@ -118,6 +118,21 @@ export const DiaryDetailScreen: React.FC = () => {
               </Text>
             )}
           </View>
+          {entry.mood && (
+            <View style={styles.moodContainer}>
+              <View
+                style={[
+                  styles.moodIndicator,
+                  entry.mood === 'red' && styles.moodRed,
+                  entry.mood === 'yellow' && styles.moodYellow,
+                  entry.mood === 'green' && styles.moodGreen,
+                ]}
+              />
+              {entry.moodTag && (
+                <Text style={styles.moodTagText}>{entry.moodTag}</Text>
+              )}
+            </View>
+          )}
         </View>
 
         <View style={styles.diaryContent}>
@@ -209,6 +224,31 @@ const styles = StyleSheet.create({
   },
   weatherIcon: {
     fontSize: 24,
+  },
+  moodContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  moodIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  moodRed: {
+    backgroundColor: '#ff4444',
+  },
+  moodYellow: {
+    backgroundColor: '#ffbb33',
+  },
+  moodGreen: {
+    backgroundColor: '#4CAF50',
+  },
+  moodTagText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
   diaryContent: {
     padding: 16,
