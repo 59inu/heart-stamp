@@ -101,6 +101,37 @@ export const DiaryListScreen: React.FC = () => {
       };
     });
 
+    // 미래 날짜들을 연한 색으로 마킹 (시각적으로 비활성화 표현)
+    const nowDate = new Date();
+    const currentMonth = nowDate.getMonth();
+    const currentYear = nowDate.getFullYear();
+
+    // 이전 달부터 다음다음 달까지의 모든 날짜 확인
+    for (let monthOffset = -1; monthOffset <= 2; monthOffset++) {
+      const checkDate = new Date(currentYear, currentMonth + monthOffset, 1);
+      const daysInMonth = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate();
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(checkDate.getFullYear(), checkDate.getMonth(), day);
+        const dateKey = format(date, 'yyyy-MM-dd');
+
+        // 미래 날짜이고, 아직 마킹되지 않았으면 (일기가 없으면)
+        if (dateKey > today && !marked[dateKey]) {
+          marked[dateKey] = {
+            customStyles: {
+              container: {
+                backgroundColor: 'transparent',
+              },
+              text: {
+                color: '#e0e0e0', // 연한 회색 - 미래 날짜
+                fontWeight: '300',
+              },
+            },
+          };
+        }
+      }
+    }
+
     // 선택된 날짜가 일기가 없는 경우에도 표시
     if (!marked[selectedDate]) {
       marked[selectedDate] = {
