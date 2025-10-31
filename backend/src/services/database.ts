@@ -9,6 +9,7 @@ const db = new Database(dbPath);
 db.exec(`
   CREATE TABLE IF NOT EXISTS diaries (
     _id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
     date TEXT NOT NULL,
     content TEXT NOT NULL,
     weather TEXT,
@@ -23,6 +24,13 @@ db.exec(`
 `);
 
 // 마이그레이션: 기존 테이블에 컬럼 추가 (이미 존재하면 무시)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN userId TEXT NOT NULL DEFAULT 'unknown'`);
+  console.log('✅ Added userId column to existing database');
+} catch (error) {
+  // 컬럼이 이미 존재하면 에러 발생 (무시)
+}
+
 try {
   db.exec(`ALTER TABLE diaries ADD COLUMN weather TEXT`);
   console.log('✅ Added weather column to existing database');
@@ -44,18 +52,27 @@ try {
   // 컬럼이 이미 존재하면 에러 발생 (무시)
 }
 
+// userId 인덱스 생성 (성능 향상)
+try {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries(userId)`);
+  console.log('✅ Created userId index');
+} catch (error) {
+  // 인덱스가 이미 존재하면 무시
+}
+
 console.log('✅ SQLite database initialized');
 
 export class DiaryDatabase {
   // 일기 저장
   static create(diary: DiaryEntry): DiaryEntry {
     const stmt = db.prepare(`
-      INSERT INTO diaries (_id, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       diary._id,
+      diary.userId || 'unknown',
       diary.date,
       diary.content,
       diary.weather || null,
@@ -132,7 +149,18 @@ export class DiaryDatabase {
     };
   }
 
-  // 모든 일기 조회
+  // 특정 사용자의 모든 일기 조회
+  static getAllByUserId(userId: string): DiaryEntry[] {
+    const stmt = db.prepare('SELECT * FROM diaries WHERE userId = ? ORDER BY date DESC');
+    const rows = stmt.all(userId) as any[];
+
+    return rows.map(row => ({
+      ...row,
+      syncedWithServer: row.syncedWithServer === 1,
+    }));
+  }
+
+  // 모든 일기 조회 (관리용)
   static getAll(): DiaryEntry[] {
     const stmt = db.prepare('SELECT * FROM diaries ORDER BY date DESC');
     const rows = stmt.all() as any[];

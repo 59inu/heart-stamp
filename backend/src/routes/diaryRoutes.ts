@@ -15,7 +15,19 @@ export function initializeClaudeService(apiKey: string) {
 // Upload diary from mobile app
 router.post('/diaries', async (req: Request, res: Response) => {
   try {
-    const diaryEntry: DiaryEntry = req.body;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID required',
+      });
+    }
+
+    const diaryEntry: DiaryEntry = {
+      ...req.body,
+      userId, // userId 추가
+    };
 
     // 기존 일기가 있으면 업데이트, 없으면 생성
     const existing = DiaryDatabase.getById(diaryEntry._id);
@@ -113,20 +125,29 @@ router.post('/diaries/:id/analyze', async (req: Request, res: Response) => {
   }
 });
 
-// Get all diaries
+// Get all diaries for a specific user
 router.get('/diaries', async (req: Request, res: Response) => {
   try {
-    const allDiaries = DiaryDatabase.getAll();
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID required',
+      });
+    }
+
+    const userDiaries = DiaryDatabase.getAllByUserId(userId);
 
     res.json({
       success: true,
-      data: allDiaries,
+      data: userDiaries,
     });
   } catch (error) {
-    console.error('Error getting all diaries:', error);
+    console.error('Error getting user diaries:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get all diaries',
+      message: 'Failed to get user diaries',
     });
   }
 });

@@ -4,6 +4,7 @@ export type MoodType = 'red' | 'yellow' | 'green';
 
 export interface DiaryEntry {
   _id: string;
+  userId?: string;
   date: string;
   content: string;
   weather?: WeatherType;
