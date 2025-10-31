@@ -80,6 +80,18 @@ export class ApiService {
       return false;
     }
   }
+
+  async registerPushToken(token: string): Promise<boolean> {
+    try {
+      const response = await axios.post(`${this.baseURL}/push/register`, {
+        token,
+      });
+      return response.data.success;
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      return false;
+    }
+  }
 }
 
 export const apiService = new ApiService();

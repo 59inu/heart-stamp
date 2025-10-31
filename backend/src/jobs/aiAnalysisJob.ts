@@ -1,31 +1,34 @@
 import cron from 'node-cron';
 import { ClaudeService } from '../services/claudeService';
+import { PushNotificationService } from '../services/pushNotificationService';
 import { diaries } from '../routes/diaryRoutes';
 
 export class AIAnalysisJob {
   private claudeService: ClaudeService;
+  private pushNotificationService: PushNotificationService;
   private isRunning: boolean = false;
 
-  constructor(claudeService: ClaudeService) {
+  constructor(
+    claudeService: ClaudeService,
+    pushNotificationService: PushNotificationService
+  ) {
     this.claudeService = claudeService;
+    this.pushNotificationService = pushNotificationService;
   }
 
   // Schedule the job to run every night at 2 AM
   start() {
     console.log('Starting AI Analysis Job scheduler...');
 
-    // Run at 2 AM every day
-    cron.schedule('0 2 * * *', async () => {
+    // Run at 10:35 PM every day (for testing)
+    cron.schedule('35 22 * * *', async () => {
+      console.log('Running scheduled batch analysis at 10:35 PM...');
       await this.runBatchAnalysis();
     });
 
-    // For testing: also run every 5 minutes (commented out in production)
-    // cron.schedule('*/5 * * * *', async () => {
-    //   console.log('Running test batch analysis...');
-    //   await this.runBatchAnalysis();
-    // });
-
-    console.log('AI Analysis Job scheduler started. Will run at 2 AM daily.');
+    console.log('AI Analysis Job scheduler started.');
+    console.log('- Scheduled: Every day at 10:35 PM');
+    console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
   async runBatchAnalysis() {
@@ -71,6 +74,13 @@ export class AIAnalysisJob {
       }
 
       console.log('Batch AI analysis completed');
+
+      // 푸시 알림 전송
+      if (pendingDiaries.length > 0) {
+        console.log('📬 푸시 알림 전송 중...');
+        await this.pushNotificationService.sendAICommentNotification();
+        console.log('✅ 푸시 알림 전송 완료');
+      }
     } catch (error) {
       console.error('Error in batch analysis:', error);
     } finally {
