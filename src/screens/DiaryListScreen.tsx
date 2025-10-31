@@ -262,9 +262,14 @@ export const DiaryListScreen: React.FC = () => {
     const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
     const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
-    // 휠 피커 스타일 계산
+    // 현재 연도의 초기 스크롤 위치 계산
+    const initialIndex = years.indexOf(currentYear);
+    const initialScrollY = initialIndex * ITEM_HEIGHT;
+
+    // 휠 피커 스타일 계산 (초기값 사용)
     const getYearItemStyle = (index: number) => {
-      const centerOffset = scrollY + WHEEL_HEIGHT / 2;
+      const currentScrollY = scrollY || initialScrollY; // scrollY가 0이면 초기값 사용
+      const centerOffset = currentScrollY + WHEEL_HEIGHT / 2;
       const itemCenter = index * ITEM_HEIGHT + ITEM_HEIGHT / 2;
       const distance = Math.abs(centerOffset - itemCenter);
 
@@ -348,7 +353,8 @@ export const DiaryListScreen: React.FC = () => {
                   onMomentumScrollEnd={handleMomentumScrollEnd}
                   renderItem={({ item: year, index }) => {
                     const itemStyle = getYearItemStyle(index);
-                    const isCenter = Math.abs(scrollY + WHEEL_HEIGHT / 2 - (index * ITEM_HEIGHT + ITEM_HEIGHT / 2)) < ITEM_HEIGHT / 2;
+                    const currentScrollY = scrollY || initialScrollY;
+                    const isCenter = Math.abs(currentScrollY + WHEEL_HEIGHT / 2 - (index * ITEM_HEIGHT + ITEM_HEIGHT / 2)) < ITEM_HEIGHT / 2;
 
                     return (
                       <TouchableOpacity
@@ -689,7 +695,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     width: '80%',
-    maxHeight: '60%',
+    height: 400,
   },
   modalHeader: {
     flexDirection: 'row',
