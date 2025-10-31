@@ -280,13 +280,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   selectedDiaryCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
     position: 'relative',
     overflow: 'hidden',
+    // iOS 그림자
+    shadowColor: '#4CAF50',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    // Android 그림자
+    elevation: 5,
   },
   stampImageLarge: {
     width: 125,
