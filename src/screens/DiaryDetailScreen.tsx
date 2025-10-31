@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +17,7 @@ import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
+import { getStampImage } from '../utils/stampUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
@@ -98,12 +100,11 @@ export const DiaryDetailScreen: React.FC = () => {
               <Text style={styles.aiTitle}>✨ 선생님의 코멘트</Text>
               {entry.stampType && (
                 <View style={styles.stampContainer}>
-                  <Text style={styles.stamp}>
-                    {entry.stampType === 'excellent' && '🌟'}
-                    {entry.stampType === 'good' && '😊'}
-                    {entry.stampType === 'nice' && '👍'}
-                    {entry.stampType === 'keep_going' && '💪'}
-                  </Text>
+                  <Image
+                    source={getStampImage(entry.stampType)}
+                    style={styles.stampImage}
+                    resizeMode="contain"
+                  />
                 </View>
               )}
             </View>
@@ -196,8 +197,9 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     padding: 8,
   },
-  stamp: {
-    fontSize: 32,
+  stampImage: {
+    width: 40,
+    height: 40,
   },
   aiCommentText: {
     fontSize: 15,

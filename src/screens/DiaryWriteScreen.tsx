@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,6 +21,7 @@ import { RootStackParamList } from '../navigation/types';
 import { apiService } from '../services/apiService';
 import { DiaryStorage } from '../services/diaryStorage';
 import { WeatherService } from '../services/weatherService';
+import { getStampImage } from '../utils/stampUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryWrite'>;
 type DiaryWriteRouteProp = RouteProp<RootStackParamList, 'DiaryWrite'>;
@@ -173,12 +175,11 @@ export const DiaryWriteScreen: React.FC = () => {
                 ✨ 선생님의 코멘트
               </Text>
               {existingEntry.stampType && (
-                <Text style={styles.stampDisplay}>
-                  {existingEntry.stampType === 'excellent' && '🌟'}
-                  {existingEntry.stampType === 'good' && '😊'}
-                  {existingEntry.stampType === 'nice' && '👍'}
-                  {existingEntry.stampType === 'keep_going' && '💪'}
-                </Text>
+                <Image
+                  source={getStampImage(existingEntry.stampType)}
+                  style={styles.stampDisplay}
+                  resizeMode="contain"
+                />
               )}
             </View>
             <Text style={styles.aiCommentText}>{existingEntry.aiComment}</Text>
@@ -289,7 +290,8 @@ const styles = StyleSheet.create({
     color: '#1976d2',
   },
   stampDisplay: {
-    fontSize: 24,
+    width: 32,
+    height: 32,
   },
   aiCommentText: {
     fontSize: 14,

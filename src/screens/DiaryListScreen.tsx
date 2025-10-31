@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,23 +17,9 @@ import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
+import { getStampImage } from '../utils/stampUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
-
-const getStampEmoji = (stampType?: StampType): string => {
-  switch (stampType) {
-    case 'excellent':
-      return '🌟';
-    case 'good':
-      return '😊';
-    case 'nice':
-      return '👍';
-    case 'keep_going':
-      return '💪';
-    default:
-      return '';
-  }
-};
 
 export const DiaryListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -209,9 +196,11 @@ export const DiaryListScreen: React.FC = () => {
                 {selectedDiary.content}
               </Text>
               {selectedDiary.stampType && (
-                <Text style={styles.stampEmojiLarge}>
-                  {getStampEmoji(selectedDiary.stampType)}
-                </Text>
+                <Image
+                  source={getStampImage(selectedDiary.stampType)}
+                  style={styles.stampImageLarge}
+                  resizeMode="contain"
+                />
               )}
             </View>
             {selectedDiary.aiComment && (
@@ -309,8 +298,9 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 20,
   },
-  stampEmojiLarge: {
-    fontSize: 40,
+  stampImageLarge: {
+    width: 50,
+    height: 50,
     marginLeft: 12,
   },
   aiCommentPreview: {
