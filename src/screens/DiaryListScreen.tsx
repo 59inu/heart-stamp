@@ -84,35 +84,21 @@ export const DiaryListScreen: React.FC = () => {
       const hasComment = !!diary.aiComment;
 
       marked[dateKey] = {
-        customStyles: {
-          container: {
-            backgroundColor: isSelected ? '#4CAF50' : hasComment ? '#e8f5e9' : 'transparent',
-            borderRadius: 16,
-            position: 'relative',
-            borderWidth: hasComment && !isSelected ? 2 : 0,
-            borderColor: hasComment && !isSelected ? '#FFD700' : 'transparent',
-          },
-          text: {
-            color: isSelected ? '#fff' : '#000',
-            fontWeight: 'bold',
-          },
-        },
+        selected: isSelected,
+        marked: hasComment,
+        dotColor: hasComment ? '#FFD700' : undefined,
+        selectedColor: '#4CAF50',
+        selectedTextColor: '#fff',
+        textColor: '#000',
       };
     });
 
     // 선택된 날짜가 일기가 없는 경우에도 표시
     if (!marked[selectedDate]) {
       marked[selectedDate] = {
-        customStyles: {
-          container: {
-            backgroundColor: '#4CAF50',
-            borderRadius: 16,
-          },
-          text: {
-            color: '#fff',
-            fontWeight: '300',
-          },
-        },
+        selected: true,
+        selectedColor: '#4CAF50',
+        selectedTextColor: '#fff',
       };
     }
 
@@ -148,7 +134,6 @@ export const DiaryListScreen: React.FC = () => {
       <Calendar
         markedDates={markedDates}
         onDayPress={handleDateSelect}
-        markingType="custom"
         theme={{
           selectedDayBackgroundColor: '#4CAF50',
           todayTextColor: '#4CAF50',
