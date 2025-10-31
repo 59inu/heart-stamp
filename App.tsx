@@ -7,14 +7,6 @@ import { DiaryStorage } from './src/services/diaryStorage';
 
 export default function App() {
   useEffect(() => {
-    // 임시: AsyncStorage 강제 클리어
-    const clearStorage = async () => {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.clear();
-      console.log('🗑️ AsyncStorage 클리어됨!');
-    };
-    clearStorage();
-
     // 푸시 알림 등록
     const registerPushNotifications = async () => {
       const token = await NotificationService.registerForPushNotifications();
