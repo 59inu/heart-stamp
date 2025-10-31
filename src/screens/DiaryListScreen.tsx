@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,6 @@ import {
   SafeAreaView,
   Image,
   Modal,
-  FlatList,
-  ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -27,9 +23,6 @@ import { getStampImage } from '../utils/stampUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
-const ITEM_HEIGHT = 50;
-const WHEEL_HEIGHT = 250;
-
 export const DiaryListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
@@ -38,10 +31,6 @@ export const DiaryListScreen: React.FC = () => {
   );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const yearListRef = useRef<FlatList>(null);
-  const hasScrolledToInitial = useRef(false);
 
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
@@ -234,65 +223,22 @@ export const DiaryListScreen: React.FC = () => {
 
   const handleCloseModal = () => {
     setShowMonthPicker(false);
-    setShowYearPicker(false);
-    setScrollY(0);
-    hasScrolledToInitial.current = false;
   };
 
-  // 휠 피커 스크롤 이벤트
-  const handleYearScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setScrollY(event.nativeEvent.contentOffset.y);
-  };
-
-  // 스냅 처리
-  const handleMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / ITEM_HEIGHT);
-    const targetY = index * ITEM_HEIGHT;
-
-    if (Math.abs(offsetY - targetY) > 1 && yearListRef.current) {
-      yearListRef.current.scrollToOffset({ offset: targetY, animated: true });
-    }
+  const handleYearChange = (delta: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(currentDate.getFullYear() + delta);
+    setCurrentDate(newDate);
   };
 
   const renderMonthYearPicker = () => {
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
-    // 과거 20년부터 미래 5년까지 표시
-    const startYear = currentYear - 20;
-    const endYear = currentYear + 5;
-    const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
     const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-
-    // 현재 연도의 초기 스크롤 위치 계산
-    const initialIndex = years.indexOf(currentYear);
-    const initialScrollY = initialIndex * ITEM_HEIGHT;
-
-    // 휠 피커 스타일 계산 (초기값 사용)
-    const getYearItemStyle = (index: number) => {
-      const currentScrollY = scrollY || initialScrollY; // scrollY가 0이면 초기값 사용
-      const centerOffset = currentScrollY + WHEEL_HEIGHT / 2;
-      const itemCenter = index * ITEM_HEIGHT + ITEM_HEIGHT / 2;
-      const distance = Math.abs(centerOffset - itemCenter);
-
-      // 중앙으로부터의 거리에 따라 스케일과 투명도 계산
-      const maxDistance = WHEEL_HEIGHT / 2;
-      const normalizedDistance = Math.min(distance / maxDistance, 1);
-
-      const scale = 1 + (1 - normalizedDistance) * 0.5; // 1.0 ~ 1.5
-      const opacity = 0.3 + (1 - normalizedDistance) * 0.7; // 0.3 ~ 1.0
-      const fontSize = 16 + (1 - normalizedDistance) * 12; // 16 ~ 28
-
-      return {
-        transform: [{ scale }],
-        opacity,
-        fontSize,
-      };
-    };
 
     return (
       <Modal
-        visible={showMonthPicker || showYearPicker}
+        visible={showMonthPicker}
         transparent
         animationType="fade"
         onRequestClose={handleCloseModal}
@@ -303,123 +249,45 @@ export const DiaryListScreen: React.FC = () => {
           onPress={handleCloseModal}
         >
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-            <TouchableOpacity
-              style={styles.modalHeader}
-              onPress={() => {
-                if (showMonthPicker) {
-                  setShowMonthPicker(false);
-                  setShowYearPicker(true);
-                }
-              }}
-            >
-              <Text style={styles.modalTitle}>
-                {showYearPicker ? '연도 선택' : `${currentYear}년`}
-              </Text>
-              {showMonthPicker && <Ionicons name="chevron-down" size={20} color="#333" />}
-            </TouchableOpacity>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => handleYearChange(-1)}
+                style={styles.yearArrowButton}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4CAF50" />
+              </TouchableOpacity>
 
-            {showYearPicker ? (
-              <View style={styles.wheelContainer}>
-                {/* 중앙 하이라이트 인디케이터 */}
-                <View style={styles.wheelIndicatorTop} />
-                <View style={styles.wheelIndicatorBottom} />
+              <Text style={styles.modalTitle}>{currentYear}년</Text>
 
-                <FlatList
-                  ref={yearListRef}
-                  data={years}
-                  keyExtractor={(item) => item.toString()}
-                  getItemLayout={(data, index) => ({
-                    length: ITEM_HEIGHT,
-                    offset: ITEM_HEIGHT * index,
-                    index,
-                  })}
-                  onLayout={() => {
-                    // 레이아웃 완료 후 현재 연도로 스크롤 (한 번만)
-                    if (!hasScrolledToInitial.current && yearListRef.current) {
-                      const targetIndex = years.indexOf(currentYear);
-                      setTimeout(() => {
-                        yearListRef.current?.scrollToIndex({
-                          index: targetIndex,
-                          animated: false,
-                        });
-                        // scrollY 초기화
-                        setScrollY(targetIndex * ITEM_HEIGHT);
-                        hasScrolledToInitial.current = true;
-                      }, 50);
-                    }
-                  }}
-                  onScrollToIndexFailed={(info) => {
-                    // 레이아웃이 완료되지 않은 경우 재시도
-                    setTimeout(() => {
-                      yearListRef.current?.scrollToIndex({
-                        index: info.index,
-                        animated: false,
-                      });
-                    }, 100);
-                  }}
-                  style={styles.wheelScroll}
-                  contentContainerStyle={{
-                    paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
-                  }}
-                  showsVerticalScrollIndicator={false}
-                  onScroll={handleYearScroll}
-                  scrollEventThrottle={16}
-                  snapToInterval={ITEM_HEIGHT}
-                  decelerationRate="fast"
-                  onMomentumScrollEnd={handleMomentumScrollEnd}
-                  renderItem={({ item: year, index }) => {
-                    const itemStyle = getYearItemStyle(index);
-                    const currentScrollY = scrollY || initialScrollY;
-                    const isCenter = Math.abs(currentScrollY + WHEEL_HEIGHT / 2 - (index * ITEM_HEIGHT + ITEM_HEIGHT / 2)) < ITEM_HEIGHT / 2;
+              <TouchableOpacity
+                onPress={() => handleYearChange(1)}
+                style={styles.yearArrowButton}
+              >
+                <Ionicons name="chevron-forward" size={24} color="#4CAF50" />
+              </TouchableOpacity>
+            </View>
 
-                    return (
-                      <TouchableOpacity
-                        style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
-                        onPress={() => handleYearSelect(year)}
-                      >
-                        <Text
-                          style={[
-                            styles.wheelItemText,
-                            {
-                              fontSize: itemStyle.fontSize,
-                              opacity: itemStyle.opacity,
-                              fontWeight: isCenter ? 'bold' : '400',
-                              color: isCenter ? '#4CAF50' : '#333',
-                            },
-                          ]}
-                        >
-                          {year}년
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              </View>
-            ) : (
-              <ScrollView style={styles.pickerScroll}>
-                <View style={styles.pickerGrid}>
-                  {months.map((month, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.pickerItem,
-                        index === currentMonth && styles.pickerItemSelected,
-                      ]}
-                      onPress={() => handleMonthSelect(index)}
-                    >
-                      <Text
-                        style={[
-                          styles.pickerItemText,
-                          index === currentMonth && styles.pickerItemTextSelected,
-                        ]}
-                      >
-                        {month}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            )}
+            <View style={styles.pickerGrid}>
+              {months.map((month, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.pickerItem,
+                    index === currentMonth && styles.pickerItemSelected,
+                  ]}
+                  onPress={() => handleMonthSelect(index)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerItemText,
+                      index === currentMonth && styles.pickerItemTextSelected,
+                    ]}
+                  >
+                    {month}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -716,24 +584,21 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    gap: 8,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
-  pickerScroll: {
-    marginTop: 16,
-  },
   pickerGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 16,
   },
   pickerItem: {
     width: '30%',
@@ -756,38 +621,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  wheelContainer: {
-    height: WHEEL_HEIGHT,
-    marginTop: 16,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  wheelScroll: {
-    flex: 1,
-  },
-  wheelIndicatorTop: {
-    position: 'absolute',
-    top: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#4CAF50',
-    zIndex: 10,
-  },
-  wheelIndicatorBottom: {
-    position: 'absolute',
-    top: WHEEL_HEIGHT / 2 + ITEM_HEIGHT / 2,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#4CAF50',
-    zIndex: 10,
-  },
-  wheelItem: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  wheelItemText: {
-    textAlign: 'center',
+  yearArrowButton: {
+    padding: 8,
   },
 });
