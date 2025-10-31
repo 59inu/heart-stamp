@@ -91,14 +91,16 @@ export const DiaryListScreen: React.FC = () => {
             backgroundColor: isSelected ? '#4CAF50' : 'transparent',
             borderRadius: 16,
             position: 'relative',
+            ...(hasComment && !isSelected ? {
+              borderWidth: 2,
+              borderColor: '#FF6B6B',
+            } : {}),
           },
           text: {
             color: isSelected ? '#fff' : '#000',
             fontWeight: 'bold',
           },
         },
-        marked: hasComment,
-        dotColor: hasComment ? '#FFD700' : undefined,
       };
     });
 
