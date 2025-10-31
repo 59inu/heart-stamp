@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -28,31 +28,34 @@ export const DiaryDetailScreen: React.FC = () => {
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
 
-  useEffect(() => {
-    const loadEntry = async () => {
-      let diary = await DiaryStorage.getById(route.params.entryId);
+  const loadEntry = useCallback(async () => {
+    let diary = await DiaryStorage.getById(route.params.entryId);
 
-      // 서버에서 AI 코멘트 동기화
-      if (diary && !diary.aiComment) {
-        try {
-          const serverData = await apiService.syncDiaryFromServer(diary._id);
-          if (serverData && serverData.aiComment) {
-            await DiaryStorage.update(diary._id, {
-              aiComment: serverData.aiComment,
-              stampType: serverData.stampType as StampType,
-            });
-            // 다시 로드
-            diary = await DiaryStorage.getById(route.params.entryId);
-          }
-        } catch (error) {
-          console.log('서버 동기화 오류 (무시):', error);
+    // 서버에서 AI 코멘트 동기화
+    if (diary && !diary.aiComment) {
+      try {
+        const serverData = await apiService.syncDiaryFromServer(diary._id);
+        if (serverData && serverData.aiComment) {
+          await DiaryStorage.update(diary._id, {
+            aiComment: serverData.aiComment,
+            stampType: serverData.stampType as StampType,
+          });
+          // 다시 로드
+          diary = await DiaryStorage.getById(route.params.entryId);
         }
+      } catch (error) {
+        console.log('서버 동기화 오류 (무시):', error);
       }
+    }
 
-      setEntry(diary);
-    };
-    loadEntry();
+    setEntry(diary);
   }, [route.params.entryId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEntry();
+    }, [loadEntry])
+  );
 
   if (!entry) {
     return (
