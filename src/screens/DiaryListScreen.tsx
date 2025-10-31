@@ -280,7 +280,7 @@ export const DiaryListScreen: React.FC = () => {
                 ? '기대하며 기다려볼까요'
                 : selectedDate === format(new Date(), 'yyyy-MM-dd')
                 ? '선생님이 기다리고 있어요'
-                : '새로운 일기를 작성해보세요!'}
+                : '기억을 기록해주세요'}
             </Text>
           </View>
         )}
