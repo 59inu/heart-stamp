@@ -6,6 +6,7 @@ export type MoodType = 'red' | 'yellow' | 'green';
 
 export interface DiaryEntry {
   _id: string;
+  userId?: string; // 익명 사용자 ID (UUID)
   date: string; // ISO string
   content: string;
   weather?: WeatherType;
