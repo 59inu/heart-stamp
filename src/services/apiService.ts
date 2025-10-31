@@ -110,6 +110,19 @@ export class ApiService {
       return null;
     }
   }
+
+  async getAllDiaries(): Promise<DiaryEntry[]> {
+    try {
+      const response = await axios.get(`${this.baseURL}/diaries`);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting all diaries from server:', error);
+      return [];
+    }
+  }
 }
 
 export const apiService = new ApiService();

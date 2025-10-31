@@ -48,6 +48,22 @@ export class DiaryStorage {
     return newEntry;
   }
 
+  // 서버에서 가져온 데이터를 그대로 저장 (ID 포함)
+  static async saveFromServer(entry: DiaryEntry): Promise<DiaryEntry> {
+    const entries = await this.getAllEntries();
+    const existing = entries.find((e) => e._id === entry._id);
+
+    if (existing) {
+      // 이미 존재하면 업데이트
+      return (await this.update(entry._id, entry))!;
+    } else {
+      // 없으면 새로 추가
+      entries.push(entry);
+      await this.saveAllEntries(entries);
+      return entry;
+    }
+  }
+
   static async update(id: string, updates: Partial<DiaryEntry>): Promise<DiaryEntry | null> {
     const entries = await this.getAllEntries();
     const index = entries.findIndex((entry) => entry._id === id);
@@ -80,5 +96,16 @@ export class DiaryStorage {
 
   private static generateId(): string {
     return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // 개발/디버깅용: 모든 로컬 데이터 클리어
+  static async clearAll(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      console.log('✅ All local diary data cleared');
+    } catch (error) {
+      console.error('Error clearing diary data:', error);
+      throw error;
+    }
   }
 }

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { NotificationService } from './src/services/notificationService';
 import { apiService } from './src/services/apiService';
+import { DiaryStorage } from './src/services/diaryStorage';
 
 export default function App() {
   useEffect(() => {

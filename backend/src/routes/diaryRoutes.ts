@@ -113,6 +113,24 @@ router.post('/diaries/:id/analyze', async (req: Request, res: Response) => {
   }
 });
 
+// Get all diaries
+router.get('/diaries', async (req: Request, res: Response) => {
+  try {
+    const allDiaries = DiaryDatabase.getAll();
+
+    res.json({
+      success: true,
+      data: allDiaries,
+    });
+  } catch (error) {
+    console.error('Error getting all diaries:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get all diaries',
+    });
+  }
+});
+
 // Get all diaries that need AI analysis
 router.get('/diaries/pending', async (req: Request, res: Response) => {
   try {
