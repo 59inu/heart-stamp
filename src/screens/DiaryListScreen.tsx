@@ -228,8 +228,16 @@ export const DiaryListScreen: React.FC = () => {
           </TouchableOpacity>
         ) : (
           <View style={styles.noDiaryContainer}>
-            <Text style={styles.noDiaryText}>이 날의 일기가 없어요</Text>
-            <Text style={styles.noDiarySubText}>새로운 일기를 작성해보세요!</Text>
+            <Text style={styles.noDiaryText}>
+              {selectedDate === format(new Date(), 'yyyy-MM-dd')
+                ? '오늘의 일기를 작성하세요'
+                : '이 날의 일기가 없어요'}
+            </Text>
+            <Text style={styles.noDiarySubText}>
+              {selectedDate === format(new Date(), 'yyyy-MM-dd')
+                ? '선생님이 기다리고 있어요'
+                : '새로운 일기를 작성해보세요!'}
+            </Text>
           </View>
         )}
       </View>
