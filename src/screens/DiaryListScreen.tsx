@@ -349,7 +349,6 @@ export const DiaryListScreen: React.FC = () => {
               onPress={() => setShowMonthPicker(true)}
             >
               <Text style={styles.calendarHeaderText}>{monthYear}</Text>
-              <Ionicons name="chevron-down" size={16} color="#333" />
             </TouchableOpacity>
           );
         }}
