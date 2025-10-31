@@ -253,32 +253,25 @@ export const DiaryListScreen: React.FC = () => {
     }
   };
 
-  // 연도 피커가 열릴 때 현재 연도로 스크롤
-  useEffect(() => {
-    if (showYearPicker) {
-      const currentYear = currentDate.getFullYear();
-      const startYear = currentYear - 20;
-      const endYear = currentYear + 5;
-      const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
-      const index = years.indexOf(currentYear);
+  // 스크롤뷰 레이아웃 완료 시 초기 위치로 스크롤
+  const handleScrollViewLayout = () => {
+    const currentYear = currentDate.getFullYear();
+    const startYear = currentYear - 20;
+    const endYear = currentYear + 5;
+    const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
+    const index = years.indexOf(currentYear);
 
-      // 초기 scrollY 즉시 설정 (동기적으로)
-      if (index !== -1) {
-        const initialScrollY = index * ITEM_HEIGHT;
-        setScrollY(initialScrollY);
+    if (index !== -1 && yearScrollRef.current) {
+      const initialScrollY = index * ITEM_HEIGHT;
+      setScrollY(initialScrollY);
 
-        // 스크롤 위치로 이동
-        setTimeout(() => {
-          if (yearScrollRef.current) {
-            yearScrollRef.current.scrollTo({
-              y: initialScrollY,
-              animated: false, // 초기 위치는 애니메이션 없이
-            });
-          }
-        }, 50);
-      }
+      // 즉시 스크롤
+      yearScrollRef.current.scrollTo({
+        y: initialScrollY,
+        animated: false,
+      });
     }
-  }, [showYearPicker]);
+  };
 
   const renderMonthYearPicker = () => {
     const currentYear = currentDate.getFullYear();
@@ -350,12 +343,12 @@ export const DiaryListScreen: React.FC = () => {
                   contentContainerStyle={{
                     paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
                   }}
-                  contentOffset={{ x: 0, y: years.indexOf(currentYear) * ITEM_HEIGHT }}
                   showsVerticalScrollIndicator={false}
                   onScroll={handleYearScroll}
                   scrollEventThrottle={16}
                   snapToInterval={ITEM_HEIGHT}
                   decelerationRate="fast"
+                  onLayout={handleScrollViewLayout}
                   onMomentumScrollEnd={(event) => {
                     const offsetY = event.nativeEvent.contentOffset.y;
                     const index = Math.round(offsetY / ITEM_HEIGHT);
