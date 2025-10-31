@@ -11,9 +11,10 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { DiaryEntry } from '../models/DiaryEntry';
+import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
+import { apiService } from '../services/apiService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
@@ -25,7 +26,25 @@ export const DiaryDetailScreen: React.FC = () => {
 
   useEffect(() => {
     const loadEntry = async () => {
-      const diary = await DiaryStorage.getById(route.params.entryId);
+      let diary = await DiaryStorage.getById(route.params.entryId);
+
+      // 서버에서 AI 코멘트 동기화
+      if (diary && !diary.aiComment) {
+        try {
+          const serverData = await apiService.syncDiaryFromServer(diary._id);
+          if (serverData && serverData.aiComment) {
+            await DiaryStorage.update(diary._id, {
+              aiComment: serverData.aiComment,
+              stampType: serverData.stampType as StampType,
+            });
+            // 다시 로드
+            diary = await DiaryStorage.getById(route.params.entryId);
+          }
+        } catch (error) {
+          console.log('서버 동기화 오류 (무시):', error);
+        }
+      }
+
       setEntry(diary);
     };
     loadEntry();

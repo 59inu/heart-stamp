@@ -14,6 +14,7 @@ import { ko } from 'date-fns/locale';
 import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
+import { apiService } from '../services/apiService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -41,7 +42,28 @@ export const DiaryListScreen: React.FC = () => {
 
   const loadDiaries = useCallback(async () => {
     const entries = await DiaryStorage.getAll();
-    setDiaries(entries);
+
+    // 서버에서 AI 코멘트 동기화
+    for (const entry of entries) {
+      if (!entry.aiComment) {
+        try {
+          const serverData = await apiService.syncDiaryFromServer(entry._id);
+          if (serverData && serverData.aiComment) {
+            // 로컬 스토리지 업데이트
+            await DiaryStorage.update(entry._id, {
+              aiComment: serverData.aiComment,
+              stampType: serverData.stampType as StampType,
+            });
+          }
+        } catch (error) {
+          console.log('서버 동기화 오류 (무시):', error);
+        }
+      }
+    }
+
+    // 동기화 후 다시 로드
+    const updatedEntries = await DiaryStorage.getAll();
+    setDiaries(updatedEntries);
   }, []);
 
   useFocusEffect(

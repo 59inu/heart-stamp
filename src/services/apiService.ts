@@ -92,6 +92,24 @@ export class ApiService {
       return false;
     }
   }
+
+  async syncDiaryFromServer(diaryId: string): Promise<{
+    aiComment?: string;
+    stampType?: string;
+  } | null> {
+    try {
+      const response = await axios.get(
+        `${this.baseURL}/diaries/${diaryId}/ai-comment`
+      );
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error syncing diary from server:', error);
+      return null;
+    }
+  }
 }
 
 export const apiService = new ApiService();
