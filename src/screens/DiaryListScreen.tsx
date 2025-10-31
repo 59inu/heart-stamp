@@ -100,16 +100,16 @@ export const DiaryListScreen: React.FC = () => {
           },
         };
       }
-      // AI 코멘트 있는 날짜 - 연한 핑크 배경
+      // AI 코멘트 있는 날짜 - 볼드체만 (배경색은 작동 안 함)
       else if (hasComment) {
         marked[dateKey] = {
           customStyles: {
             container: {
-              backgroundColor: '#FFE0E6',
+              backgroundColor: 'transparent',
               borderRadius: 16,
             },
             text: {
-              color: '#D63384',
+              color: '#000',
               fontWeight: 'bold',
             },
           },
