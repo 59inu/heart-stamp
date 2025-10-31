@@ -12,6 +12,8 @@ db.exec(`
     date TEXT NOT NULL,
     content TEXT NOT NULL,
     weather TEXT,
+    mood TEXT,
+    moodTag TEXT,
     aiComment TEXT,
     stampType TEXT,
     createdAt TEXT NOT NULL,
@@ -20,10 +22,24 @@ db.exec(`
   )
 `);
 
-// 마이그레이션: 기존 테이블에 weather 컬럼 추가 (이미 존재하면 무시)
+// 마이그레이션: 기존 테이블에 컬럼 추가 (이미 존재하면 무시)
 try {
   db.exec(`ALTER TABLE diaries ADD COLUMN weather TEXT`);
   console.log('✅ Added weather column to existing database');
+} catch (error) {
+  // 컬럼이 이미 존재하면 에러 발생 (무시)
+}
+
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN mood TEXT`);
+  console.log('✅ Added mood column to existing database');
+} catch (error) {
+  // 컬럼이 이미 존재하면 에러 발생 (무시)
+}
+
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN moodTag TEXT`);
+  console.log('✅ Added moodTag column to existing database');
 } catch (error) {
   // 컬럼이 이미 존재하면 에러 발생 (무시)
 }
@@ -34,8 +50,8 @@ export class DiaryDatabase {
   // 일기 저장
   static create(diary: DiaryEntry): DiaryEntry {
     const stmt = db.prepare(`
-      INSERT INTO diaries (_id, date, content, weather, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO diaries (_id, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -43,6 +59,8 @@ export class DiaryDatabase {
       diary.date,
       diary.content,
       diary.weather || null,
+      diary.mood || null,
+      diary.moodTag || null,
       diary.aiComment || null,
       diary.stampType || null,
       diary.createdAt,
@@ -65,6 +83,14 @@ export class DiaryDatabase {
     if (updates.weather !== undefined) {
       fields.push('weather = ?');
       values.push(updates.weather);
+    }
+    if (updates.mood !== undefined) {
+      fields.push('mood = ?');
+      values.push(updates.mood);
+    }
+    if (updates.moodTag !== undefined) {
+      fields.push('moodTag = ?');
+      values.push(updates.moodTag);
     }
     if (updates.aiComment !== undefined) {
       fields.push('aiComment = ?');
