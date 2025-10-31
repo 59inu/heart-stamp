@@ -79,18 +79,22 @@ export const DiaryListScreen: React.FC = () => {
     diaries.forEach((diary) => {
       const dateKey = format(new Date(diary.date), 'yyyy-MM-dd');
       const isSelected = dateKey === selectedDate;
+      const hasComment = !!diary.aiComment;
 
       marked[dateKey] = {
         customStyles: {
           container: {
             backgroundColor: isSelected ? '#4CAF50' : 'transparent',
             borderRadius: 16,
+            position: 'relative',
           },
           text: {
             color: isSelected ? '#fff' : '#000',
             fontWeight: 'bold',
           },
         },
+        marked: hasComment,
+        dotColor: hasComment ? '#FFD700' : undefined,
       };
     });
 
