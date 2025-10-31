@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,10 @@ import {
   SafeAreaView,
   Image,
   Modal,
+  FlatList,
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -40,8 +40,7 @@ export const DiaryListScreen: React.FC = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [wheelReady, setWheelReady] = useState(false);
-  const yearScrollRef = useRef<ScrollView>(null);
+  const yearListRef = useRef<FlatList>(null);
 
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
@@ -235,8 +234,7 @@ export const DiaryListScreen: React.FC = () => {
   const handleCloseModal = () => {
     setShowMonthPicker(false);
     setShowYearPicker(false);
-    setScrollY(0); // scrollY 리셋
-    setWheelReady(false); // wheelReady 리셋
+    setScrollY(0);
   };
 
   // 휠 피커 스크롤 이벤트
@@ -244,39 +242,14 @@ export const DiaryListScreen: React.FC = () => {
     setScrollY(event.nativeEvent.contentOffset.y);
   };
 
-  // 연도 선택 시 스크롤 위치 계산
-  const scrollToYear = (year: number, years: number[]) => {
-    const index = years.indexOf(year);
-    if (index !== -1 && yearScrollRef.current) {
-      yearScrollRef.current.scrollTo({
-        y: index * ITEM_HEIGHT,
-        animated: true,
-      });
-    }
-  };
+  // 스냅 처리
+  const handleMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const targetY = index * ITEM_HEIGHT;
 
-  // 스크롤뷰 레이아웃 완료 시 초기 위치로 스크롤
-  const handleScrollViewLayout = () => {
-    const currentYear = currentDate.getFullYear();
-    const startYear = currentYear - 20;
-    const endYear = currentYear + 5;
-    const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).reverse();
-    const index = years.indexOf(currentYear);
-
-    if (index !== -1 && yearScrollRef.current) {
-      const initialScrollY = index * ITEM_HEIGHT;
-      setScrollY(initialScrollY);
-
-      // 즉시 스크롤
-      yearScrollRef.current.scrollTo({
-        y: initialScrollY,
-        animated: false,
-      });
-
-      // 스크롤 완료 후 휠 표시
-      setTimeout(() => {
-        setWheelReady(true);
-      }, 50);
+    if (Math.abs(offsetY - targetY) > 1 && yearListRef.current) {
+      yearListRef.current.scrollToOffset({ offset: targetY, animated: true });
     }
   };
 
@@ -339,13 +312,30 @@ export const DiaryListScreen: React.FC = () => {
             </TouchableOpacity>
 
             {showYearPicker ? (
-              <View style={[styles.wheelContainer, { opacity: wheelReady ? 1 : 0 }]}>
+              <View style={styles.wheelContainer}>
                 {/* 중앙 하이라이트 인디케이터 */}
                 <View style={styles.wheelIndicatorTop} />
                 <View style={styles.wheelIndicatorBottom} />
 
-                <ScrollView
-                  ref={yearScrollRef}
+                <FlatList
+                  ref={yearListRef}
+                  data={years}
+                  keyExtractor={(item) => item.toString()}
+                  initialScrollIndex={years.indexOf(currentYear)}
+                  getItemLayout={(data, index) => ({
+                    length: ITEM_HEIGHT,
+                    offset: ITEM_HEIGHT * index,
+                    index,
+                  })}
+                  onScrollToIndexFailed={(info) => {
+                    // 레이아웃이 완료되지 않은 경우 재시도
+                    setTimeout(() => {
+                      yearListRef.current?.scrollToIndex({
+                        index: info.index,
+                        animated: false,
+                      });
+                    }, 100);
+                  }}
                   style={styles.wheelScroll}
                   contentContainerStyle={{
                     paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
@@ -355,22 +345,13 @@ export const DiaryListScreen: React.FC = () => {
                   scrollEventThrottle={16}
                   snapToInterval={ITEM_HEIGHT}
                   decelerationRate="fast"
-                  onLayout={handleScrollViewLayout}
-                  onMomentumScrollEnd={(event) => {
-                    const offsetY = event.nativeEvent.contentOffset.y;
-                    const index = Math.round(offsetY / ITEM_HEIGHT);
-                    if (years[index]) {
-                      // 자동으로 선택 (선택 효과만, 실제 적용은 아이템 클릭 시)
-                    }
-                  }}
-                >
-                  {years.map((year, index) => {
+                  onMomentumScrollEnd={handleMomentumScrollEnd}
+                  renderItem={({ item: year, index }) => {
                     const itemStyle = getYearItemStyle(index);
                     const isCenter = Math.abs(scrollY + WHEEL_HEIGHT / 2 - (index * ITEM_HEIGHT + ITEM_HEIGHT / 2)) < ITEM_HEIGHT / 2;
 
                     return (
                       <TouchableOpacity
-                        key={year}
                         style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
                         onPress={() => handleYearSelect(year)}
                       >
@@ -389,8 +370,8 @@ export const DiaryListScreen: React.FC = () => {
                         </Text>
                       </TouchableOpacity>
                     );
-                  })}
-                </ScrollView>
+                  }}
+                />
               </View>
             ) : (
               <ScrollView style={styles.pickerScroll}>
