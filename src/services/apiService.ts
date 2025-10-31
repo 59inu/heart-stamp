@@ -123,6 +123,16 @@ export class ApiService {
       return [];
     }
   }
+
+  async deleteDiary(diaryId: string): Promise<boolean> {
+    try {
+      const response = await axios.delete(`${this.baseURL}/diaries/${diaryId}`);
+      return response.data.success;
+    } catch (error) {
+      console.error('Error deleting diary:', error);
+      return false;
+    }
+  }
 }
 
 export const apiService = new ApiService();

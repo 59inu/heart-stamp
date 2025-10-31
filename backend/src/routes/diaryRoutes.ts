@@ -149,4 +149,23 @@ router.get('/diaries/pending', async (req: Request, res: Response) => {
   }
 });
 
+// Delete a diary
+router.delete('/diaries/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    DiaryDatabase.delete(id);
+
+    res.json({
+      success: true,
+      message: 'Diary deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting diary:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete diary',
+    });
+  }
+});
+
 export default router;

@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -65,15 +66,44 @@ export const DiaryDetailScreen: React.FC = () => {
     navigation.navigate('DiaryWrite', { entryId: entry._id });
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      '일기 삭제',
+      '정말 이 일기를 삭제하시겠어요?',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            // 로컬에서 삭제
+            await DiaryStorage.delete(entry._id);
+            // 서버에서도 삭제
+            await apiService.deleteDiary(entry._id);
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← 뒤로</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleEdit}>
-          <Text style={styles.editButton}>수정</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={handleDelete} style={styles.deleteButtonContainer}>
+            <Text style={styles.deleteButton}>삭제</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleEdit}>
+            <Text style={styles.editButton}>수정</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
@@ -140,6 +170,19 @@ const styles = StyleSheet.create({
   backButton: {
     fontSize: 16,
     color: '#666',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  deleteButtonContainer: {
+    marginRight: 0,
+  },
+  deleteButton: {
+    fontSize: 16,
+    color: '#f44336',
+    fontWeight: '600',
   },
   editButton: {
     fontSize: 16,
