@@ -85,11 +85,9 @@ export const DiaryListScreen: React.FC = () => {
 
       marked[dateKey] = {
         selected: isSelected,
-        marked: hasComment,
-        dotColor: hasComment ? '#FFD700' : undefined,
         selectedColor: '#4CAF50',
         selectedTextColor: '#fff',
-        textColor: '#000',
+        dots: hasComment ? [{ color: '#FFD700', selectedDotColor: '#FFD700' }] : [],
       };
     });
 
@@ -134,12 +132,11 @@ export const DiaryListScreen: React.FC = () => {
       <Calendar
         markedDates={markedDates}
         onDayPress={handleDateSelect}
+        markingType="multi-dot"
         theme={{
           selectedDayBackgroundColor: '#4CAF50',
           todayTextColor: '#4CAF50',
           arrowColor: '#4CAF50',
-          dotColor: '#4CAF50',
-          textDayFontWeight: '300',
           textDayFontSize: 16,
           textMonthFontWeight: 'bold',
           textDayHeaderFontWeight: '600',
@@ -155,6 +152,13 @@ export const DiaryListScreen: React.FC = () => {
               fontSize: 16,
               fontWeight: '300',
               color: '#e0e0e0',
+            },
+          },
+          'stylesheet.marking': {
+            text: {
+              fontSize: 16,
+              fontWeight: 'bold',
+              color: '#000',
             },
           },
         }}
