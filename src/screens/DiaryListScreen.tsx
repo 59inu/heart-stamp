@@ -41,6 +41,7 @@ export const DiaryListScreen: React.FC = () => {
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const yearListRef = useRef<FlatList>(null);
+  const hasScrolledToInitial = useRef(false);
 
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
@@ -235,6 +236,7 @@ export const DiaryListScreen: React.FC = () => {
     setShowMonthPicker(false);
     setShowYearPicker(false);
     setScrollY(0);
+    hasScrolledToInitial.current = false;
   };
 
   // 휠 피커 스크롤 이벤트
@@ -326,12 +328,26 @@ export const DiaryListScreen: React.FC = () => {
                   ref={yearListRef}
                   data={years}
                   keyExtractor={(item) => item.toString()}
-                  initialScrollIndex={years.indexOf(currentYear)}
                   getItemLayout={(data, index) => ({
                     length: ITEM_HEIGHT,
                     offset: ITEM_HEIGHT * index,
                     index,
                   })}
+                  onLayout={() => {
+                    // 레이아웃 완료 후 현재 연도로 스크롤 (한 번만)
+                    if (!hasScrolledToInitial.current && yearListRef.current) {
+                      const targetIndex = years.indexOf(currentYear);
+                      setTimeout(() => {
+                        yearListRef.current?.scrollToIndex({
+                          index: targetIndex,
+                          animated: false,
+                        });
+                        // scrollY 초기화
+                        setScrollY(targetIndex * ITEM_HEIGHT);
+                        hasScrolledToInitial.current = true;
+                      }, 50);
+                    }
+                  }}
                   onScrollToIndexFailed={(info) => {
                     // 레이아웃이 완료되지 않은 경우 재시도
                     setTimeout(() => {
