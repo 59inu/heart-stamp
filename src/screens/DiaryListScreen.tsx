@@ -86,17 +86,17 @@ export const DiaryListScreen: React.FC = () => {
       marked[dateKey] = {
         customStyles: {
           container: {
-            backgroundColor: isSelected ? '#4CAF50' : 'transparent',
+            backgroundColor: isSelected ? '#4CAF50' : hasComment ? '#e8f5e9' : 'transparent',
             borderRadius: 16,
             position: 'relative',
+            borderWidth: hasComment && !isSelected ? 2 : 0,
+            borderColor: hasComment && !isSelected ? '#FFD700' : 'transparent',
           },
           text: {
             color: isSelected ? '#fff' : '#000',
             fontWeight: 'bold',
           },
         },
-        marked: hasComment,
-        dotColor: hasComment ? '#FFD700' : undefined,
       };
     });
 
