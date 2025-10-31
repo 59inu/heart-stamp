@@ -191,17 +191,17 @@ export const DiaryListScreen: React.FC = () => {
               navigation.navigate('DiaryDetail', { entryId: selectedDiary._id })
             }
           >
+            {selectedDiary.stampType && (
+              <Image
+                source={getStampImage(selectedDiary.stampType)}
+                style={styles.stampImageLarge}
+                resizeMode="contain"
+              />
+            )}
             <View style={styles.cardContent}>
               <Text style={styles.diaryContentText} numberOfLines={3}>
                 {selectedDiary.content}
               </Text>
-              {selectedDiary.stampType && (
-                <Image
-                  source={getStampImage(selectedDiary.stampType)}
-                  style={styles.stampImageLarge}
-                  resizeMode="contain"
-                />
-              )}
             </View>
             {selectedDiary.aiComment && (
               <View style={styles.aiCommentPreview}>
@@ -285,23 +285,25 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 2,
     borderColor: '#4CAF50',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  stampImageLarge: {
+    width: 125,
+    height: 125,
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    opacity: 0.85,
+    zIndex: 1,
   },
   cardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 12,
   },
   diaryContentText: {
-    flex: 1,
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
-  },
-  stampImageLarge: {
-    width: 50,
-    height: 50,
-    marginLeft: 12,
   },
   aiCommentPreview: {
     backgroundColor: '#e3f2fd',
