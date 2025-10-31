@@ -40,6 +40,7 @@ export const DiaryListScreen: React.FC = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [wheelReady, setWheelReady] = useState(false);
   const yearScrollRef = useRef<ScrollView>(null);
 
   const loadDiaries = useCallback(async () => {
@@ -235,6 +236,7 @@ export const DiaryListScreen: React.FC = () => {
     setShowMonthPicker(false);
     setShowYearPicker(false);
     setScrollY(0); // scrollY 리셋
+    setWheelReady(false); // wheelReady 리셋
   };
 
   // 휠 피커 스크롤 이벤트
@@ -270,6 +272,11 @@ export const DiaryListScreen: React.FC = () => {
         y: initialScrollY,
         animated: false,
       });
+
+      // 스크롤 완료 후 휠 표시
+      setTimeout(() => {
+        setWheelReady(true);
+      }, 50);
     }
   };
 
@@ -332,7 +339,7 @@ export const DiaryListScreen: React.FC = () => {
             </TouchableOpacity>
 
             {showYearPicker ? (
-              <View style={styles.wheelContainer}>
+              <View style={[styles.wheelContainer, { opacity: wheelReady ? 1 : 0 }]}>
                 {/* 중앙 하이라이트 인디케이터 */}
                 <View style={styles.wheelIndicatorTop} />
                 <View style={styles.wheelIndicatorBottom} />
