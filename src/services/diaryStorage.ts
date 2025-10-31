@@ -37,6 +37,14 @@ export class DiaryStorage {
 
   static async create(entry: Omit<DiaryEntry, '_id' | 'createdAt' | 'updatedAt'>): Promise<DiaryEntry> {
     const entries = await this.getAllEntries();
+
+    // 같은 날짜의 일기가 이미 있는지 체크
+    const existingEntry = await this.getByDate(entry.date);
+    if (existingEntry) {
+      console.warn(`⚠️ 같은 날짜(${entry.date})의 일기가 이미 존재합니다. 기존 일기를 반환합니다.`);
+      throw new Error('같은 날짜의 일기가 이미 존재합니다.');
+    }
+
     const newEntry: DiaryEntry = {
       ...entry,
       _id: this.generateId(),
@@ -46,6 +54,15 @@ export class DiaryStorage {
     entries.push(newEntry);
     await this.saveAllEntries(entries);
     return newEntry;
+  }
+
+  static async getByDate(date: string): Promise<DiaryEntry | null> {
+    const entries = await this.getAllEntries();
+    const targetDate = new Date(date).toISOString().split('T')[0];
+    return entries.find((entry) => {
+      const entryDate = new Date(entry.date).toISOString().split('T')[0];
+      return entryDate === targetDate;
+    }) || null;
   }
 
   // 서버에서 가져온 데이터를 그대로 저장 (ID 포함)

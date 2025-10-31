@@ -80,10 +80,18 @@ export const DiaryListScreen: React.FC = () => {
     const marked: { [key: string]: any } = {};
     const today = format(new Date(), 'yyyy-MM-dd');
 
+    console.log('=== 캘린더 마킹 시작 ===');
+    console.log('총 일기 개수:', diaries.length);
+
     diaries.forEach((diary) => {
       const dateKey = format(new Date(diary.date), 'yyyy-MM-dd');
       const isSelected = dateKey === selectedDate;
       const hasComment = !!diary.aiComment;
+
+      console.log(`${dateKey}: isSelected=${isSelected}, hasComment=${hasComment}`);
+      if (hasComment) {
+        console.log(`  ✨ AI 코멘트 있음! -> 노란색 배경 적용`);
+      }
 
       // 선택된 날짜 - 초록 배경
       if (isSelected) {
