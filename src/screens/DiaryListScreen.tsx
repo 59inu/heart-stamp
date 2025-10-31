@@ -6,6 +6,8 @@ import {
   StyleSheet,
   SafeAreaView,
   Image,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -28,6 +30,9 @@ export const DiaryListScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     format(new Date(), 'yyyy-MM-dd')
   );
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
 
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
@@ -203,6 +208,114 @@ export const DiaryListScreen: React.FC = () => {
     }
   };
 
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(year);
+    setCurrentDate(newDate);
+    setShowYearPicker(false);
+    setShowMonthPicker(true);
+  };
+
+  const handleMonthSelect = (month: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(month);
+    setCurrentDate(newDate);
+    setShowMonthPicker(false);
+  };
+
+  const renderMonthYearPicker = () => {
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+    return (
+      <Modal
+        visible={showMonthPicker || showYearPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowMonthPicker(false);
+          setShowYearPicker(false);
+        }}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowMonthPicker(false);
+            setShowYearPicker(false);
+          }}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <TouchableOpacity
+              style={styles.modalHeader}
+              onPress={() => {
+                if (showMonthPicker) {
+                  setShowMonthPicker(false);
+                  setShowYearPicker(true);
+                }
+              }}
+            >
+              <Text style={styles.modalTitle}>
+                {showYearPicker ? '연도 선택' : `${currentYear}년`}
+              </Text>
+              {showMonthPicker && <Ionicons name="chevron-down" size={20} color="#333" />}
+            </TouchableOpacity>
+
+            <ScrollView style={styles.pickerScroll}>
+              {showYearPicker ? (
+                <View style={styles.pickerGrid}>
+                  {years.map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.pickerItem,
+                        year === currentYear && styles.pickerItemSelected,
+                      ]}
+                      onPress={() => handleYearSelect(year)}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          year === currentYear && styles.pickerItemTextSelected,
+                        ]}
+                      >
+                        {year}년
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.pickerGrid}>
+                  {months.map((month, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.pickerItem,
+                        index === currentMonth && styles.pickerItemSelected,
+                      ]}
+                      onPress={() => handleMonthSelect(index)}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          index === currentMonth && styles.pickerItemTextSelected,
+                        ]}
+                      >
+                        {month}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -214,10 +327,28 @@ export const DiaryListScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {renderMonthYearPicker()}
+
       <Calendar
+        current={format(currentDate, 'yyyy-MM-dd')}
         markedDates={markedDates}
         onDayPress={handleDateSelect}
+        onMonthChange={(date: DateData) => {
+          setCurrentDate(new Date(date.year, date.month - 1, 1));
+        }}
         markingType="custom"
+        renderHeader={(date: any) => {
+          const monthYear = format(new Date(date), 'yyyy년 MM월', { locale: ko });
+          return (
+            <TouchableOpacity
+              style={styles.calendarHeader}
+              onPress={() => setShowMonthPicker(true)}
+            >
+              <Text style={styles.calendarHeaderText}>{monthYear}</Text>
+              <Ionicons name="chevron-down" size={16} color="#333" />
+            </TouchableOpacity>
+          );
+        }}
         theme={{
           selectedDayBackgroundColor: '#4CAF50',
           todayTextColor: '#4CAF50',
@@ -447,5 +578,73 @@ const styles = StyleSheet.create({
   noDiarySubText: {
     fontSize: 14,
     color: '#999',
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  calendarHeaderText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '80%',
+    maxHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    gap: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  pickerScroll: {
+    marginTop: 16,
+  },
+  pickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  pickerItem: {
+    width: '30%',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerItemSelected: {
+    backgroundColor: '#4CAF50',
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  pickerItemTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
