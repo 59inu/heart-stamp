@@ -85,23 +85,54 @@ export const DiaryListScreen: React.FC = () => {
       const isSelected = dateKey === selectedDate;
       const hasComment = !!diary.aiComment;
 
-      marked[dateKey] = {
-        customStyles: {
-          container: {
-            backgroundColor: isSelected ? '#4CAF50' : 'transparent',
-            borderRadius: 16,
-            position: 'relative',
-            ...(hasComment && !isSelected ? {
+      if (isSelected) {
+        // 선택된 날짜
+        marked[dateKey] = {
+          customStyles: {
+            container: {
+              backgroundColor: '#4CAF50',
+              borderRadius: 16,
+              position: 'relative',
+            },
+            text: {
+              color: '#fff',
+              fontWeight: 'bold',
+            },
+          },
+        };
+      } else if (hasComment) {
+        // AI 코멘트가 있는 날짜
+        marked[dateKey] = {
+          customStyles: {
+            container: {
+              backgroundColor: 'transparent',
+              borderRadius: 16,
+              position: 'relative',
               borderWidth: 2,
               borderColor: '#FF6B6B',
-            } : {}),
+            },
+            text: {
+              color: '#000',
+              fontWeight: 'bold',
+            },
           },
-          text: {
-            color: isSelected ? '#fff' : '#000',
-            fontWeight: 'bold',
+        };
+      } else {
+        // 일반 일기만 있는 날짜
+        marked[dateKey] = {
+          customStyles: {
+            container: {
+              backgroundColor: 'transparent',
+              borderRadius: 16,
+              position: 'relative',
+            },
+            text: {
+              color: '#000',
+              fontWeight: 'bold',
+            },
           },
-        },
-      };
+        };
+      }
     });
 
     // 미래 날짜들을 연한 색으로 마킹 (시각적으로 비활성화 표현)
