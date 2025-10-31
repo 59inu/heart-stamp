@@ -213,8 +213,8 @@ export const DiaryListScreen: React.FC = () => {
               />
             )}
             <View style={styles.cardContent}>
-              <Text style={styles.diaryContentText} numberOfLines={3}>
-                {selectedDiary.content}
+              <Text style={styles.diaryContentText} numberOfLines={3} ellipsizeMode="tail">
+                {selectedDiary.content.replace(/\n/g, ' ')}
               </Text>
             </View>
             {selectedDiary.aiComment && (
