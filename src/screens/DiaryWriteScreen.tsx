@@ -30,6 +30,7 @@ import { SurveyModal } from '../components/SurveyModal';
 import { SurveyService } from '../services/surveyService';
 import { SURVEY_TRIGGER_COUNT } from '../constants/survey';
 import { logger } from '../utils/logger';
+import { COLORS } from '../constants/colors';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryWrite'>;
 type DiaryWriteRouteProp = RouteProp<RootStackParamList, 'DiaryWrite'>;
@@ -282,7 +283,7 @@ export const DiaryWriteScreen: React.FC = () => {
         <View style={styles.weatherSection}>
           <Text style={styles.weatherLabel}>날씨</Text>
           {loadingWeather ? (
-            <ActivityIndicator size="small" color="#4CAF50" />
+            <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
             <View style={styles.weatherButtons}>
               {weatherOptions.map((option) => (
@@ -333,7 +334,7 @@ export const DiaryWriteScreen: React.FC = () => {
             />
             {uploadingImage && (
               <View style={styles.uploadingOverlay}>
-                <ActivityIndicator size="large" color="#4CAF50" />
+                <ActivityIndicator size="large" color={COLORS.primary} />
                 <Text style={styles.uploadingText}>업로드 중...</Text>
               </View>
             )}
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   scrollContent: {
@@ -588,7 +589,7 @@ const styles = StyleSheet.create({
   uploadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#4CAF50',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   weatherSection: {
@@ -617,8 +618,8 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   weatherButtonSelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#e8f5e9',
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
   },
   weatherEmoji: {
     fontSize: 28,
@@ -629,7 +630,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   weatherTextSelected: {
-    color: '#4CAF50',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   editorContainer: {
@@ -652,7 +653,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   aiCommentSection: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: COLORS.secondaryLight,
     padding: 16,
     margin: 16,
     borderRadius: 12,
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
   aiCommentTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1976d2',
+    color: COLORS.secondary,
   },
   stampDisplay: {
     width: 32,
@@ -777,8 +778,8 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   moodTagSelected: {
-    backgroundColor: '#e8f5e9',
-    borderColor: '#4CAF50',
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
   moodTagText: {
     fontSize: 14,
@@ -786,7 +787,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   moodTagTextSelected: {
-    color: '#4CAF50',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   moodTagPlaceholder: {
@@ -814,7 +815,7 @@ const styles = StyleSheet.create({
   moodModalButtonSave: {
     flex: 1,
     paddingVertical: 14,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
     borderRadius: 12,
     alignItems: 'center',
   },

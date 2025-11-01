@@ -29,6 +29,7 @@ import { Report } from '../models/Report';
 import { apiService } from '../services/apiService';
 import { getWeekNumber } from '../utils/dateUtils';
 import { logger } from '../utils/logger';
+import { COLORS } from '../constants/colors';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Report'>;
 
@@ -408,18 +409,18 @@ export const ReportScreen: React.FC = () => {
         {/* 기간 네비게이션 */}
         <View style={styles.periodNavigation}>
           <TouchableOpacity onPress={handlePreviousPeriod} style={styles.periodArrow}>
-            <Ionicons name="chevron-back" size={24} color="#4CAF50" />
+            <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.periodText}>{periodText}</Text>
           <TouchableOpacity onPress={handleNextPeriod} style={styles.periodArrow}>
-            <Ionicons name="chevron-forward" size={24} color="#4CAF50" />
+            <Ionicons name="chevron-forward" size={24} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
 
         {/* 로딩 */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={COLORS.primary} />
             <Text style={styles.loadingText}>리포트 생성 중...</Text>
           </View>
         )}
@@ -453,7 +454,7 @@ export const ReportScreen: React.FC = () => {
                     🗓 {period === 'week' ? '주간' : '월간'} 심리 리포트
                   </Text>
                   <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoIconButton}>
-                    <Ionicons name="information-circle" size={20} color="#4CAF50" />
+                    <Ionicons name="information-circle" size={20} color={COLORS.primary} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -682,7 +683,7 @@ export const ReportScreen: React.FC = () => {
             {/* 리포트 안내 */}
             <View style={styles.infoCard}>
               <View style={styles.infoHeader}>
-                <Ionicons name="information-circle-outline" size={18} color="#4CAF50" />
+                <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
                 <Text style={styles.infoText}>
                   한 번 생성된 리포트는 과거 일기가 수정되어도 업데이트되지 않습니다
                 </Text>
@@ -779,7 +780,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   periodTabActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
   },
   periodTabText: {
     fontSize: 16,
@@ -820,7 +821,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 20,
     borderRadius: 16,
-    shadowColor: '#4CAF50',
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -843,7 +844,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   infoIconButton: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 12,
     padding: 4,
     width: 28,
@@ -875,16 +876,16 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#4CAF50',
+    color: COLORS.primary,
   },
   summaryValueGreen: {
-    color: '#4CAF50',
+    color: COLORS.emotionPositive,
   },
   summaryValueYellow: {
-    color: '#FFA726',
+    color: COLORS.emotionNeutral,
   },
   summaryValueRed: {
-    color: '#EF5350',
+    color: COLORS.emotionNegative,
   },
   summaryChangeBadge: {
     paddingHorizontal: 8,
@@ -893,20 +894,20 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   summaryChangeBadgePositive: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   summaryChangeBadgeNegative: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   summaryChangeText: {
     fontSize: 13,
     fontWeight: '700',
   },
   summaryChangeTextPositive: {
-    color: '#2E7D32',
+    color: COLORS.emotionPositive,
   },
   summaryChangeTextNegative: {
-    color: '#C62828',
+    color: COLORS.emotionNegative,
   },
   summaryKeywords: {
     fontSize: 16,
@@ -939,7 +940,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#ffa726',
+    borderLeftColor: COLORS.emotionNeutral,
     alignItems: 'flex-start',
   },
   warningIcon: {
@@ -953,12 +954,12 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e65100',
+    color: COLORS.emotionNeutral,
     marginBottom: 4,
   },
   warningSubtext: {
     fontSize: 13,
-    color: '#f57c00',
+    color: COLORS.emotionNeutral,
   },
   statsCard: {
     backgroundColor: '#fff',
@@ -981,7 +982,7 @@ const styles = StyleSheet.create({
   statsCount: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#4CAF50',
+    color: COLORS.emotionPositive,
   },
   statsSubtext: {
     fontSize: 14,
@@ -1011,13 +1012,13 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   moodBarRed: {
-    backgroundColor: '#FFB3BA',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   moodBarYellow: {
-    backgroundColor: '#FFF4B0',
+    backgroundColor: COLORS.emotionNeutralLight,
   },
   moodBarGreen: {
-    backgroundColor: '#B4E7CE',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   moodDetails: {
     gap: 12,
@@ -1037,26 +1038,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   moodChangeBadgeGood: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   moodChangeBadgeBad: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   moodChangeBadgeNeutral: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: COLORS.emotionNeutralLight,
   },
   moodChangeText: {
     fontSize: 11,
     fontWeight: '600',
   },
   moodChangeTextGood: {
-    color: '#2E7D32',
+    color: COLORS.emotionPositive,
   },
   moodChangeTextBad: {
-    color: '#C62828',
+    color: COLORS.emotionNegative,
   },
   moodChangeTextNeutral: {
-    color: '#F57C00',
+    color: COLORS.emotionNeutral,
   },
   moodDot: {
     width: 12,
@@ -1065,13 +1066,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   moodDotRed: {
-    backgroundColor: '#FFB3BA',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   moodDotYellow: {
-    backgroundColor: '#FFF4B0',
+    backgroundColor: COLORS.emotionNeutralLight,
   },
   moodDotGreen: {
-    backgroundColor: '#B4E7CE',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   moodDetailLabel: {
     fontSize: 15,
@@ -1090,12 +1091,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#ffd93d',
+    borderLeftColor: COLORS.emotionNeutral,
   },
   keywordSummaryTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#f57c00',
+    color: COLORS.emotionNeutral,
     marginBottom: 12,
   },
   keywordSummaryText: {
@@ -1136,12 +1137,12 @@ const styles = StyleSheet.create({
     width: 24,
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: COLORS.emotionPositive,
     marginRight: 12,
   },
   tagRankTop3: {
     fontSize: 18,
-    color: '#f57c00',
+    color: COLORS.emotionNeutral,
   },
   tagText: {
     flex: 1,
@@ -1193,7 +1194,7 @@ const styles = StyleSheet.create({
     padding: 32,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#4CAF50',
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -1221,13 +1222,13 @@ const styles = StyleSheet.create({
   },
   generateInfo: {
     fontSize: 13,
-    color: '#4CAF50',
+    color: COLORS.emotionPositive,
     marginBottom: 20,
     textAlign: 'center',
     lineHeight: 18,
   },
   generateButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.emotionPositive,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -1246,7 +1247,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: COLORS.emotionPositive,
   },
   infoHeader: {
     flexDirection: 'row',
@@ -1256,7 +1257,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: '#2E7D32',
+    color: COLORS.emotionPositive,
     lineHeight: 18,
   },
   modalOverlay: {

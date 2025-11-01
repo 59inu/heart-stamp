@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS } from '../constants/colors';
 
 const PUSH_TOKEN_KEY = '@stamp_diary:push_token';
 
@@ -53,7 +54,7 @@ export class NotificationService {
           name: 'default',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#4CAF50',
+          lightColor: COLORS.primary,
         });
       }
 

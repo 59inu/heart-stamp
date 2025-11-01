@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { GUIDE_STEPS } from '../constants/guide';
+import { COLORS } from '../constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   },
   example: {
     fontSize: 15,
-    color: '#4CAF50',
+    color: COLORS.primary,
     fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 12,
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   },
   indicatorActive: {
     width: 24,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
   },
   startButtonContainer: {
     width: '100%',
@@ -156,11 +157,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   startButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 20,
-    shadowColor: '#4CAF50',
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 4,

@@ -8,6 +8,7 @@ import {
   Linking,
 } from 'react-native';
 import { SURVEY_URL, SURVEY_BENEFIT } from '../constants/survey';
+import { COLORS } from '../constants/colors';
 
 interface SurveyModalProps {
   visible: boolean;
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: COLORS.primary,
   },
   infoRow: {
     flexDirection: 'row',
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
   },
   participateButtonText: {

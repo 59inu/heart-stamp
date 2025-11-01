@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CONTACT_FORM_URL } from '../constants/faq';
+import { COLORS } from '../constants/colors';
 
 interface ContactModalProps {
   visible: boolean;
@@ -50,7 +51,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             activeOpacity={0.7}
           >
             <View style={styles.optionIcon}>
-              <Ionicons name="book-outline" size={24} color="#4CAF50" />
+              <Ionicons name="book-outline" size={24} color={COLORS.secondary} />
             </View>
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>자주 묻는 질문</Text>
@@ -67,7 +68,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             activeOpacity={0.7}
           >
             <View style={styles.optionIcon}>
-              <Ionicons name="mail-outline" size={24} color="#4CAF50" />
+              <Ionicons name="mail-outline" size={24} color={COLORS.secondary} />
             </View>
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>문의하기</Text>
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: COLORS.secondaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

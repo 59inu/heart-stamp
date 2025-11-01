@@ -18,6 +18,7 @@ import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
 import { DiaryStorage } from '../services/diaryStorage';
+import { COLORS } from '../constants/colors';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -105,8 +106,8 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={notificationEnabled}
               onValueChange={setNotificationEnabled}
-              trackColor={{ false: '#d0d0d0', true: '#A5D6A7' }}
-              thumbColor={notificationEnabled ? '#4CAF50' : '#f4f3f4'}
+              trackColor={{ false: '#d0d0d0', true: COLORS.secondaryLight }}
+              thumbColor={notificationEnabled ? COLORS.secondary : '#f4f3f4'}
             />
           </View>
 
@@ -120,8 +121,8 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={dailyReminderEnabled}
               onValueChange={setDailyReminderEnabled}
-              trackColor={{ false: '#d0d0d0', true: '#A5D6A7' }}
-              thumbColor={dailyReminderEnabled ? '#4CAF50' : '#f4f3f4'}
+              trackColor={{ false: '#d0d0d0', true: COLORS.secondaryLight }}
+              thumbColor={dailyReminderEnabled ? COLORS.secondary : '#f4f3f4'}
             />
           </View>
         </View>
@@ -131,7 +132,7 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>데이터 관리</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataBackup}>
-            <Ionicons name="cloud-upload-outline" size={24} color="#4CAF50" />
+            <Ionicons name="cloud-upload-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>데이터 백업</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -140,7 +141,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataRestore}>
-            <Ionicons name="cloud-download-outline" size={24} color="#4CAF50" />
+            <Ionicons name="cloud-download-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>데이터 복원</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -149,7 +150,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
-            <Ionicons name="document-text-outline" size={24} color="#4CAF50" />
+            <Ionicons name="document-text-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>일기 내보내기</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -194,19 +195,19 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>정보 및 지원</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleUserGuide}>
-            <Ionicons name="book-outline" size={24} color="#4CAF50" />
+            <Ionicons name="book-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>사용 가이드</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleFeedback}>
-            <Ionicons name="help-circle-outline" size={24} color="#4CAF50" />
+            <Ionicons name="help-circle-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>FAQ / 문의하기</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
-            <Ionicons name="shield-checkmark-outline" size={24} color="#4CAF50" />
+            <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>개인정보 처리방침</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -215,7 +216,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
 
           <View style={styles.menuItem}>
-            <Ionicons name="information-circle-outline" size={24} color="#4CAF50" />
+            <Ionicons name="information-circle-outline" size={24} color={COLORS.secondary} />
             <Text style={styles.menuItemText}>앱 버전</Text>
             <Text style={styles.versionText}>{appVersion}</Text>
           </View>
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   },
   completedText: {
     fontSize: 13,
-    color: '#4CAF50',
+    color: COLORS.secondary,
     fontWeight: '600',
   },
   comingSoonBadge: {

@@ -25,6 +25,7 @@ import { OnboardingService } from '../services/onboardingService';
 import { FirstVisitGuide } from '../components/FirstVisitGuide';
 import { logger } from '../utils/logger';
 import { CALENDAR_MARKING_STYLES } from '../constants/calendarStyles';
+import { COLORS } from '../constants/colors';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -292,7 +293,7 @@ export const DiaryListScreen: React.FC = () => {
                 onPress={() => handleYearChange(-1)}
                 style={styles.yearArrowButton}
               >
-                <Ionicons name="chevron-back" size={24} color="#4CAF50" />
+                <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
               </TouchableOpacity>
 
               <Text style={styles.modalTitle}>{currentYear}년</Text>
@@ -301,7 +302,7 @@ export const DiaryListScreen: React.FC = () => {
                 onPress={() => handleYearChange(1)}
                 style={styles.yearArrowButton}
               >
-                <Ionicons name="chevron-forward" size={24} color="#4CAF50" />
+                <Ionicons name="chevron-forward" size={24} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
 
@@ -416,10 +417,10 @@ export const DiaryListScreen: React.FC = () => {
           );
         }}
         theme={{
-          selectedDayBackgroundColor: '#4CAF50',
-          todayTextColor: '#4CAF50',
-          arrowColor: '#4CAF50',
-          dotColor: '#4CAF50',
+          selectedDayBackgroundColor: COLORS.primary,
+          todayTextColor: COLORS.primary,
+          arrowColor: COLORS.primary,
+          dotColor: COLORS.primary,
           textDayFontWeight: '300',
           textDayFontSize: 16,
           textMonthFontWeight: 'bold',
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   writeButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -640,7 +641,7 @@ const styles = StyleSheet.create({
     padding: 16,
     position: 'relative',
     // iOS 그림자
-    shadowColor: '#4CAF50',
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -668,13 +669,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   aiCommentPreview: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: COLORS.secondaryLight,
     padding: 12,
     borderRadius: 8,
   },
   aiCommentLabel: {
     fontSize: 12,
-    color: '#1976d2',
+    color: COLORS.secondary,
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -706,13 +707,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   moodRed: {
-    backgroundColor: '#FFB3BA',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   moodYellow: {
-    backgroundColor: '#FFF4B0',
+    backgroundColor: COLORS.emotionNeutralLight,
   },
   moodGreen: {
-    backgroundColor: '#B4E7CE',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   moodTagText: {
     fontSize: 12,
@@ -791,7 +792,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pickerItemSelected: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
   },
   pickerItemText: {
     fontSize: 16,
@@ -826,13 +827,13 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   moodStatsRed: {
-    backgroundColor: '#FFB3BA',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   moodStatsYellow: {
-    backgroundColor: '#FFF4B0',
+    backgroundColor: COLORS.emotionNeutralLight,
   },
   moodStatsGreen: {
-    backgroundColor: '#B4E7CE',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   floatingButton: {
     position: 'absolute',
@@ -841,7 +842,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

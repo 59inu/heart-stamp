@@ -3,16 +3,18 @@
  * Prevents inline object creation in render cycles
  */
 
+import { COLORS } from './colors';
+
 export const CALENDAR_MARKING_STYLES = {
   // 선택된 날짜 스타일 (코멘트 있음)
   selectedWithComment: {
     customStyles: {
       container: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: COLORS.primary, // 따뜻한 베이지
         borderRadius: 16,
       },
       text: {
-        color: '#FFDAB9', // 피치색
+        color: '#fff',
         fontWeight: 'bold' as const,
       },
     },
@@ -22,7 +24,7 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithoutComment: {
     customStyles: {
       container: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: COLORS.primary, // 따뜻한 베이지
         borderRadius: 16,
       },
       text: {
@@ -36,7 +38,7 @@ export const CALENDAR_MARKING_STYLES = {
   selectedEmpty: {
     customStyles: {
       container: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: COLORS.primary, // 따뜻한 베이지
         borderRadius: 16,
       },
       text: {
@@ -50,11 +52,11 @@ export const CALENDAR_MARKING_STYLES = {
   withComment: {
     customStyles: {
       container: {
-        backgroundColor: '#FFDAB9',
+        backgroundColor: COLORS.secondary, // 부드러운 퍼플 - AI 피드백 강조
         borderRadius: 16,
       },
       text: {
-        color: '#000',
+        color: '#fff',
         fontWeight: 'bold' as const,
       },
     },

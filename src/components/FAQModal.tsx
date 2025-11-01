@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FAQ_LIST } from '../constants/faq';
+import { COLORS } from '../constants/colors';
 
 interface FAQModalProps {
   visible: boolean;
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.primary,
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',

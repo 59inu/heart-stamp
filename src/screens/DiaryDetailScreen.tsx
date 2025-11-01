@@ -22,6 +22,7 @@ import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
 import { getStampImage } from '../utils/stampUtils';
 import { logger } from '../utils/logger';
+import { COLORS } from '../constants/colors';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
@@ -327,12 +328,12 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     fontSize: 16,
-    color: '#f44336',
+    color: COLORS.error,
     fontWeight: '600',
   },
   editButton: {
     fontSize: 16,
-    color: '#4CAF50',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   content: {
@@ -368,13 +369,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   moodRed: {
-    backgroundColor: '#FFB3BA',
+    backgroundColor: COLORS.emotionNegativeLight,
   },
   moodYellow: {
-    backgroundColor: '#FFF4B0',
+    backgroundColor: COLORS.emotionNeutralLight,
   },
   moodGreen: {
-    backgroundColor: '#B4E7CE',
+    backgroundColor: COLORS.emotionPositiveLight,
   },
   moodTagText: {
     fontSize: 14,
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
   },
   aiSection: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: COLORS.secondaryLight,
     margin: 16,
     padding: 16,
     borderRadius: 12,
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
   aiTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1976d2',
+    color: COLORS.secondary,
   },
   stampContainer: {
     backgroundColor: '#fff',
