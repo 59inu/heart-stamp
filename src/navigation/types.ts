@@ -4,4 +4,6 @@ export type RootStackParamList = {
   DiaryList: undefined;
   DiaryWrite: { entryId?: string; date?: Date };
   DiaryDetail: { entryId: string };
+  Report: undefined;
+  Settings: undefined;
 };

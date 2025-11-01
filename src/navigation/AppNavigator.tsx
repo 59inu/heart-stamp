@@ -5,6 +5,8 @@ import { RootStackParamList } from './types';
 import { DiaryListScreen } from '../screens/DiaryListScreen';
 import { DiaryWriteScreen } from '../screens/DiaryWriteScreen';
 import { DiaryDetailScreen } from '../screens/DiaryDetailScreen';
+import { ReportScreen } from '../screens/ReportScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -20,6 +22,8 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="DiaryList" component={DiaryListScreen} />
         <Stack.Screen name="DiaryWrite" component={DiaryWriteScreen} />
         <Stack.Screen name="DiaryDetail" component={DiaryDetailScreen} />
+        <Stack.Screen name="Report" component={ReportScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
