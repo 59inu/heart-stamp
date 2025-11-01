@@ -21,6 +21,8 @@ import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
 import { getStampImage } from '../utils/stampUtils';
+import { OnboardingService } from '../services/onboardingService';
+import { FirstVisitGuide } from '../components/FirstVisitGuide';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -32,6 +34,7 @@ export const DiaryListScreen: React.FC = () => {
   );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
@@ -76,8 +79,22 @@ export const DiaryListScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadDiaries();
+
+      // 첫 방문 온보딩 체크
+      const checkOnboarding = async () => {
+        const completed = await OnboardingService.hasCompletedOnboarding();
+        if (!completed) {
+          setShowOnboarding(true);
+        }
+      };
+      checkOnboarding();
     }, [loadDiaries])
   );
+
+  const handleOnboardingComplete = async () => {
+    await OnboardingService.markOnboardingCompleted();
+    setShowOnboarding(false);
+  };
 
   // 캘린더에 표시할 날짜 마킹
   const markedDates = useMemo(() => {
@@ -355,11 +372,17 @@ export const DiaryListScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="menu" size={28} color="#333" />
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Ionicons name="settings" size={26} color="#333" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="stats-chart" size={24} color="#333" />
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigation.navigate('Report')}
+        >
+          <Ionicons name="stats-chart" size={26} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -521,13 +544,28 @@ export const DiaryListScreen: React.FC = () => {
                   {selectedDiary.aiComment}
                 </Text>
               </View>
-            ) : (
-              <View style={styles.noAiCommentPreview}>
-                <Text style={styles.noAiCommentPreviewText}>
-                  선생님이 일기를 읽고 있어요📖
-                </Text>
-              </View>
-            )}
+            ) : (() => {
+              // 일기 날짜와 현재 날짜 비교
+              const entryDate = new Date(selectedDiary.date);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              entryDate.setHours(0, 0, 0, 0);
+
+              const isToday = entryDate.getTime() === today.getTime();
+
+              // 오늘 일기만 대기 메시지 표시
+              if (isToday) {
+                return (
+                  <View style={styles.noAiCommentPreview}>
+                    <Text style={styles.noAiCommentPreviewText}>
+                      선생님이 일기를 읽고 있어요📖
+                    </Text>
+                  </View>
+                );
+              }
+
+              return null;
+            })()}
           </TouchableOpacity>
         ) : (
           <View style={styles.noDiaryContainer}>
@@ -559,6 +597,12 @@ export const DiaryListScreen: React.FC = () => {
           <Ionicons name="create" size={28} color="#fff" />
         </TouchableOpacity>
       )}
+
+      {/* 첫 방문 온보딩 */}
+      <FirstVisitGuide
+        visible={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
     </SafeAreaView>
   );
 };
