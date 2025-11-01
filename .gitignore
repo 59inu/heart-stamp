@@ -28,6 +28,9 @@ yarn-error.*
 
 # macOS
 .DS_Store
+
+# Uploaded images
+backend/uploads/
 *.pem
 
 # local env files

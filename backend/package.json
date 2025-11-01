@@ -15,11 +15,13 @@
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
+    "@types/multer": "^2.0.0",
     "better-sqlite3": "^12.4.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "expo-server-sdk": "^4.0.0",
     "express": "^5.1.0",
+    "multer": "^2.0.2",
     "node-cron": "^4.2.1"
   },
   "devDependencies": {

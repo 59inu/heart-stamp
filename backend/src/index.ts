@@ -1,7 +1,10 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
+import reportRoutes, { initializeReportService } from './routes/reportRoutes';
+import imageRoutes from './routes/imageRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { PushNotificationService } from './services/pushNotificationService';
@@ -16,6 +19,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// 정적 파일 서빙: /uploads 폴더의 이미지 파일 제공
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Stamp Diary Backend is running' });
@@ -23,6 +29,8 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api', diaryRoutes);
+app.use('/api', reportRoutes);
+app.use('/api', imageRoutes);
 
 // Initialize Claude Service
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || 'mock-api-key-for-testing';
@@ -34,6 +42,7 @@ if (!process.env.CLAUDE_API_KEY) {
 }
 
 initializeClaudeService(CLAUDE_API_KEY);
+initializeReportService(CLAUDE_API_KEY);
 const claudeService = new ClaudeService(CLAUDE_API_KEY);
 
 // Initialize Push Notification Service
