@@ -41,6 +41,9 @@ backend/.env
 # typescript
 *.tsbuildinfo
 
+# testing
+coverage/
+
 # generated native folders
 /ios
 /android
