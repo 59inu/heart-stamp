@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { Ionicons } from '@expo/vector-icons';
 import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
@@ -22,6 +24,48 @@ import { getStampImage } from '../utils/stampUtils';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
+
+// 원고지 스타일 컴포넌트
+const ManuscriptPaper: React.FC<{ content: string }> = ({ content }) => {
+  // 텍스트를 한 글자씩 분리 (공백과 줄바꿈 포함)
+  const characters = content.split('');
+
+  // 한 줄에 들어가는 칸 개수 계산 (화면 너비 기준)
+  const cellWidth = 22;
+  const screenWidth = Dimensions.get('window').width;
+  const horizontalPadding = 8 * 2 + 4 * 2; // diaryContent padding + manuscriptContainer padding
+  const availableWidth = screenWidth - horizontalPadding;
+  const cellsPerRow = Math.floor(availableWidth / cellWidth);
+
+  // 마지막 줄을 채우기 위한 빈 칸 계산
+  const totalCells = characters.length;
+  const lastRowCells = totalCells % cellsPerRow;
+  const emptyCellsNeeded = lastRowCells > 0 ? cellsPerRow - lastRowCells : 0;
+
+  console.log('Screen width:', screenWidth);
+  console.log('Available width:', availableWidth);
+  console.log('Cells per row:', cellsPerRow);
+  console.log('Total cells:', totalCells);
+  console.log('Empty cells needed:', emptyCellsNeeded);
+
+  return (
+    <View style={styles.manuscriptContainer}>
+      {characters.map((char, index) => (
+        <View key={`char-${index}`} style={styles.manuscriptCell}>
+          <Text style={styles.manuscriptChar}>
+            {char === '\n' ? '' : char}
+          </Text>
+        </View>
+      ))}
+      {/* 마지막 줄 빈 칸 채우기 */}
+      {Array.from({ length: emptyCellsNeeded }).map((_, index) => (
+        <View key={`empty-${index}`} style={styles.manuscriptCell}>
+          <Text style={styles.manuscriptChar}> </Text>
+        </View>
+      ))}
+    </View>
+  );
+};
 
 export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -116,8 +160,8 @@ export const DiaryDetailScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← 뒤로</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={handleDelete} style={styles.deleteButtonContainer}>
@@ -158,8 +202,28 @@ export const DiaryDetailScreen: React.FC = () => {
           )}
         </View>
 
+        {/* 이미지 섹션 */}
+        {entry.imageUri && (
+          <View style={styles.imageSection}>
+            <Image
+              source={{ uri: entry.imageUri }}
+              style={styles.diaryImage}
+              resizeMode="cover"
+            />
+          </View>
+        )}
+        {!entry.imageUri && (
+          <View style={styles.imagePlaceholderSection}>
+            <Image
+              source={require('../../assets/image-placeholder.png')}
+              style={styles.placeholderImage}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
         <View style={styles.diaryContent}>
-          <Text style={styles.contentText}>{entry.content}</Text>
+          <ManuscriptPaper content={entry.content} />
         </View>
 
         {entry.aiComment && (
@@ -180,13 +244,28 @@ export const DiaryDetailScreen: React.FC = () => {
           </View>
         )}
 
-        {!entry.aiComment && (
-          <View style={styles.noAiComment}>
-            <Text style={styles.noAiCommentText}>
-              밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙
-            </Text>
-          </View>
-        )}
+        {!entry.aiComment && (() => {
+          // 일기 날짜와 현재 날짜 비교
+          const entryDate = new Date(entry.date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          entryDate.setHours(0, 0, 0, 0);
+
+          const isToday = entryDate.getTime() === today.getTime();
+
+          // 오늘 일기만 대기 메시지 표시
+          if (isToday) {
+            return (
+              <View style={styles.noAiComment}>
+                <Text style={styles.noAiCommentText}>
+                  밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙
+                </Text>
+              </View>
+            );
+          }
+
+          return null;
+        })()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -206,8 +285,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
   },
   backButton: {
-    fontSize: 16,
-    color: '#666',
+    padding: 4,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -273,13 +351,56 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
+  imageSection: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#f5f5f5',
+  },
+  diaryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePlaceholderSection: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.5,
+  },
   diaryContent: {
-    padding: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 16,
   },
   contentText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#333',
+  },
+  manuscriptContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#fffef8',
+    padding: 4,
+    borderRadius: 8,
+  },
+  manuscriptCell: {
+    width: 22,
+    height: 20,
+    borderWidth: 0.5,
+    borderColor: '#e0d5c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fffef8',
+  },
+  manuscriptChar: {
+    fontSize: 12,
+    color: '#333',
+    fontFamily: 'System',
   },
   aiSection: {
     backgroundColor: '#e3f2fd',

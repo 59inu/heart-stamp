@@ -10,6 +10,7 @@ export interface DiaryEntry {
   weather?: WeatherType;
   mood?: MoodType;
   moodTag?: string;
+  imageUri?: string;
   aiComment?: string;
   stampType?: StampType;
   createdAt: string;

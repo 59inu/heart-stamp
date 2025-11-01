@@ -18,12 +18,17 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { DiaryEntry, WeatherType, MoodType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { apiService } from '../services/apiService';
 import { DiaryStorage } from '../services/diaryStorage';
 import { WeatherService } from '../services/weatherService';
 import { getStampImage } from '../utils/stampUtils';
+import { SurveyModal } from '../components/SurveyModal';
+import { SurveyService } from '../services/surveyService';
+import { SURVEY_TRIGGER_COUNT } from '../constants/survey';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryWrite'>;
 type DiaryWriteRouteProp = RouteProp<RootStackParamList, 'DiaryWrite'>;
@@ -42,9 +47,13 @@ export const DiaryWriteScreen: React.FC = () => {
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
 
   const entryId = route.params?.entryId;
   const MAX_CHARS = 700;
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
   const weatherOptions: WeatherType[] = ['sunny', 'cloudy', 'rainy', 'snowy', 'stormy'];
 
@@ -58,22 +67,43 @@ export const DiaryWriteScreen: React.FC = () => {
   useEffect(() => {
     const loadEntry = async () => {
       if (entryId) {
+        // entryId가 있으면 해당 일기 불러오기
         const entry = await DiaryStorage.getById(entryId);
         if (entry) {
           setExistingEntry(entry);
           setContent(entry.content);
-          setSelectedDate(new Date(entry.date));
           setWeather(entry.weather || null);
           setSelectedMood(entry.mood || null);
           setSelectedMoodTag(entry.moodTag || null);
+          setImageUri(entry.imageUri || null);
+          setSelectedDate(new Date(entry.date)); // 기존 일기의 날짜로 설정
         }
       } else {
-        // 새 일기: 자동으로 현재 날씨 가져오기
-        fetchWeather();
+        // entryId가 없으면 날짜로 기존 일기 확인
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const allEntries = await DiaryStorage.getAll();
+        const existingForDate = allEntries.find(
+          (e) => format(new Date(e.date), 'yyyy-MM-dd') === dateStr
+        );
+
+        if (existingForDate) {
+          // 해당 날짜에 일기가 있으면 수정 모드로 전환
+          setExistingEntry(existingForDate);
+          setContent(existingForDate.content);
+          setWeather(existingForDate.weather || null);
+          setSelectedMood(existingForDate.mood || null);
+          setSelectedMoodTag(existingForDate.moodTag || null);
+          setImageUri(existingForDate.imageUri || null);
+        } else {
+          // 새 일기: 자동으로 현재 날씨 가져오기
+          fetchWeather();
+        }
       }
     };
     loadEntry();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryId]);
+
 
   const fetchWeather = async () => {
     setLoadingWeather(true);
@@ -82,6 +112,65 @@ export const DiaryWriteScreen: React.FC = () => {
       setWeather(currentWeather);
     }
     setLoadingWeather(false);
+  };
+
+  const pickImage = async () => {
+    // 권한 요청
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
+      return;
+    }
+
+    // 이미지 선택
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7, // 압축 품질
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const selectedImage = result.assets[0];
+
+      // 파일 크기 체크
+      if (selectedImage.fileSize && selectedImage.fileSize > MAX_IMAGE_SIZE) {
+        Alert.alert(
+          '파일 크기 초과',
+          `이미지 크기는 최대 5MB까지 가능합니다.\n현재 크기: ${(selectedImage.fileSize / 1024 / 1024).toFixed(2)}MB`
+        );
+        return;
+      }
+
+      // 서버에 이미지 업로드
+      setUploadingImage(true);
+      const serverImageUrl = await apiService.uploadImage(selectedImage.uri);
+      setUploadingImage(false);
+
+      if (serverImageUrl) {
+        setImageUri(serverImageUrl);
+      } else {
+        Alert.alert('업로드 실패', '이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+      }
+    }
+  };
+
+  const removeImage = () => {
+    Alert.alert(
+      '이미지 삭제',
+      '사진을 삭제하시겠어요?',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => setImageUri(null),
+        },
+      ]
+    );
   };
 
   const handleSave = () => {
@@ -103,6 +192,7 @@ export const DiaryWriteScreen: React.FC = () => {
         weather: weather || undefined,
         mood: selectedMood || undefined,
         moodTag: selectedMoodTag || undefined,
+        imageUri: imageUri || undefined,
         syncedWithServer: false,
       });
       savedEntry = updated!;
@@ -113,8 +203,13 @@ export const DiaryWriteScreen: React.FC = () => {
         weather: weather || undefined,
         mood: selectedMood || undefined,
         moodTag: selectedMoodTag || undefined,
+        imageUri: imageUri || undefined,
         syncedWithServer: false,
       });
+
+      // 새 일기 작성 시에만 카운트 증가
+      const newCount = await SurveyService.incrementDiaryCount();
+      console.log(`📝 일기 작성 횟수: ${newCount}`);
     }
 
     // Upload to server
@@ -127,6 +222,19 @@ export const DiaryWriteScreen: React.FC = () => {
 
     // 모달 닫기
     setShowMoodModal(false);
+
+    // 설문조사 모달 체크 (새 일기 작성 시에만)
+    if (!existingEntry) {
+      const hasShown = await SurveyService.hasShownSurvey();
+      const diaryCount = await SurveyService.getDiaryWriteCount();
+
+      if (!hasShown && diaryCount >= SURVEY_TRIGGER_COUNT) {
+        // 저장 완료 알림 후 설문조사 모달 표시
+        setTimeout(() => {
+          setShowSurveyModal(true);
+        }, 500);
+      }
+    }
 
     // 과거 날짜인지 확인
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -142,6 +250,17 @@ export const DiaryWriteScreen: React.FC = () => {
     ]);
   };
 
+  const handleSurveyClose = async () => {
+    await SurveyService.markSurveyShown();
+    setShowSurveyModal(false);
+  };
+
+  const handleSurveyParticipate = async () => {
+    await SurveyService.markSurveyShown();
+    await SurveyService.markSurveyCompleted();
+    setShowSurveyModal(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -153,7 +272,7 @@ export const DiaryWriteScreen: React.FC = () => {
             <Text style={styles.cancelButton}>취소</Text>
           </TouchableOpacity>
           <Text style={styles.dateText}>
-            {format(selectedDate, 'yyyy년 MM월 dd일 (E)', { locale: ko })}
+            {format(existingEntry ? new Date(existingEntry.date) : selectedDate, 'yyyy년 MM월 dd일 (E)', { locale: ko })}
           </Text>
           <TouchableOpacity onPress={handleSave}>
             <Text style={styles.saveButton}>저장</Text>
@@ -192,23 +311,66 @@ export const DiaryWriteScreen: React.FC = () => {
           )}
         </View>
 
-        <View style={styles.editorContainer}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="오늘 하루는 어땠나요?"
-            placeholderTextColor="#999"
-            multiline
-            value={content}
-            onChangeText={setContent}
-            maxLength={MAX_CHARS}
-            autoFocus
-          />
-          <View style={styles.charCountContainer}>
-            <Text style={styles.charCount}>
-              {content.length} / {MAX_CHARS}
-            </Text>
+        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* 이미지 영역 */}
+          <TouchableOpacity
+            style={styles.imageContainer}
+            onPress={pickImage}
+            activeOpacity={0.7}
+            disabled={uploadingImage}
+          >
+            <Image
+              source={
+                imageUri
+                  ? { uri: imageUri }
+                  : require('../../assets/image-placeholder.png')
+              }
+              style={[
+                styles.diaryImage,
+                !imageUri && styles.placeholderImage,
+              ]}
+              resizeMode={imageUri ? 'cover' : 'contain'}
+            />
+            {uploadingImage && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="large" color="#4CAF50" />
+                <Text style={styles.uploadingText}>업로드 중...</Text>
+              </View>
+            )}
+            {!imageUri && !uploadingImage && (
+              <View style={styles.imagePlaceholderOverlay}>
+                <Text style={styles.imagePlaceholderText}>탭하여 사진 추가</Text>
+              </View>
+            )}
+            {imageUri && !uploadingImage && (
+              <TouchableOpacity
+                style={styles.imageDeleteButton}
+                onPress={removeImage}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.imageDeleteIcon}>×</Text>
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.editorContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="오늘 하루는 어땠나요?"
+              placeholderTextColor="#999"
+              multiline
+              value={content}
+              onChangeText={setContent}
+              maxLength={MAX_CHARS}
+              autoFocus
+            />
+            <View style={styles.charCountContainer}>
+              <Text style={styles.charCount}>
+                {content.length} / {MAX_CHARS}
+              </Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {/* 기분 선택 모달 */}
@@ -230,8 +392,11 @@ export const DiaryWriteScreen: React.FC = () => {
                   selectedMood === 'red' ? styles.trafficLightRedSelected : styles.trafficLightRed,
                 ]}
                 onPress={() => {
+                  // 다른 신호등으로 변경할 때만 태그 리셋
+                  if (selectedMood !== 'red') {
+                    setSelectedMoodTag(null);
+                  }
                   setSelectedMood('red');
-                  setSelectedMoodTag(null);
                 }}
               >
                 <View style={styles.trafficLightCircle} />
@@ -243,8 +408,11 @@ export const DiaryWriteScreen: React.FC = () => {
                   selectedMood === 'yellow' ? styles.trafficLightYellowSelected : styles.trafficLightYellow,
                 ]}
                 onPress={() => {
+                  // 다른 신호등으로 변경할 때만 태그 리셋
+                  if (selectedMood !== 'yellow') {
+                    setSelectedMoodTag(null);
+                  }
                   setSelectedMood('yellow');
-                  setSelectedMoodTag(null);
                 }}
               >
                 <View style={styles.trafficLightCircle} />
@@ -256,8 +424,11 @@ export const DiaryWriteScreen: React.FC = () => {
                   selectedMood === 'green' ? styles.trafficLightGreenSelected : styles.trafficLightGreen,
                 ]}
                 onPress={() => {
+                  // 다른 신호등으로 변경할 때만 태그 리셋
+                  if (selectedMood !== 'green') {
+                    setSelectedMoodTag(null);
+                  }
                   setSelectedMood('green');
-                  setSelectedMoodTag(null);
                 }}
               >
                 <View style={styles.trafficLightCircle} />
@@ -265,30 +436,36 @@ export const DiaryWriteScreen: React.FC = () => {
             </View>
 
             {/* 감정 태그 */}
-            {selectedMood && (
+            {selectedMood ? (
               <ScrollView style={styles.moodTagScroll}>
                 <View style={styles.moodTagContainer}>
-                  {moodTags[selectedMood].map((tag) => (
-                    <TouchableOpacity
-                      key={tag}
-                      style={[
-                        styles.moodTag,
-                        selectedMoodTag === tag && styles.moodTagSelected,
-                      ]}
-                      onPress={() => setSelectedMoodTag(tag)}
-                    >
-                      <Text
+                  {moodTags[selectedMood].map((tag) => {
+                    const isSelected = selectedMoodTag === tag;
+                    return (
+                      <TouchableOpacity
+                        key={tag}
                         style={[
-                          styles.moodTagText,
-                          selectedMoodTag === tag && styles.moodTagTextSelected,
+                          styles.moodTag,
+                          isSelected && styles.moodTagSelected,
                         ]}
+                        onPress={() => setSelectedMoodTag(tag)}
+                        activeOpacity={0.7}
                       >
-                        {tag}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.moodTagText,
+                            isSelected && styles.moodTagTextSelected,
+                          ]}
+                        >
+                          {tag}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </ScrollView>
+            ) : (
+              <Text style={styles.moodTagPlaceholder}>신호등을 선택해주세요</Text>
             )}
 
             {/* 버튼 */}
@@ -309,6 +486,13 @@ export const DiaryWriteScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* 설문조사 모달 */}
+      <SurveyModal
+        visible={showSurveyModal}
+        onClose={handleSurveyClose}
+        onParticipate={handleSurveyParticipate}
+      />
     </SafeAreaView>
   );
 };
@@ -340,6 +524,70 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#f5f5f5',
+    position: 'relative',
+  },
+  diaryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderImage: {
+    opacity: 0.3,
+  },
+  imagePlaceholderOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  imagePlaceholderText: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '500',
+  },
+  imageDeleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageDeleteIcon: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadingText: {
+    marginTop: 12,
+    fontSize: 14,
     color: '#4CAF50',
     fontWeight: '600',
   },
@@ -540,6 +788,12 @@ const styles = StyleSheet.create({
   moodTagTextSelected: {
     color: '#4CAF50',
     fontWeight: '600',
+  },
+  moodTagPlaceholder: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#999',
+    paddingVertical: 20,
   },
   moodModalButtons: {
     flexDirection: 'row',
