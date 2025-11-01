@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import { getStampImage } from '../utils/stampUtils';
 import { SurveyModal } from '../components/SurveyModal';
 import { SurveyService } from '../services/surveyService';
 import { SURVEY_TRIGGER_COUNT } from '../constants/survey';
+import { logger } from '../utils/logger';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryWrite'>;
 type DiaryWriteRouteProp = RouteProp<RootStackParamList, 'DiaryWrite'>;
@@ -101,18 +102,17 @@ export const DiaryWriteScreen: React.FC = () => {
       }
     };
     loadEntry();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryId]);
+  }, [entryId, selectedDate, fetchWeather]);
 
 
-  const fetchWeather = async () => {
+  const fetchWeather = useCallback(async () => {
     setLoadingWeather(true);
     const currentWeather = await WeatherService.getCurrentWeather();
     if (currentWeather) {
       setWeather(currentWeather);
     }
     setLoadingWeather(false);
-  };
+  }, []);
 
   const pickImage = async () => {
     // 권한 요청
@@ -209,7 +209,7 @@ export const DiaryWriteScreen: React.FC = () => {
 
       // 새 일기 작성 시에만 카운트 증가
       const newCount = await SurveyService.incrementDiaryCount();
-      console.log(`📝 일기 작성 횟수: ${newCount}`);
+      logger.log(`📝 일기 작성 횟수: ${newCount}`);
     }
 
     // Upload to server

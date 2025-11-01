@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,32 +21,32 @@ import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
 import { getStampImage } from '../utils/stampUtils';
+import { logger } from '../utils/logger';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
 
-// 원고지 스타일 컴포넌트
-const ManuscriptPaper: React.FC<{ content: string }> = ({ content }) => {
-  // 텍스트를 한 글자씩 분리 (공백과 줄바꿈 포함)
-  const characters = content.split('');
+// 원고지 계산 상수 (한 번만 계산)
+const CELL_WIDTH = 22;
+const HORIZONTAL_PADDING = 8 * 2 + 4 * 2; // diaryContent padding + manuscriptContainer padding
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const AVAILABLE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING;
+const CELLS_PER_ROW = Math.floor(AVAILABLE_WIDTH / CELL_WIDTH);
 
-  // 한 줄에 들어가는 칸 개수 계산 (화면 너비 기준)
-  const cellWidth = 22;
-  const screenWidth = Dimensions.get('window').width;
-  const horizontalPadding = 8 * 2 + 4 * 2; // diaryContent padding + manuscriptContainer padding
-  const availableWidth = screenWidth - horizontalPadding;
-  const cellsPerRow = Math.floor(availableWidth / cellWidth);
+// 원고지 스타일 컴포넌트 (React.memo로 최적화)
+const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) => {
+  // 텍스트를 한 글자씩 분리하고 빈 칸 계산 (useMemo로 최적화)
+  const { characters, emptyCellsNeeded } = React.useMemo(() => {
+    const chars = content.split('');
+    const totalCells = chars.length;
+    const lastRowCells = totalCells % CELLS_PER_ROW;
+    const empty = lastRowCells > 0 ? CELLS_PER_ROW - lastRowCells : 0;
 
-  // 마지막 줄을 채우기 위한 빈 칸 계산
-  const totalCells = characters.length;
-  const lastRowCells = totalCells % cellsPerRow;
-  const emptyCellsNeeded = lastRowCells > 0 ? cellsPerRow - lastRowCells : 0;
-
-  console.log('Screen width:', screenWidth);
-  console.log('Available width:', availableWidth);
-  console.log('Cells per row:', cellsPerRow);
-  console.log('Total cells:', totalCells);
-  console.log('Empty cells needed:', emptyCellsNeeded);
+    return {
+      characters: chars,
+      emptyCellsNeeded: empty,
+    };
+  }, [content]);
 
   return (
     <View style={styles.manuscriptContainer}>
@@ -65,7 +65,7 @@ const ManuscriptPaper: React.FC<{ content: string }> = ({ content }) => {
       ))}
     </View>
   );
-};
+});
 
 export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -73,31 +73,57 @@ export const DiaryDetailScreen: React.FC = () => {
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
 
   const loadEntry = useCallback(async () => {
-    let diary = await DiaryStorage.getById(route.params.entryId);
+    let cancelled = false;
 
-    // 서버에서 AI 코멘트 동기화
-    if (diary && !diary.aiComment) {
-      try {
-        const serverData = await apiService.syncDiaryFromServer(diary._id);
-        if (serverData && serverData.aiComment) {
-          await DiaryStorage.update(diary._id, {
-            aiComment: serverData.aiComment,
-            stampType: serverData.stampType as StampType,
-          });
-          // 다시 로드
-          diary = await DiaryStorage.getById(route.params.entryId);
+    const fetchData = async () => {
+      let diary = await DiaryStorage.getById(route.params.entryId);
+
+      // Check cancellation before making API call
+      if (cancelled) return;
+
+      // 서버에서 AI 코멘트 동기화
+      if (diary && !diary.aiComment) {
+        try {
+          const serverData = await apiService.syncDiaryFromServer(diary._id);
+
+          // Check cancellation after async operation
+          if (cancelled) return;
+
+          if (serverData && serverData.aiComment) {
+            await DiaryStorage.update(diary._id, {
+              aiComment: serverData.aiComment,
+              stampType: serverData.stampType as StampType,
+            });
+
+            // Check cancellation before final fetch
+            if (cancelled) return;
+
+            // 다시 로드
+            diary = await DiaryStorage.getById(route.params.entryId);
+          }
+        } catch (error) {
+          logger.debug('서버 동기화 오류 (무시):', error);
         }
-      } catch (error) {
-        console.log('서버 동기화 오류 (무시):', error);
       }
-    }
 
-    setEntry(diary);
+      // Only update state if not cancelled
+      if (!cancelled && diary) {
+        setEntry(diary);
+      }
+    };
+
+    fetchData();
+
+    // Cleanup function
+    return () => {
+      cancelled = true;
+    };
   }, [route.params.entryId]);
 
   useFocusEffect(
     useCallback(() => {
-      loadEntry();
+      const cleanup = loadEntry();
+      return cleanup;
     }, [loadEntry])
   );
 
@@ -109,7 +135,9 @@ export const DiaryDetailScreen: React.FC = () => {
     );
   }
 
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
+    if (!entry) return;
+
     // AI 코멘트가 있으면 경고 표시
     if (entry.aiComment) {
       Alert.alert(
@@ -131,9 +159,11 @@ export const DiaryDetailScreen: React.FC = () => {
     } else {
       navigation.navigate('DiaryWrite', { entryId: entry._id });
     }
-  };
+  }, [entry, navigation]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
+    if (!entry) return;
+
     Alert.alert(
       '일기 삭제',
       '정말 이 일기를 삭제하시겠어요?',
@@ -155,7 +185,7 @@ export const DiaryDetailScreen: React.FC = () => {
         },
       ]
     );
-  };
+  }, [entry, navigation]);
 
   return (
     <SafeAreaView style={styles.container}>

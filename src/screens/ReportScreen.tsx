@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import { RootStackParamList } from '../navigation/types';
 import { Report } from '../models/Report';
 import { apiService } from '../services/apiService';
 import { getWeekNumber } from '../utils/dateUtils';
+import { logger } from '../utils/logger';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Report'>;
 
@@ -157,12 +158,12 @@ export const ReportScreen: React.FC = () => {
     try {
       if (period === 'week') {
         const { year, week } = getWeekNumber(currentDate);
-        console.log(`📊 Requesting weekly report: ${year} week ${week}`);
+        logger.log(`📊 Requesting weekly report: ${year} week ${week}`);
         const result = await apiService.getWeeklyReport(year, week);
 
         if (result.success) {
           setReport(result.report);
-          console.log('✅ Report loaded successfully');
+          logger.log('✅ Report loaded successfully');
 
           // 이전 주 리포트 로드 (optional)
           const previousWeekDate = subWeeks(currentDate, 1);
@@ -170,10 +171,10 @@ export const ReportScreen: React.FC = () => {
           const prevResult = await apiService.getWeeklyReport(prevYear, prevWeek);
           if (prevResult.success) {
             setPreviousReport(prevResult.report);
-            console.log('✅ Previous week report loaded');
+            logger.log('✅ Previous week report loaded');
           }
         } else {
-          console.log(`❌ Report error: ${result.error}, diaryCount: ${result.diaryCount}, canGenerate: ${result.canGenerate}`);
+          logger.log(`❌ Report error: ${result.error}, diaryCount: ${result.diaryCount}, canGenerate: ${result.canGenerate}`);
           setError(result.error);
           setDiaryCount(result.diaryCount);
           setCanGenerate(result.canGenerate || false);
@@ -181,12 +182,12 @@ export const ReportScreen: React.FC = () => {
       } else {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1;
-        console.log(`📊 Requesting monthly report: ${year} month ${month}`);
+        logger.log(`📊 Requesting monthly report: ${year} month ${month}`);
         const result = await apiService.getMonthlyReport(year, month);
 
         if (result.success) {
           setReport(result.report);
-          console.log('✅ Report loaded successfully');
+          logger.log('✅ Report loaded successfully');
 
           // 이전 달 리포트 로드 (optional)
           const previousMonthDate = subMonths(currentDate, 1);
@@ -195,34 +196,29 @@ export const ReportScreen: React.FC = () => {
           const prevResult = await apiService.getMonthlyReport(prevYear, prevMonth);
           if (prevResult.success) {
             setPreviousReport(prevResult.report);
-            console.log('✅ Previous month report loaded');
+            logger.log('✅ Previous month report loaded');
           }
         } else {
-          console.log(`❌ Report error: ${result.error}, diaryCount: ${result.diaryCount}`);
+          logger.log(`❌ Report error: ${result.error}, diaryCount: ${result.diaryCount}`);
           setError(result.error);
           setDiaryCount(result.diaryCount);
         }
       }
     } catch (err: any) {
-      console.error('❌ Error loading report:', err);
-      console.error('Error details:', err.message || err);
+      logger.error('❌ Error loading report:', err);
+      logger.error('Error details:', err.message || err);
       setError(err.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
   }, [period, currentDate, isPeriodCompleted]);
 
-  // 화면 포커스 시 리포트 로드
+  // 화면 포커스 시 리포트 로드 (loadReport가 period, currentDate를 의존하므로 자동으로 재로드됨)
   useFocusEffect(
     useCallback(() => {
       loadReport();
     }, [loadReport])
   );
-
-  // 기간이나 날짜 변경 시 리포트 로드
-  useEffect(() => {
-    loadReport();
-  }, [period, currentDate]);
 
   // 기간 표시 텍스트
   const periodText = useMemo(() => {
@@ -266,19 +262,19 @@ export const ReportScreen: React.FC = () => {
 
     try {
       const { year, week } = getWeekNumber(currentDate);
-      console.log(`📝 Generating weekly report: ${year} week ${week}`);
+      logger.log(`📝 Generating weekly report: ${year} week ${week}`);
       const result = await apiService.createWeeklyReport(year, week);
 
       if (result.success) {
-        console.log('✅ Report generated successfully');
+        logger.log('✅ Report generated successfully');
         // 리포트 재로드
         await loadReport();
       } else {
-        console.error('❌ Failed to generate report:', result.error);
+        logger.error('❌ Failed to generate report:', result.error);
         Alert.alert('리포트 생성 실패', result.error);
       }
     } catch (error) {
-      console.error('Error generating report:', error);
+      logger.error('Error generating report:', error);
       Alert.alert('오류', '리포트 생성 중 오류가 발생했습니다.');
     } finally {
       setIsGenerating(false);

@@ -23,6 +23,8 @@ import { WeatherService } from '../services/weatherService';
 import { getStampImage } from '../utils/stampUtils';
 import { OnboardingService } from '../services/onboardingService';
 import { FirstVisitGuide } from '../components/FirstVisitGuide';
+import { logger } from '../utils/logger';
+import { CALENDAR_MARKING_STYLES } from '../constants/calendarStyles';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -36,6 +38,9 @@ export const DiaryListScreen: React.FC = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // 오늘 날짜를 한 번만 계산 (성능 최적화)
+  const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+
   const loadDiaries = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
 
@@ -43,7 +48,7 @@ export const DiaryListScreen: React.FC = () => {
     if (entries.length === 0) {
       try {
         const serverDiaries = await apiService.getAllDiaries();
-        console.log(`📥 서버에서 ${serverDiaries.length}개 일기 가져오기`);
+        logger.log(`📥 서버에서 ${serverDiaries.length}개 일기 가져오기`);
 
         for (const diary of serverDiaries) {
           await DiaryStorage.saveFromServer(diary);
@@ -51,24 +56,41 @@ export const DiaryListScreen: React.FC = () => {
 
         entries = await DiaryStorage.getAll();
       } catch (error) {
-        console.error('서버에서 일기 가져오기 실패:', error);
+        logger.error('서버에서 일기 가져오기 실패:', error);
       }
     }
 
-    // 서버에서 AI 코멘트 동기화 (항상 최신 데이터 가져오기)
-    for (const entry of entries) {
-      try {
-        const serverData = await apiService.syncDiaryFromServer(entry._id);
-        if (serverData && serverData.aiComment) {
-          // 로컬 스토리지 업데이트
-          await DiaryStorage.update(entry._id, {
-            aiComment: serverData.aiComment,
-            stampType: serverData.stampType as StampType,
-          });
+    // 서버에서 AI 코멘트 동기화 - 병렬 처리로 성능 개선 (N+1 쿼리 패턴 제거)
+    try {
+      const syncPromises = entries.map(async (entry) => {
+        try {
+          const serverData = await apiService.syncDiaryFromServer(entry._id);
+          if (serverData && serverData.aiComment) {
+            return {
+              id: entry._id,
+              updates: {
+                aiComment: serverData.aiComment,
+                stampType: serverData.stampType as StampType,
+              },
+            };
+          }
+          return null;
+        } catch (error) {
+          logger.debug(`서버 동기화 오류 (${entry._id}):`, error);
+          return null;
         }
-      } catch (error) {
-        console.log('서버 동기화 오류 (무시):', error);
+      });
+
+      const results = await Promise.all(syncPromises);
+
+      // Batch update all entries
+      for (const result of results) {
+        if (result) {
+          await DiaryStorage.update(result.id, result.updates);
+        }
       }
+    } catch (error) {
+      logger.error('동기화 중 오류:', error);
     }
 
     // 동기화 후 다시 로드
@@ -91,15 +113,14 @@ export const DiaryListScreen: React.FC = () => {
     }, [loadDiaries])
   );
 
-  const handleOnboardingComplete = async () => {
+  const handleOnboardingComplete = useCallback(async () => {
     await OnboardingService.markOnboardingCompleted();
     setShowOnboarding(false);
-  };
+  }, []);
 
-  // 캘린더에 표시할 날짜 마킹
+  // 캘린더에 표시할 날짜 마킹 (인라인 객체 생성 최적화)
   const markedDates = useMemo(() => {
     const marked: { [key: string]: any } = {};
-    const today = format(new Date(), 'yyyy-MM-dd');
 
     diaries.forEach((diary) => {
       const dateKey = format(new Date(diary.date), 'yyyy-MM-dd');
@@ -108,49 +129,17 @@ export const DiaryListScreen: React.FC = () => {
 
       // 선택된 날짜
       if (isSelected) {
-        marked[dateKey] = {
-          customStyles: {
-            container: {
-              backgroundColor: '#4CAF50',
-              borderRadius: 16,
-            },
-            text: {
-              // 코멘트 있으면 연한 피치색, 없으면 흰색
-              color: hasComment ? '#FFDAB9' : '#fff',
-              fontWeight: 'bold',
-            },
-          },
-        };
+        marked[dateKey] = hasComment
+          ? CALENDAR_MARKING_STYLES.selectedWithComment
+          : CALENDAR_MARKING_STYLES.selectedWithoutComment;
       }
       // AI 코멘트 있는 날짜 - 피치색 배경
       else if (hasComment) {
-        marked[dateKey] = {
-          customStyles: {
-            container: {
-              backgroundColor: '#FFDAB9',
-              borderRadius: 16,
-            },
-            text: {
-              color: '#000',
-              fontWeight: 'bold',
-            },
-          },
-        };
+        marked[dateKey] = CALENDAR_MARKING_STYLES.withComment;
       }
       // 일반 일기 있는 날짜 - 볼드체만
       else {
-        marked[dateKey] = {
-          customStyles: {
-            container: {
-              backgroundColor: 'transparent',
-              borderRadius: 16,
-            },
-            text: {
-              color: '#000',
-              fontWeight: 'bold',
-            },
-          },
-        };
+        marked[dateKey] = CALENDAR_MARKING_STYLES.withDiary;
       }
     });
 
@@ -170,39 +159,18 @@ export const DiaryListScreen: React.FC = () => {
 
         // 미래 날짜이고, 아직 마킹되지 않았으면 (일기가 없으면)
         if (dateKey > today && !marked[dateKey]) {
-          marked[dateKey] = {
-            customStyles: {
-              container: {
-                backgroundColor: 'transparent',
-              },
-              text: {
-                color: '#e0e0e0', // 연한 회색 - 미래 날짜
-                fontWeight: '300',
-              },
-            },
-          };
+          marked[dateKey] = CALENDAR_MARKING_STYLES.futureDate;
         }
       }
     }
 
     // 선택된 날짜가 일기가 없는 경우에도 표시
     if (!marked[selectedDate]) {
-      marked[selectedDate] = {
-        customStyles: {
-          container: {
-            backgroundColor: '#4CAF50',
-            borderRadius: 16,
-          },
-          text: {
-            color: '#fff',
-            fontWeight: '300',
-          },
-        },
-      };
+      marked[selectedDate] = CALENDAR_MARKING_STYLES.selectedEmpty;
     }
 
     return marked;
-  }, [diaries, selectedDate]);
+  }, [diaries, selectedDate, today]);
 
   // 선택된 날짜의 일기
   const selectedDiary = useMemo(() => {
@@ -262,49 +230,44 @@ export const DiaryListScreen: React.FC = () => {
 
   // 오늘 일기 작성 여부
   const hasTodayDiary = useMemo(() => {
-    const today = format(new Date(), 'yyyy-MM-dd');
     return diaries.some((diary) => {
       const diaryDate = format(new Date(diary.date), 'yyyy-MM-dd');
       return diaryDate === today;
     });
-  }, [diaries]);
+  }, [diaries, today]);
 
-  const handleDateSelect = (date: DateData) => {
+  const handleDateSelect = useCallback((date: DateData) => {
     setSelectedDate(date.dateString);
-  };
+  }, []);
 
-  const handleWriteDiary = () => {
+  const handleWriteDiary = useCallback(() => {
     if (selectedDiary) {
       navigation.navigate('DiaryDetail', { entryId: selectedDiary._id });
     } else {
       navigation.navigate('DiaryWrite', { date: new Date(selectedDate) });
     }
-  };
+  }, [selectedDiary, selectedDate, navigation]);
 
-  const handleYearSelect = (year: number) => {
-    const newDate = new Date(currentDate);
-    newDate.setFullYear(year);
-    setCurrentDate(newDate);
-    setShowYearPicker(false);
-    setShowMonthPicker(true);
-  };
-
-  const handleMonthSelect = (month: number) => {
-    const newDate = new Date(currentDate);
-    newDate.setMonth(month);
-    setCurrentDate(newDate);
+  const handleMonthSelect = useCallback((month: number) => {
+    setCurrentDate((prevDate) => {
+      const newDate = new Date(prevDate);
+      newDate.setMonth(month);
+      return newDate;
+    });
     setShowMonthPicker(false);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setShowMonthPicker(false);
-  };
+  }, []);
 
-  const handleYearChange = (delta: number) => {
-    const newDate = new Date(currentDate);
-    newDate.setFullYear(currentDate.getFullYear() + delta);
-    setCurrentDate(newDate);
-  };
+  const handleYearChange = useCallback((delta: number) => {
+    setCurrentDate((prevDate) => {
+      const newDate = new Date(prevDate);
+      newDate.setFullYear(prevDate.getFullYear() + delta);
+      return newDate;
+    });
+  }, []);
 
   const renderMonthYearPicker = () => {
     const currentYear = currentDate.getFullYear();
@@ -491,7 +454,7 @@ export const DiaryListScreen: React.FC = () => {
               </Text>
             )}
           </View>
-          {selectedDate <= format(new Date(), 'yyyy-MM-dd') && (
+          {selectedDate <= today && (
             <TouchableOpacity
               style={styles.writeButton}
               onPress={handleWriteDiary}
@@ -570,16 +533,16 @@ export const DiaryListScreen: React.FC = () => {
         ) : (
           <View style={styles.noDiaryContainer}>
             <Text style={styles.noDiaryText}>
-              {selectedDate > format(new Date(), 'yyyy-MM-dd')
+              {selectedDate > today
                 ? '아직 오지 않은 미래에요'
-                : selectedDate === format(new Date(), 'yyyy-MM-dd')
+                : selectedDate === today
                 ? '오늘의 일기를 작성하세요'
                 : '이 날의 일기가 없어요'}
             </Text>
             <Text style={styles.noDiarySubText}>
-              {selectedDate > format(new Date(), 'yyyy-MM-dd')
+              {selectedDate > today
                 ? '기대하며 기다려볼까요'
-                : selectedDate === format(new Date(), 'yyyy-MM-dd')
+                : selectedDate === today
                 ? '선생님이 기다리고 있어요'
                 : '기억을 기록해주세요'}
             </Text>
