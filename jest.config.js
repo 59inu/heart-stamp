@@ -1,11 +1,8 @@
 module.exports = {
-  // No preset - manual configuration
+  preset: 'react-native',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
-  },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|react-navigation|@expo|expo|date-fns|uuid)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|react-navigation|@expo|expo|date-fns|uuid|react-native-get-random-values)/)',
   ],
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
@@ -27,9 +24,11 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/__mocks__/fileMock.js',
-  },
-  testEnvironment: 'jsdom',
-  globals: {
-    __DEV__: true,
+    'expo-image-picker': '<rootDir>/__mocks__/expo-image-picker.js',
+    'expo-file-system': '<rootDir>/__mocks__/expo-file-system.js',
+    'expo-asset': '<rootDir>/__mocks__/expo-asset.js',
+    'expo-location': '<rootDir>/__mocks__/expo-location.js',
+    'expo-web-browser': '<rootDir>/__mocks__/expo-web-browser.js',
+    'react-native-get-random-values': '<rootDir>/__mocks__/react-native-get-random-values.js',
   },
 };
