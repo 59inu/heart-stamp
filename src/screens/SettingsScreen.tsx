@@ -19,6 +19,7 @@ import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
 import { PrivacyPolicyModal } from '../components/PrivacyPolicyModal';
+import { NoticeModal } from '../components/NoticeModal';
 import { DiaryStorage } from '../services/diaryStorage';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
@@ -34,6 +35,7 @@ export const SettingsScreen: React.FC = () => {
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
   const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
 
   const appVersion = '1.0.0';
 
@@ -50,6 +52,10 @@ export const SettingsScreen: React.FC = () => {
     };
     loadDiaryCount();
   }, []);
+
+  const handleNotice = () => {
+    setShowNoticeModal(true);
+  };
 
   const handlePrivacyPolicy = () => {
     setShowPrivacyPolicyModal(true);
@@ -190,6 +196,12 @@ export const SettingsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>정보 및 지원</Text>
 
+          <TouchableOpacity style={styles.menuItem} onPress={handleNotice}>
+            <Ionicons name="megaphone-outline" size={24} color={COLORS.settingsIconColor} />
+            <Text style={styles.menuItemText}>공지사항</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={handleUserGuide}>
             <Ionicons name="book-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>사용 가이드</Text>
@@ -243,6 +255,12 @@ export const SettingsScreen: React.FC = () => {
       <PrivacyPolicyModal
         visible={showPrivacyPolicyModal}
         onClose={() => setShowPrivacyPolicyModal(false)}
+      />
+
+      {/* 공지사항 모달 */}
+      <NoticeModal
+        visible={showNoticeModal}
+        onClose={() => setShowNoticeModal(false)}
       />
     </SafeAreaView>
   );
