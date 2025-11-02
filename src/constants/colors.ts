@@ -17,14 +17,17 @@ export const COLORS = {
   primaryDark: '#A89888',       // 어두운 베이지
 
   // Emotion Traffic Light (감정 신호등)
-  emotionNegative: '#D98B7F',   // 파스텔 레드 (어둡게 조정) - 불안정/부정적
-  emotionNeutral: '#D4B857',    // 파스텔 옐로우 (더 어둡게 조정) - 중립/변화
-  emotionPositive: '#7DBFA0',   // 파스텔 그린 (어둡게 조정) - 긍정/안정
+  emotionNegative: '#2F2B4C',   // 감정 부정 - 불안정/부정적
+  emotionNegativeStrong: '#F97171', // 감정 부정 강조 (미리보기용)
+  emotionNeutral: '#A16207',    // 감정 중립 - 중립/변화
+  emotionNeutralStrong: '#FACC14', // 감정 중립 강조 (미리보기용)
+  emotionPositive: '#16803C',   // 감정 초록 - 긍정/안정
+  emotionPositiveStrong: '#4BDE80', // 감정 긍정 강조 (미리보기용)
 
   // Emotion backgrounds (배경용 - 더 연한 버전)
-  emotionNegativeLight: '#F5DCD9',
-  emotionNeutralLight: '#FBF4D7',
-  emotionPositiveLight: '#DDF0E6',
+  emotionNegativeLight: '#F9C5BD',  // 감정 부정 배경
+  emotionNeutralLight: '#FEF9C3',   // 감정 중립 배경
+  emotionPositiveLight: '#DCFCE7',  // 감정 초록 배경
 
   // Secondary
   secondary: '#8C7E9B',          // 부드러운 퍼플 (어둡게 조정)
@@ -48,10 +51,21 @@ export const COLORS = {
   textSecondary: '#666666',
   textLight: '#999999',
   textWhite: '#ffffff',
+  teacherTitle: '#2F2B4C',  // 선생님 타이틀 색상
 
   // Background
-  background: '#ffffff',
+  background: '#F7F6F9',
   backgroundLight: '#fafafa',
+
+  // Button
+  buttonBackground: '#F7F6F9',
+  buttonText: '#B9A8E0',
+  buttonSecondaryBackground: '#B9A8E0',
+  buttonSecondaryText: '#FFFFFF',
+
+  // Settings
+  settingsIconBackground: '#f5f5f5',  // 설정 아이콘 배경색
+  settingsIconColor: '#8C7E9B',       // 설정 아이콘 색상
 
   // Status (시스템 색상 - 변경하지 않음)
   error: '#d32f2f',

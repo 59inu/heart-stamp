@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   format,
   startOfWeek,
@@ -327,15 +327,43 @@ export const ReportScreen: React.FC = () => {
 
     // 일기 부족
     if (error && (error.includes('No diaries found') || error === 'Report not found')) {
+      // 0개일 때 특별 메시지
+      if (diaryCount === 0) {
+        return (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>📖</Text>
+            <Text style={styles.emptyMessage}>
+              분석할 기억이 쌓이지 않았어요
+            </Text>
+            <Text style={styles.emptySubtext}>
+              일기를 작성하면 감정 리포트를 생성할 수 있어요
+            </Text>
+          </View>
+        );
+      }
+
+      // 1개 이상일 때는 생성 가능
       return (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>📝</Text>
-          <Text style={styles.emptyMessage}>
-            리포트 생성을 위해 최소 3개의 일기가 필요해요
+        <View style={styles.generateCard}>
+          <Text style={styles.generateEmoji}>✨</Text>
+          <Text style={styles.generateTitle}>리포트 생성이 준비되었어요!</Text>
+          <Text style={styles.generateMessage}>
+            이번 {period === 'week' ? '주' : '달'}에 {diaryCount}개의 일기를 작성했어요
           </Text>
-          <Text style={styles.emptySubtext}>
-            현재 {diaryCount || 0}개 작성했어요
+          <Text style={styles.generateInfo}>
+            💡 한 번 생성된 리포트는 과거 일기가 수정되어도{'\n'}업데이트되지 않습니다
           </Text>
+          <TouchableOpacity
+            style={styles.generateButton}
+            onPress={handleGenerateReport}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.generateButtonText}>리포트 생성하기</Text>
+            )}
+          </TouchableOpacity>
         </View>
       );
     }
@@ -377,7 +405,7 @@ export const ReportScreen: React.FC = () => {
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>감정 리포트</Text>
         <View style={styles.placeholder} />
@@ -409,18 +437,18 @@ export const ReportScreen: React.FC = () => {
         {/* 기간 네비게이션 */}
         <View style={styles.periodNavigation}>
           <TouchableOpacity onPress={handlePreviousPeriod} style={styles.periodArrow}>
-            <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
+            <Ionicons name="chevron-back" size={24} color={COLORS.buttonSecondaryBackground} />
           </TouchableOpacity>
           <Text style={styles.periodText}>{periodText}</Text>
           <TouchableOpacity onPress={handleNextPeriod} style={styles.periodArrow}>
-            <Ionicons name="chevron-forward" size={24} color={COLORS.primary} />
+            <Ionicons name="chevron-forward" size={24} color={COLORS.buttonSecondaryBackground} />
           </TouchableOpacity>
         </View>
 
         {/* 로딩 */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
             <Text style={styles.loadingText}>리포트 생성 중...</Text>
           </View>
         )}
@@ -454,9 +482,15 @@ export const ReportScreen: React.FC = () => {
                     🗓 {period === 'week' ? '주간' : '월간'} 심리 리포트
                   </Text>
                   <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoIconButton}>
-                    <Ionicons name="information-circle" size={20} color={COLORS.primary} />
+                    <MaterialCommunityIcons name="information" size={22} color={COLORS.settingsIconColor} />
                   </TouchableOpacity>
                 </View>
+              </View>
+
+              {/* 일기 쓴 날 */}
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>일기 쓴 날</Text>
+                <Text style={styles.summaryValueGreen}>{report.diaryCount}일</Text>
               </View>
 
               {/* 기분 밸런스 */}
@@ -514,14 +548,6 @@ export const ReportScreen: React.FC = () => {
                   </Text>
                 </View>
               )}
-            </View>
-
-            {/* 작성한 일기 수 */}
-            <View style={styles.statsCard}>
-              <View style={styles.statsHeader}>
-                <Text style={styles.statsTitle}>작성한 일기</Text>
-                <Text style={styles.statsCount}>{report.diaryCount}개</Text>
-              </View>
             </View>
 
             {/* 감정 통계 */}
@@ -683,7 +709,7 @@ export const ReportScreen: React.FC = () => {
             {/* 리포트 안내 */}
             <View style={styles.infoCard}>
               <View style={styles.infoHeader}>
-                <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+                <MaterialCommunityIcons name="information-outline" size={20} color={COLORS.emotionPositive} />
                 <Text style={styles.infoText}>
                   한 번 생성된 리포트는 과거 일기가 수정되어도 업데이트되지 않습니다
                 </Text>
@@ -709,7 +735,7 @@ export const ReportScreen: React.FC = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>리포트 항목 설명</Text>
               <TouchableOpacity onPress={() => setShowInfoModal(false)}>
-                <Ionicons name="close" size={24} color="#333" />
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
@@ -741,17 +767,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
+    backgroundColor: '#fff',
+    height: 56,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 4,
+    padding: 0,
   },
   headerTitle: {
     fontSize: 18,
@@ -768,22 +794,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
     borderRadius: 12,
     padding: 4,
     gap: 8,
   },
   periodTab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 8,
     alignItems: 'center',
     borderRadius: 8,
   },
   periodTabActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.settingsIconColor,
   },
   periodTabText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: '#666',
   },
@@ -796,13 +822,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 14,
   },
   periodArrow: {
     padding: 8,
   },
   periodText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
@@ -821,7 +847,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 20,
     borderRadius: 16,
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.buttonSecondaryBackground,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -836,7 +862,7 @@ const styles = StyleSheet.create({
   summaryTitleWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 2,
   },
   summaryTitle: {
     fontSize: 18,
@@ -844,13 +870,13 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   infoIconButton: {
-    backgroundColor: COLORS.primaryLight,
     borderRadius: 12,
     padding: 4,
     width: 28,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 4,
   },
   summaryItem: {
     flexDirection: 'row',
@@ -874,18 +900,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryValue: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   summaryValueGreen: {
-    color: COLORS.emotionPositive,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   summaryValueYellow: {
-    color: COLORS.emotionNeutral,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   summaryValueRed: {
-    color: COLORS.emotionNegative,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   summaryChangeBadge: {
     paddingHorizontal: 8,
@@ -918,7 +950,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   summaryAiText: {
-    marginTop: 4,
+    marginTop: 12,
   },
   summaryAiSummary: {
     fontSize: 14,
@@ -980,7 +1012,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   statsCount: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.emotionPositive,
   },
@@ -1012,13 +1044,13 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   moodBarRed: {
-    backgroundColor: COLORS.emotionNegativeLight,
+    backgroundColor: '#F7B5AA',
   },
   moodBarYellow: {
-    backgroundColor: COLORS.emotionNeutralLight,
+    backgroundColor: '#F5F0C0',
   },
   moodBarGreen: {
-    backgroundColor: COLORS.emotionPositiveLight,
+    backgroundColor: '#D0FADD',
   },
   moodDetails: {
     gap: 12,
@@ -1066,13 +1098,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   moodDotRed: {
-    backgroundColor: COLORS.emotionNegativeLight,
+    backgroundColor: '#F7B5AA',
   },
   moodDotYellow: {
-    backgroundColor: COLORS.emotionNeutralLight,
+    backgroundColor: '#F5F0C0',
   },
   moodDotGreen: {
-    backgroundColor: COLORS.emotionPositiveLight,
+    backgroundColor: '#D0FADD',
   },
   moodDetailLabel: {
     fontSize: 15,
@@ -1194,7 +1226,7 @@ const styles = StyleSheet.create({
     padding: 32,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.buttonSecondaryBackground,
     shadowOffset: {
       width: 0,
       height: 2,

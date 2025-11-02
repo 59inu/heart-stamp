@@ -31,7 +31,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     emoji: '🌱',
     title: '④ 조금씩, 당신의 페이스대로',
-    description: 'STAMP DIARY는 완벽한 하루보다\n진짜 마음을 기록하는 하루를 응원해요.\n꾸준히 기록할수록 선생님은 당신을 더 이해하게 돼요.',
+    description: 'Heart Stamp는 완벽한 하루보다\n진짜 마음을 기록하는 하루를 응원해요.\n꾸준히 기록할수록 선생님은 당신을 더 이해하게 돼요.',
     highlight: '☁️ "오늘도 마음 도장을 하나 찍어요."',
   },
 ];

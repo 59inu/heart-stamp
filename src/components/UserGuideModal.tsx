@@ -15,11 +15,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface UserGuideModalProps {
   visible: boolean;
   onClose: () => void;
+  hideStartButton?: boolean; // 시작하기 버튼 숨김 (기본값: false)
 }
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   visible,
   onClose,
+  hideStartButton = false,
 }) => {
   return (
     <Modal
@@ -47,6 +49,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
           <GuideCarousel
             onComplete={onClose}
             containerWidth={SCREEN_WIDTH - 40}
+            hideStartButton={hideStartButton}
           />
         </View>
       </View>

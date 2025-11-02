@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,23 +14,26 @@ import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navig
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
-import { getStampImage } from '../utils/stampUtils';
+import { getStampImage, getRandomStampPosition } from '../utils/stampUtils';
 import { logger } from '../utils/logger';
 import { COLORS } from '../constants/colors';
+import { diaryEvents, EVENTS } from '../services/eventEmitter';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const IMAGE_HEIGHT = (SCREEN_WIDTH * 3) / 5; // 3:5 비율
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
 
 // 원고지 계산 상수 (한 번만 계산)
 const CELL_WIDTH = 22;
-const HORIZONTAL_PADDING = 8 * 2 + 4 * 2; // diaryContent padding + manuscriptContainer padding
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const HORIZONTAL_PADDING = 0; // 패딩 없음 (전체 화면 너비 사용)
 const AVAILABLE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING;
 const CELLS_PER_ROW = Math.floor(AVAILABLE_WIDTH / CELL_WIDTH);
 
@@ -40,8 +43,18 @@ const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) 
   const { characters, emptyCellsNeeded } = React.useMemo(() => {
     const chars = content.split('');
     const totalCells = chars.length;
-    const lastRowCells = totalCells % CELLS_PER_ROW;
-    const empty = lastRowCells > 0 ? CELLS_PER_ROW - lastRowCells : 0;
+    const minCells = CELLS_PER_ROW * 10; // 최소 10줄 보장
+
+    // 최소 줄 수를 보장하기 위한 빈 칸 계산
+    let empty = 0;
+    if (totalCells < minCells) {
+      // 10줄보다 적으면 10줄까지 채움
+      empty = minCells - totalCells;
+    } else {
+      // 10줄 이상이면 마지막 줄만 채움
+      const lastRowCells = totalCells % CELLS_PER_ROW;
+      empty = lastRowCells > 0 ? CELLS_PER_ROW - lastRowCells : 0;
+    }
 
     return {
       characters: chars,
@@ -73,68 +86,51 @@ export const DiaryDetailScreen: React.FC = () => {
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
 
-  const loadEntry = useCallback(async () => {
-    let cancelled = false;
+  const fetchData = useCallback(async () => {
+    let diary = await DiaryStorage.getById(route.params.entryId);
 
-    const fetchData = async () => {
-      let diary = await DiaryStorage.getById(route.params.entryId);
+    // 서버에서 AI 코멘트 동기화
+    if (diary && !diary.aiComment) {
+      try {
+        const serverData = await apiService.syncDiaryFromServer(diary._id);
 
-      // Check cancellation before making API call
-      if (cancelled) return;
+        if (serverData && serverData.aiComment) {
+          await DiaryStorage.update(diary._id, {
+            aiComment: serverData.aiComment,
+            stampType: serverData.stampType as StampType,
+          });
 
-      // 서버에서 AI 코멘트 동기화
-      if (diary && !diary.aiComment) {
-        try {
-          const serverData = await apiService.syncDiaryFromServer(diary._id);
-
-          // Check cancellation after async operation
-          if (cancelled) return;
-
-          if (serverData && serverData.aiComment) {
-            await DiaryStorage.update(diary._id, {
-              aiComment: serverData.aiComment,
-              stampType: serverData.stampType as StampType,
-            });
-
-            // Check cancellation before final fetch
-            if (cancelled) return;
-
-            // 다시 로드
-            diary = await DiaryStorage.getById(route.params.entryId);
-          }
-        } catch (error) {
-          logger.debug('서버 동기화 오류 (무시):', error);
+          diary = await DiaryStorage.getById(route.params.entryId);
         }
+      } catch (error) {
+        logger.debug('서버 동기화 오류 (무시):', error);
       }
+    }
 
-      // Only update state if not cancelled
-      if (!cancelled && diary) {
-        setEntry(diary);
-      }
-    };
-
-    fetchData();
-
-    // Cleanup function
-    return () => {
-      cancelled = true;
-    };
+    if (diary) {
+      setEntry(diary);
+    }
   }, [route.params.entryId]);
 
   useFocusEffect(
     useCallback(() => {
-      const cleanup = loadEntry();
-      return cleanup;
-    }, [loadEntry])
+      fetchData();
+    }, [fetchData])
   );
 
-  if (!entry) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text>일기를 찾을 수 없습니다.</Text>
-      </SafeAreaView>
-    );
-  }
+  // Silent Push 수신 시 자동 새로고침
+  useEffect(() => {
+    const handleAICommentReceived = () => {
+      console.log('📖 AI comment received event - reloading diary detail...');
+      fetchData();
+    };
+
+    diaryEvents.on(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
+
+    return () => {
+      diaryEvents.off(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
+    };
+  }, [fetchData]);
 
   const handleEdit = useCallback(() => {
     if (!entry) return;
@@ -188,11 +184,19 @@ export const DiaryDetailScreen: React.FC = () => {
     );
   }, [entry, navigation]);
 
+  if (!entry) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>일기를 찾을 수 없습니다.</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
         </TouchableOpacity>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={handleDelete} style={styles.deleteButtonContainer}>
@@ -204,34 +208,35 @@ export const DiaryDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.dateContainer}>
-          <View style={styles.dateWithWeather}>
-            <Text style={styles.dateText}>
-              {format(new Date(entry.date), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
+      <View style={styles.dateContainer}>
+        <View style={styles.dateWithWeather}>
+          <Text style={styles.dateText}>
+            {format(new Date(entry.date), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
+          </Text>
+          {entry.weather && (
+            <Text style={styles.weatherIcon}>
+              {WeatherService.getWeatherEmoji(entry.weather)}
             </Text>
-            {entry.weather && (
-              <Text style={styles.weatherIcon}>
-                {WeatherService.getWeatherEmoji(entry.weather)}
-              </Text>
-            )}
-          </View>
-          {entry.mood && (
-            <View style={styles.moodContainer}>
-              <View
-                style={[
-                  styles.moodIndicator,
-                  entry.mood === 'red' && styles.moodRed,
-                  entry.mood === 'yellow' && styles.moodYellow,
-                  entry.mood === 'green' && styles.moodGreen,
-                ]}
-              />
-              {entry.moodTag && (
-                <Text style={styles.moodTagText}>{entry.moodTag}</Text>
-              )}
-            </View>
           )}
         </View>
+        {entry.mood && (
+          <View style={styles.moodContainer}>
+            <View
+              style={[
+                styles.moodIndicator,
+                entry.mood === 'red' && styles.moodRed,
+                entry.mood === 'yellow' && styles.moodYellow,
+                entry.mood === 'green' && styles.moodGreen,
+              ]}
+            />
+            {entry.moodTag && (
+              <Text style={styles.moodTagText}>{entry.moodTag}</Text>
+            )}
+          </View>
+        )}
+      </View>
+
+      <ScrollView style={styles.content}>
 
         {/* 이미지 섹션 */}
         {entry.imageUri && (
@@ -239,7 +244,7 @@ export const DiaryDetailScreen: React.FC = () => {
             <Image
               source={{ uri: entry.imageUri }}
               style={styles.diaryImage}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           </View>
         )}
@@ -260,12 +265,15 @@ export const DiaryDetailScreen: React.FC = () => {
         {entry.aiComment && (
           <View style={styles.aiSection}>
             <View style={styles.aiHeader}>
-              <Text style={styles.aiTitle}>✨ 선생님의 코멘트</Text>
+              <View style={styles.emojiCircle}>
+                <Ionicons name="sparkles" size={12} color="#fff" />
+              </View>
+              <Text style={styles.aiTitle}>선생님 코멘트</Text>
               {entry.stampType && (
                 <View style={styles.stampContainer}>
                   <Image
                     source={getStampImage(entry.stampType)}
-                    style={styles.stampImage}
+                    style={styles.stampImageSmall}
                     resizeMode="contain"
                   />
                 </View>
@@ -308,15 +316,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   header: {
+    backgroundColor: '#fff',
+    height: 56,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 4,
+    padding: 0,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -333,16 +343,18 @@ const styles = StyleSheet.create({
   },
   editButton: {
     fontSize: 16,
-    color: COLORS.primary,
-    fontWeight: '600',
+    color: '#4B5563',
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   dateContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    paddingTop: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
   dateWithWeather: {
     flexDirection: 'row',
@@ -350,7 +362,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dateText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
@@ -369,13 +381,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   moodRed: {
-    backgroundColor: COLORS.emotionNegativeLight,
+    backgroundColor: COLORS.emotionNegativeStrong,
   },
   moodYellow: {
-    backgroundColor: COLORS.emotionNeutralLight,
+    backgroundColor: COLORS.emotionNeutralStrong,
   },
   moodGreen: {
-    backgroundColor: COLORS.emotionPositiveLight,
+    backgroundColor: COLORS.emotionPositiveStrong,
   },
   moodTagText: {
     fontSize: 14,
@@ -384,7 +396,7 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     width: '100%',
-    height: 200,
+    height: IMAGE_HEIGHT,
     backgroundColor: '#f5f5f5',
   },
   diaryImage: {
@@ -393,7 +405,7 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderSection: {
     width: '100%',
-    height: 200,
+    height: IMAGE_HEIGHT,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -404,8 +416,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   diaryContent: {
-    paddingHorizontal: 8,
-    paddingVertical: 16,
+    paddingTop: 24,
+    paddingBottom: 18,
+    backgroundColor: '#fffef8',
   },
   contentText: {
     fontSize: 16,
@@ -416,8 +429,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     backgroundColor: '#fffef8',
-    padding: 4,
-    borderRadius: 8,
+    justifyContent: 'center',
   },
   manuscriptCell: {
     width: 22,
@@ -434,40 +446,70 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
   },
   aiSection: {
-    backgroundColor: COLORS.secondaryLight,
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#F0F6FF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 60,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    position: 'relative',
+    overflow: 'visible',
   },
   aiHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  emojiCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#60A5FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiText: {
+    fontSize: 12,
   },
   aiTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.secondary,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.teacherTitle,
+    flex: 1,
   },
   stampContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#fff',
-    borderRadius: 30,
-    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
   },
-  stampImage: {
-    width: 40,
-    height: 40,
+  stampImageSmall: {
+    width: 72,
+    height: 72,
   },
   aiCommentText: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 24,
     color: '#333',
   },
   noAiComment: {
     margin: 16,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F0F6FF',
     borderRadius: 12,
     alignItems: 'center',
   },

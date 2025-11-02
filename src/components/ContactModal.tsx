@@ -5,9 +5,9 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { CONTACT_FORM_URL } from '../constants/faq';
 import { COLORS } from '../constants/colors';
 
@@ -22,9 +22,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   onFAQ,
 }) => {
-  const handleContactForm = () => {
+  const handleContactForm = async () => {
+    const result = await WebBrowser.openBrowserAsync(CONTACT_FORM_URL);
+    // 웹뷰가 닫힌 후 모달도 닫기
     onClose();
-    Linking.openURL(CONTACT_FORM_URL);
   };
 
   return (
@@ -51,7 +52,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             activeOpacity={0.7}
           >
             <View style={styles.optionIcon}>
-              <Ionicons name="book-outline" size={24} color={COLORS.secondary} />
+              <Ionicons name="book-outline" size={24} color={COLORS.settingsIconColor} />
             </View>
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>자주 묻는 질문</Text>
@@ -68,7 +69,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             activeOpacity={0.7}
           >
             <View style={styles.optionIcon}>
-              <Ionicons name="mail-outline" size={24} color={COLORS.secondary} />
+              <Ionicons name="mail-outline" size={24} color={COLORS.settingsIconColor} />
             </View>
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>문의하기</Text>
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.secondaryLight,
+    backgroundColor: COLORS.settingsIconBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

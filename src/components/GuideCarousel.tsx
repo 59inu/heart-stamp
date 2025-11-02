@@ -17,11 +17,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface GuideCarouselProps {
   onComplete: () => void;
   containerWidth?: number; // 커스텀 너비 (기본값: 화면 너비)
+  hideStartButton?: boolean; // 시작하기 버튼 숨김 (기본값: false)
 }
 
 export const GuideCarousel: React.FC<GuideCarouselProps> = ({
   onComplete,
   containerWidth = SCREEN_WIDTH,
+  hideStartButton = false,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -76,7 +78,7 @@ export const GuideCarousel: React.FC<GuideCarouselProps> = ({
       </View>
 
       {/* 시작하기 버튼 */}
-      {isLastStep && (
+      {isLastStep && !hideStartButton && (
         <View style={styles.startButtonContainer}>
           <TouchableOpacity
             style={styles.startButton}
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
   },
   example: {
     fontSize: 15,
-    color: COLORS.primary,
+    color: COLORS.buttonSecondaryBackground,
     fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 12,
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
   },
   indicatorActive: {
     width: 24,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
   },
   startButtonContainer: {
     width: '100%',
@@ -157,11 +159,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   startButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 20,
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.buttonSecondaryBackground,
     shadowOffset: {
       width: 0,
       height: 4,

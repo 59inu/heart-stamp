@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',

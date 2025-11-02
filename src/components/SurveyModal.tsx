@@ -5,8 +5,8 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Linking,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { SURVEY_URL, SURVEY_BENEFIT } from '../constants/survey';
 import { COLORS } from '../constants/colors';
 
@@ -21,9 +21,9 @@ export const SurveyModal: React.FC<SurveyModalProps> = ({
   onClose,
   onParticipate,
 }) => {
-  const handleParticipate = () => {
+  const handleParticipate = async () => {
     onParticipate();
-    Linking.openURL(SURVEY_URL);
+    await WebBrowser.openBrowserAsync(SURVEY_URL);
   };
 
   return (
@@ -129,11 +129,11 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: COLORS.buttonSecondaryBackground,
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   infoIcon: {
@@ -141,9 +141,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   infoText: {
+    flex: 1,
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+    flexWrap: 'wrap',
   },
   infoSubtext: {
     fontSize: 12,
@@ -179,7 +181,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
     alignItems: 'center',
   },
   participateButtonText: {
