@@ -15,6 +15,7 @@ export class ApiService {
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
+    console.log(`🌐 [apiService] Initializing with baseURL: ${this.baseURL}`);
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
     });
@@ -23,12 +24,35 @@ export class ApiService {
     this.axiosInstance.interceptors.request.use(async (config) => {
       const userId = await UserService.getOrCreateUserId();
       config.headers['X-User-Id'] = userId;
+      console.log(`🔍 [apiService] Request interceptor - URL: ${config.baseURL}${config.url}`);
+      console.log(`🔍 [apiService] Request method: ${config.method}`);
+      console.log(`🔍 [apiService] Request headers:`, JSON.stringify(config.headers));
+      console.log(`🔍 [apiService] Request data:`, JSON.stringify(config.data));
       return config;
     });
+
+    // 응답 로깅
+    this.axiosInstance.interceptors.response.use(
+      (response) => {
+        console.log(`✅ [apiService] Response from ${response.config.url}:`, JSON.stringify(response.data));
+        return response;
+      },
+      (error) => {
+        console.error(`❌ [apiService] Request failed:`, {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+        return Promise.reject(error);
+      }
+    );
   }
 
   async uploadDiary(diary: DiaryEntry): Promise<boolean> {
     try {
+      console.log(`📤 [apiService] Uploading diary ${diary._id} to server...`);
       const response = await this.axiosInstance.post('/diaries', {
         _id: diary._id,
         date: diary.date,
@@ -43,9 +67,10 @@ export class ApiService {
         syncedWithServer: diary.syncedWithServer,
       });
 
+      console.log(`✅ [apiService] Diary ${diary._id} uploaded successfully`);
       return response.data.success;
     } catch (error) {
-      console.error('Error uploading diary:', error);
+      console.error(`❌ [apiService] Error uploading diary ${diary._id}:`, error);
       return false;
     }
   }

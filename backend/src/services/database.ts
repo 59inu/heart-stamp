@@ -184,9 +184,18 @@ export class DiaryDatabase {
   // AI 코멘트 없는 일기 조회 (전날 작성된 일기만)
   // 배치 작업이 새벽에 실행되므로, 전날 작성된 일기에 코멘트를 달아야 함
   static getPending(): DiaryEntry[] {
-    // 테스트: 모든 AI 코멘트 없는 일기 조회
-    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL ORDER BY date DESC');
-    const rows = stmt.all() as any[];
+    // 어제 날짜 계산 (배치 작업 실행 기준 "어제")
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0]; // "2025-11-02"
+
+    console.log(`📅 [DiaryDatabase] 배치 작업 대상 날짜: ${yesterdayStr}`);
+
+    // 어제 날짜(00:00:00 ~ 23:59:59)에 작성된 일기 중 AI 코멘트 없는 것만 조회
+    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL AND date LIKE ? ORDER BY date DESC');
+    const rows = stmt.all(`${yesterdayStr}%`) as any[];
+
+    console.log(`📋 [DiaryDatabase] ${yesterdayStr} 날짜 일기 중 AI 코멘트 대기: ${rows.length}개`);
 
     return rows.map(row => ({
       ...row,
@@ -198,6 +207,25 @@ export class DiaryDatabase {
   static delete(id: string): void {
     const stmt = db.prepare('DELETE FROM diaries WHERE _id = ?');
     stmt.run(id);
+  }
+
+  // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회 (중복 제거)
+  static getUsersWithAICommentYesterday(): string[] {
+    // 어제 날짜 계산
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0]; // "2025-11-02"
+
+    console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기`);
+
+    // 어제 날짜에 작성되고 AI 코멘트가 있는 일기의 userId 조회 (중복 제거)
+    const stmt = db.prepare('SELECT DISTINCT userId FROM diaries WHERE date LIKE ? AND aiComment IS NOT NULL');
+    const rows = stmt.all(`${yesterdayStr}%`) as Array<{ userId: string }>;
+
+    const userIds = rows.map(row => row.userId);
+    console.log(`👥 [DiaryDatabase] ${yesterdayStr} 일기 AI 코멘트 받은 사용자: ${userIds.length}명`);
+
+    return userIds;
   }
 }
 

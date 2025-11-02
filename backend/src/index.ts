@@ -19,6 +19,14 @@ const PORT: number = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.use(cors());
 app.use(express.json());
 
+// 모든 요청 로깅
+app.use((req, res, next) => {
+  console.log(`📥 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log(`   Headers:`, req.headers);
+  console.log(`   Body:`, req.body);
+  next();
+});
+
 // 정적 파일 서빙: /uploads 폴더의 이미지 파일 제공
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -89,6 +97,50 @@ app.post('/api/jobs/trigger-analysis', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to trigger batch analysis',
+    });
+  }
+});
+
+// 일반 Push 테스트 엔드포인트
+app.post('/api/push/test-regular', async (req, res) => {
+  try {
+    console.log('🧪 [TEST] Sending regular push to all users...');
+    await PushNotificationService.sendNotificationToAll(
+      '테스트 알림 📱',
+      '앱이 알림을 정상적으로 수신하고 있는지 확인 중입니다',
+      { type: 'test' }
+    );
+    res.json({
+      success: true,
+      message: 'Regular push sent to all users',
+    });
+  } catch (error) {
+    console.error('Error sending regular push:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send regular push',
+    });
+  }
+});
+
+// AI 코멘트 완료 알림 테스트 엔드포인트
+app.post('/api/push/test-ai-comment', async (req, res) => {
+  try {
+    console.log('🧪 [TEST] Sending AI comment complete notification...');
+    await PushNotificationService.sendNotificationToAll(
+      '선생님 코멘트 도착 ✨',
+      '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
+      { type: 'ai_comment_complete' }
+    );
+    res.json({
+      success: true,
+      message: 'AI comment notification sent to all users',
+    });
+  } catch (error) {
+    console.error('Error sending AI comment notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send AI comment notification',
     });
   }
 });

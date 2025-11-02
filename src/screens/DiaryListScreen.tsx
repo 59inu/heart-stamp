@@ -18,7 +18,6 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
-import { NotificationStorage } from '../services/notificationStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
 import { getStampImage, getRandomStampPosition } from '../utils/stampUtils';
@@ -41,12 +40,18 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   // 오늘 날짜를 한 번만 계산 (성능 최적화)
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
+  // 로컬 데이터만 빠르게 로드 (화면 진입 시 사용)
   const loadDiaries = useCallback(async () => {
+    const entries = await DiaryStorage.getAll();
+    setDiaries(entries);
+  }, []);
+
+  // 서버 동기화 + 로컬 데이터 로드 (이벤트 핸들러에서만 사용)
+  const syncAndReload = useCallback(async () => {
     let entries = await DiaryStorage.getAll();
 
     // 로컬에 일기가 없으면 서버에서 전체 가져오기
@@ -90,20 +95,14 @@ export const DiaryListScreen: React.FC = () => {
       const results = await Promise.all(syncPromises);
 
       // Batch update all entries
-      let hasNewNotifications = false;
       for (const result of results) {
         if (result) {
           await DiaryStorage.update(result.id, result.updates);
-          // 알림 추가 (중복 체크는 NotificationStorage에서 처리)
-          await NotificationStorage.addAICommentNotification(result.id, result.date);
-          hasNewNotifications = true;
         }
       }
 
-      // 알림이 추가되었으면 이벤트 발생
-      if (hasNewNotifications) {
-        diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
-      }
+      // 주의: 여기서 이벤트를 emit하면 안됨! (순환 참조 방지)
+      // 이벤트는 외부(App.tsx)에서만 발생해야 함
     } catch (error) {
       logger.error('동기화 중 오류:', error);
     }
@@ -117,13 +116,6 @@ export const DiaryListScreen: React.FC = () => {
     useCallback(() => {
       loadDiaries();
 
-      // 읽지 않은 알림 개수 가져오기
-      const loadUnreadCount = async () => {
-        const count = await NotificationStorage.getUnreadCount();
-        setUnreadNotifications(count);
-      };
-      loadUnreadCount();
-
       // 첫 방문 온보딩 체크
       const checkOnboarding = async () => {
         const completed = await OnboardingService.hasCompletedOnboarding();
@@ -135,14 +127,14 @@ export const DiaryListScreen: React.FC = () => {
     }, [loadDiaries])
   );
 
-  // Silent Push 수신 시 자동 새로고침
+  // AI 코멘트 수신 시 자동 새로고침
   useEffect(() => {
     const handleAICommentReceived = async () => {
-      console.log('📖 AI comment received event - reloading diaries...');
-      loadDiaries();
-      // 알림 개수도 업데이트
-      const count = await NotificationStorage.getUnreadCount();
-      setUnreadNotifications(count);
+      console.log('📖 [DiaryListScreen] AI comment received event - reloading local data...');
+      // App.tsx가 이미 DiaryStorage.syncWithServer()로 동기화 완료
+      // 여기서는 로컬 데이터만 다시 로드
+      await loadDiaries();
+      console.log('✅ [DiaryListScreen] Local data reloaded');
     };
 
     diaryEvents.on(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
@@ -460,9 +452,6 @@ export const DiaryListScreen: React.FC = () => {
           onPress={() => navigation.navigate('Settings')}
         >
           <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
-          {unreadNotifications > 0 && (
-            <View style={styles.notificationDot} />
-          )}
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Heart Stamp</Text>
         <TouchableOpacity
@@ -755,15 +744,6 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 0,
     position: 'relative',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: -1,
-    right: -1,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#EF4444',
   },
   scrollView: {
     flex: 1,

@@ -12,12 +12,10 @@ const PUSH_TOKEN_KEY = '@stamp_diary:push_token';
 // 알림 핸들러 설정: 포그라운드에서도 알림 표시
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
-    const isSilent = notification.request.content.data?.type === 'silent';
-
     return {
-      shouldShowBanner: !isSilent, // Silent push는 배너 표시 안함
-      shouldShowList: true, // 알림 목록에는 항상 표시
-      shouldPlaySound: !isSilent,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
       shouldSetBadge: false,
     };
   },
@@ -120,30 +118,16 @@ export class NotificationService {
 
   /**
    * 알림 리스너 설정
-   * @param onSilentPush - Silent Push 수신 시 호출되는 콜백 (데이터 새로고침용)
-   * @param onNotification - 일반 알림 수신 시 호출되는 콜백
+   * @param onNotification - 알림 수신 시 호출되는 콜백
    */
   static setupNotificationListeners(
-    onSilentPush?: () => void,
     onNotification?: (notification: Notifications.Notification) => void
   ): void {
     // 알림 수신 리스너 (앱이 포그라운드/백그라운드일 때)
     this.notificationListener = Notifications.addNotificationReceivedListener((notification) => {
       console.log('📬 [NotificationService] Notification received');
-      console.log('📋 [NotificationService] Full notification:', JSON.stringify(notification, null, 2));
       console.log('📋 [NotificationService] Data:', notification.request.content.data);
-
-      const isSilent = notification.request.content.data?.type === 'silent';
-      console.log(`🔍 [NotificationService] Is silent push? ${isSilent}`);
-
-      if (isSilent) {
-        console.log('🔄 [NotificationService] Silent push detected - calling onSilentPush callback...');
-        onSilentPush?.();
-        console.log('✅ [NotificationService] onSilentPush callback completed');
-      } else {
-        console.log('📢 [NotificationService] Regular notification - calling onNotification callback...');
-        onNotification?.(notification);
-      }
+      onNotification?.(notification);
     });
 
     // 알림 클릭 리스너 (사용자가 알림을 탭했을 때)

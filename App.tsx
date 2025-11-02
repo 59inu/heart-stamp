@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Alert } from 'react-native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { NotificationService } from './src/services/notificationService';
 import { DiaryStorage } from './src/services/diaryStorage';
@@ -15,18 +15,10 @@ export default function App() {
       // 푸시 토큰 등록 (백엔드 등록 포함)
       await NotificationService.registerForPushNotifications();
 
-      // 알림 리스너 설정
+      // 알림 리스너 설정 - AI 코멘트 완료 알림 수신 시 동기화
       NotificationService.setupNotificationListeners(
-        // Silent Push 수신 시: 데이터 새로고침 + 화면 업데이트
-        async () => {
-          console.log('🔄 [App] Silent Push handler called - starting data sync...');
-          await DiaryStorage.syncWithServer();
-          diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
-          console.log('✅ [App] Diary data refreshed and screens updated');
-        },
-        // 일반 알림 수신 시 (포그라운드에서도 동기화!)
         async (notification) => {
-          console.log('📬 [App] Regular notification received:', notification.request.content);
+          console.log('📬 [App] Notification received:', notification.request.content);
 
           // AI 코멘트 완료 알림이면 자동으로 동기화 (사용자가 앱을 보고 있을 때도!)
           const notificationType = notification.request.content.data?.type;
@@ -44,11 +36,13 @@ export default function App() {
 
     // 앱 상태 변경 리스너 (백그라운드 → 포그라운드 전환 시 데이터 새로고침)
     const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
+      console.log(`[App] AppState changed: ${appState.current} -> ${nextAppState}`);
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('📱 App became active - syncing data...');
+        console.log('📱 [App] App became active - syncing data...');
         await DiaryStorage.syncWithServer();
+        console.log('📱 [App] Sync completed, emitting event...');
         diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
-        console.log('✅ App resumed - data synced and screens updated');
+        console.log('✅ [App] Event emitted, screens should update now');
       }
       appState.current = nextAppState;
     });

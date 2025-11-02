@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DiaryEntry } from '../models/DiaryEntry';
 import { apiService } from './apiService';
-import { NotificationStorage } from './notificationStorage';
 
 const STORAGE_KEY = '@stamp_diary:entries';
 
@@ -124,31 +123,54 @@ export class DiaryStorage {
   static async syncWithServer(): Promise<void> {
     console.log('🔄 [DiaryStorage] syncWithServer started...');
     try {
+      // 1단계: 서버에서 전체 일기 목록 가져오기
+      try {
+        const serverDiaries = await apiService.getAllDiaries();
+        console.log(`📥 [DiaryStorage] Server has ${serverDiaries.length} diaries`);
+
+        // 서버에 있는 일기를 로컬에 저장 (없으면 추가, 있으면 업데이트)
+        for (const serverDiary of serverDiaries) {
+          await this.saveFromServer(serverDiary);
+        }
+        console.log(`✅ [DiaryStorage] Synced all diaries from server`);
+      } catch (error) {
+        console.error('❌ [DiaryStorage] Error fetching all diaries from server:', error);
+      }
+
+      // 2단계: 로컬 일기들의 AI 코멘트 동기화
       const entries = await this.getAllEntries();
-      console.log(`📚 [DiaryStorage] Total entries: ${entries.length}`);
+      console.log(`📚 [DiaryStorage] Total local entries: ${entries.length}`);
 
       let updatedCount = 0;
 
-      // AI 코멘트가 없는 일기들만 서버에서 확인
-      const pendingEntries = entries.filter((entry) => !entry.aiComment);
-      console.log(`⏳ [DiaryStorage] Pending entries without AI comment: ${pendingEntries.length}`);
+      // 모든 일기를 서버와 동기화 (코멘트가 있어도 업데이트될 수 있음)
+      console.log(`⏳ [DiaryStorage] Syncing all ${entries.length} entries with server...`);
 
-      for (const entry of pendingEntries) {
+      for (const entry of entries) {
         try {
           console.log(`🔍 [DiaryStorage] Checking diary ${entry._id}...`);
           const serverData = await apiService.syncDiaryFromServer(entry._id);
-          if (serverData?.aiComment) {
-            await this.update(entry._id, {
-              aiComment: serverData.aiComment,
-              stampType: serverData.stampType,
-              syncedWithServer: true,
-            });
-            updatedCount++;
-            console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment from server`);
+          console.log(`📦 [DiaryStorage] Server data:`, serverData);
+          console.log(`📦 [DiaryStorage] Has AI comment? ${!!serverData?.aiComment}`);
 
-            // 알림 추가
-            await NotificationStorage.addAICommentNotification(entry._id, entry.date);
-            console.log(`🔔 [DiaryStorage] Notification added for diary ${entry._id}`);
+          if (serverData?.aiComment) {
+            console.log(`✅ [DiaryStorage] AI 코멘트 발견!`);
+            // 서버 데이터가 로컬과 다른 경우에만 업데이트
+            const needsUpdate =
+              entry.aiComment !== serverData.aiComment ||
+              entry.stampType !== serverData.stampType;
+
+            if (needsUpdate) {
+              await this.update(entry._id, {
+                aiComment: serverData.aiComment,
+                stampType: serverData.stampType,
+                syncedWithServer: true,
+              });
+              updatedCount++;
+              console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment from server`);
+            } else {
+              console.log(`ℹ️ [DiaryStorage] Diary ${entry._id} is already up to date`);
+            }
           } else {
             console.log(`⚠️ [DiaryStorage] No AI comment yet for diary ${entry._id}`);
           }

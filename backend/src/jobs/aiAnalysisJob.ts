@@ -11,30 +11,41 @@ export class AIAnalysisJob {
     this.claudeService = claudeService;
   }
 
-  // Schedule the job to run every night at 2 AM
+  // Schedule the job to run every night at 3 AM
   start() {
     console.log('Starting AI Analysis Job scheduler...');
 
-    // Run at 10:52 PM every day (for testing)
-    cron.schedule('52 22 * * *', async () => {
-      console.log('Running scheduled batch analysis at 10:52 PM...');
+    // Run at 3:00 AM every day - 어제 날짜 일기 분석
+    cron.schedule('0 3 * * *', async () => {
+      console.log('Running scheduled batch analysis at 3:00 AM...');
       await this.runBatchAnalysis();
     });
 
-    // 아침 9시 일괄 푸시 알림 전송
-    cron.schedule('0 9 * * *', async () => {
-      console.log('📬 아침 9시 - 일괄 푸시 알림 전송 시작...');
-      await PushNotificationService.sendNotificationToAll(
+    // 아침 8시 30분 일괄 푸시 알림 전송 (어제 일기 작성한 사용자만)
+    cron.schedule('30 8 * * *', async () => {
+      console.log('📬 아침 8:30 - 푸시 알림 전송 시작...');
+
+      // 어제 날짜 일기 중 AI 코멘트를 받은 사용자 목록 조회
+      const userIds = DiaryDatabase.getUsersWithAICommentYesterday();
+
+      if (userIds.length === 0) {
+        console.log('ℹ️ 어제 일기를 작성한 사용자가 없어 알림을 보내지 않습니다.');
+        return;
+      }
+
+      // 해당 사용자들에게만 알림 전송
+      await PushNotificationService.sendNotificationToUsers(
+        userIds,
         '선생님 코멘트 도착 ✨',
         '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
         { type: 'ai_comment_complete' }
       );
-      console.log('✅ 아침 9시 - 일괄 푸시 알림 전송 완료');
+      console.log(`✅ 아침 8:30 - ${userIds.length}명에게 푸시 알림 전송 완료`);
     });
 
     console.log('AI Analysis Job scheduler started.');
-    console.log('- Batch Analysis: Every day at 10:52 PM');
-    console.log('- Morning Push: Every day at 9:00 AM');
+    console.log('- Batch Analysis: Every day at 3:00 AM (어제 날짜 일기)');
+    console.log('- Morning Push: Every day at 8:30 AM (어제 일기 작성자만)');
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
@@ -79,14 +90,7 @@ export class AIAnalysisJob {
       }
 
       console.log('Batch AI analysis completed');
-
-      // Silent Push만 전송 (조용히 데이터 업데이트)
-      // 일반 푸시는 아침 9시에 별도로 전송
-      if (pendingDiaries.length > 0) {
-        console.log('📬 Silent Push 전송 중...');
-        await PushNotificationService.sendSilentPushToAll();
-        console.log('✅ Silent Push 전송 완료 (일반 푸시는 아침 9시에 전송 예정)');
-      }
+      console.log(`📋 Processed ${pendingDiaries.length} diaries - regular push will be sent at 8:30 AM`);
     } catch (error) {
       console.error('Error in batch analysis:', error);
     } finally {

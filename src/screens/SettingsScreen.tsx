@@ -20,7 +20,6 @@ import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
 import { PrivacyPolicyModal } from '../components/PrivacyPolicyModal';
 import { DiaryStorage } from '../services/diaryStorage';
-import { NotificationStorage } from '../services/notificationStorage';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
 
@@ -31,7 +30,6 @@ export const SettingsScreen: React.FC = () => {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
   const [diaryCount, setDiaryCount] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
@@ -52,17 +50,6 @@ export const SettingsScreen: React.FC = () => {
     };
     loadDiaryCount();
   }, []);
-
-  // 읽지 않은 알림 개수 확인 (화면 포커스될 때마다)
-  useFocusEffect(
-    React.useCallback(() => {
-      const loadUnreadCount = async () => {
-        const count = await NotificationStorage.getUnreadCount();
-        setUnreadNotifications(count);
-      };
-      loadUnreadCount();
-    }, [])
-  );
 
   const handlePrivacyPolicy = () => {
     setShowPrivacyPolicyModal(true);
@@ -107,20 +94,6 @@ export const SettingsScreen: React.FC = () => {
         {/* 알림 설정 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>알림</Text>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Notification')}
-          >
-            <Ionicons name="notifications-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>알림 목록</Text>
-            {unreadNotifications > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>{unreadNotifications}</Text>
-              </View>
-            )}
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
 
           <View style={styles.settingItem}>
             <View style={styles.settingTextContainer}>
@@ -423,20 +396,5 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
-  },
-  unreadBadge: {
-    backgroundColor: '#EF4444',
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    marginLeft: 8,
-  },
-  unreadBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
   },
 });

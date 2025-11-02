@@ -6,5 +6,4 @@ export type RootStackParamList = {
   DiaryDetail: { entryId: string };
   Report: undefined;
   Settings: undefined;
-  Notification: undefined;
 };
