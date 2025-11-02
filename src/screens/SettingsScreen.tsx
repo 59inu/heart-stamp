@@ -18,7 +18,6 @@ import { SurveyService } from '../services/surveyService';
 import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
-import { PrivacyPolicyModal } from '../components/PrivacyPolicyModal';
 import { NoticeModal } from '../components/NoticeModal';
 import { DiaryStorage } from '../services/diaryStorage';
 import { RootStackParamList } from '../navigation/types';
@@ -34,7 +33,6 @@ export const SettingsScreen: React.FC = () => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
-  const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
 
   const appVersion = '1.0.0';
@@ -57,8 +55,12 @@ export const SettingsScreen: React.FC = () => {
     setShowNoticeModal(true);
   };
 
+  const handleTerms = () => {
+    navigation.navigate('TermsDetail');
+  };
+
   const handlePrivacyPolicy = () => {
-    setShowPrivacyPolicyModal(true);
+    navigation.navigate('PrivacyDetail');
   };
 
   const handleUserGuide = () => {
@@ -214,6 +216,12 @@ export const SettingsScreen: React.FC = () => {
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
+            <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
+            <Text style={styles.menuItemText}>서비스 이용약관</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
             <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>개인정보 처리방침</Text>
@@ -249,12 +257,6 @@ export const SettingsScreen: React.FC = () => {
         visible={showUserGuideModal}
         onClose={() => setShowUserGuideModal(false)}
         hideStartButton={true}
-      />
-
-      {/* 개인정보 처리방침 모달 */}
-      <PrivacyPolicyModal
-        visible={showPrivacyPolicyModal}
-        onClose={() => setShowPrivacyPolicyModal(false)}
       />
 
       {/* 공지사항 모달 */}

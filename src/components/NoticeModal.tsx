@@ -68,7 +68,14 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
               <Text style={styles.bold}>AI 코멘트</Text>{'\n'}
               • 매일 새벽 3시에 전날 일기에 코멘트가 달립니다{'\n'}
               • 오전 8시 30분에 푸시 알림으로 알려드립니다{'\n'}
-              • 일기를 작성한 다음 날 아침에 확인하실 수 있습니다{'\n\n'}
+              • 일기를 작성한 다음 날 아침에 확인하실 수 있습니다{'\n'}
+              • Anthropic Claude API를 사용하여 따뜻하고 섬세한 코멘트를 생성합니다{'\n\n'}
+
+              <Text style={styles.bold}>개인정보 보호</Text>{'\n'}
+              • 일기 원문은 암호화되어 저장됩니다{'\n'}
+              • AI 코멘트 생성을 위해 Anthropic Claude API로 일기가 전송됩니다{'\n'}
+              • 전송된 데이터는 AI 학습에 사용되지 않으며, Trust & Safety 목적으로 최대 90일 보관 후 자동 삭제됩니다{'\n'}
+              • 자세한 내용은 설정 {'>'} 개인정보 처리방침을 확인해주세요{'\n\n'}
 
               <Text style={styles.bold}>문의사항</Text>{'\n'}
               설정 {'>'} FAQ / 문의하기에서 언제든지 문의 주세요!
