@@ -39,3 +39,28 @@ export const getStampLabel = (stampType: StampType): string => {
       return '';
   }
 };
+
+// 일기 ID를 기반으로 일관된 랜덤 도장 위치 생성
+export const getRandomStampPosition = (diaryId: string) => {
+  // diaryId를 해시하여 일관된 랜덤 값 생성
+  let hash = 0;
+  for (let i = 0; i < diaryId.length; i++) {
+    hash = ((hash << 5) - hash) + diaryId.charCodeAt(i);
+    hash = hash & hash; // 32비트 정수로 변환
+  }
+
+  // 회전: 0 ~ 60도
+  const rotation = (Math.abs(hash) % 61);
+
+  // 상하 위치: ±20
+  const topOffset = ((Math.abs(hash >> 8) % 41) - 20);
+
+  // 좌우 위치: ±20
+  const rightOffset = ((Math.abs(hash >> 16) % 41) - 20);
+
+  return {
+    rotation: `${rotation}deg`,
+    top: -80 + topOffset,
+    right: 5 + rightOffset,
+  };
+};
