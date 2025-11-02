@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -40,6 +41,7 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 오늘 날짜를 한 번만 계산 (성능 최적화)
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -49,6 +51,22 @@ export const DiaryListScreen: React.FC = () => {
     const entries = await DiaryStorage.getAll();
     setDiaries(entries);
   }, []);
+
+  // Pull-to-Refresh 핸들러
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      console.log('🔄 [DiaryListScreen] Pull-to-refresh triggered - syncing with server...');
+      await DiaryStorage.syncWithServer();
+      await loadDiaries();
+      diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
+      console.log('✅ [DiaryListScreen] Pull-to-refresh completed');
+    } catch (error) {
+      logger.error('Pull-to-refresh 오류:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadDiaries]);
 
   useFocusEffect(
     useCallback(() => {
@@ -400,7 +418,18 @@ export const DiaryListScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         {renderMonthYearPicker()}
 
       {/* 이달의 신호등 통계 막대 */}
@@ -675,7 +704,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#333',
   },

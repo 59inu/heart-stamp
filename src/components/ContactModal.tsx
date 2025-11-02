@@ -79,14 +79,6 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={onClose}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cancelButtonText}>취소</Text>
-          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
@@ -127,7 +119,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.buttonBackground,
     borderRadius: 12,
     marginBottom: 12,
   },

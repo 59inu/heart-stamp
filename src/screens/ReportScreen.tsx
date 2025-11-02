@@ -809,8 +809,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.settingsIconColor,
   },
   periodTabText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#666',
   },
   periodTabTextActive: {

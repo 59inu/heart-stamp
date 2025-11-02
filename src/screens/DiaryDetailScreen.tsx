@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -85,6 +86,7 @@ export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     let diary = await DiaryStorage.getById(route.params.entryId);
@@ -111,6 +113,22 @@ export const DiaryDetailScreen: React.FC = () => {
       setEntry(diary);
     }
   }, [route.params.entryId]);
+
+  // Pull-to-Refresh 핸들러
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      console.log('🔄 [DiaryDetailScreen] Pull-to-refresh triggered - syncing with server...');
+      await DiaryStorage.syncWithServer();
+      await fetchData();
+      diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
+      console.log('✅ [DiaryDetailScreen] Pull-to-refresh completed');
+    } catch (error) {
+      logger.error('Pull-to-refresh 오류:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -236,8 +254,17 @@ export const DiaryDetailScreen: React.FC = () => {
         )}
       </View>
 
-      <ScrollView style={styles.content}>
-
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
         {/* 이미지 섹션 */}
         {entry.imageUri && (
           <View style={styles.imageSection}>
