@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ClaudeService } from '../services/claudeService';
 import { DiaryEntry } from '../types/diary';
 import { DiaryDatabase } from '../services/database';
+import { aiAnalysisLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -81,7 +82,8 @@ router.get('/diaries/:id/ai-comment', async (req: Request, res: Response) => {
 });
 
 // Manually trigger AI analysis for a specific diary (for testing)
-router.post('/diaries/:id/analyze', async (req: Request, res: Response) => {
+// AI 분석 레이트리미트 적용: 시간당 10회
+router.post('/diaries/:id/analyze', aiAnalysisLimiter, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const diary = DiaryDatabase.getById(id);

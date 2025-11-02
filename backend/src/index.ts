@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
 import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
 import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
@@ -30,15 +31,15 @@ app.use((req, res, next) => {
 // 정적 파일 서빙: /uploads 폴더의 이미지 파일 제공
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Health check endpoint
+// Health check endpoint (레이트리미트 없음)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Heart Stamp Backend is running' });
 });
 
-// API Routes
-app.use('/api', diaryRoutes);
-app.use('/api', reportRoutes);
-app.use('/api', imageRoutes);
+// API Routes (일반 레이트리미트 적용)
+app.use('/api', generalApiLimiter, diaryRoutes);
+app.use('/api', generalApiLimiter, reportRoutes);
+app.use('/api', generalApiLimiter, imageRoutes);
 
 // Initialize Claude Service
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || 'mock-api-key-for-testing';
@@ -84,8 +85,8 @@ app.post('/api/push/register', (req, res) => {
   }
 });
 
-// Manual trigger endpoint for testing
-app.post('/api/jobs/trigger-analysis', async (req, res) => {
+// Manual trigger endpoint for testing (관리 리미터 적용)
+app.post('/api/jobs/trigger-analysis', adminLimiter, async (req, res) => {
   try {
     await aiAnalysisJob.triggerManually();
     res.json({
@@ -101,8 +102,8 @@ app.post('/api/jobs/trigger-analysis', async (req, res) => {
   }
 });
 
-// 일반 Push 테스트 엔드포인트
-app.post('/api/push/test-regular', async (req, res) => {
+// 일반 Push 테스트 엔드포인트 (관리 리미터 적용)
+app.post('/api/push/test-regular', adminLimiter, async (req, res) => {
   try {
     console.log('🧪 [TEST] Sending regular push to all users...');
     await PushNotificationService.sendNotificationToAll(
@@ -123,8 +124,8 @@ app.post('/api/push/test-regular', async (req, res) => {
   }
 });
 
-// AI 코멘트 완료 알림 테스트 엔드포인트
-app.post('/api/push/test-ai-comment', async (req, res) => {
+// AI 코멘트 완료 알림 테스트 엔드포인트 (관리 리미터 적용)
+app.post('/api/push/test-ai-comment', adminLimiter, async (req, res) => {
   try {
     console.log('🧪 [TEST] Sending AI comment complete notification...');
     await PushNotificationService.sendNotificationToAll(
