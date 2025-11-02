@@ -60,6 +60,16 @@ try {
   // 인덱스가 이미 존재하면 무시
 }
 
+// Push Token 테이블 생성
+db.exec(`
+  CREATE TABLE IF NOT EXISTS push_tokens (
+    userId TEXT PRIMARY KEY,
+    token TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  )
+`);
+
 console.log('✅ SQLite database initialized');
 
 export class DiaryDatabase {
@@ -171,9 +181,11 @@ export class DiaryDatabase {
     }));
   }
 
-  // AI 코멘트 없는 일기 조회
+  // AI 코멘트 없는 일기 조회 (전날 작성된 일기만)
+  // 배치 작업이 새벽에 실행되므로, 전날 작성된 일기에 코멘트를 달아야 함
   static getPending(): DiaryEntry[] {
-    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL');
+    // 테스트: 모든 AI 코멘트 없는 일기 조회
+    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL ORDER BY date DESC');
     const rows = stmt.all() as any[];
 
     return rows.map(row => ({
@@ -186,6 +198,40 @@ export class DiaryDatabase {
   static delete(id: string): void {
     const stmt = db.prepare('DELETE FROM diaries WHERE _id = ?');
     stmt.run(id);
+  }
+}
+
+export class PushTokenDatabase {
+  // Push Token 저장/업데이트
+  static upsert(userId: string, token: string): void {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      INSERT INTO push_tokens (userId, token, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(userId) DO UPDATE SET
+        token = excluded.token,
+        updatedAt = excluded.updatedAt
+    `);
+    stmt.run(userId, token, now, now);
+  }
+
+  // Push Token 조회
+  static get(userId: string): string | null {
+    const stmt = db.prepare('SELECT token FROM push_tokens WHERE userId = ?');
+    const row = stmt.get(userId) as any;
+    return row ? row.token : null;
+  }
+
+  // 모든 Push Token 조회
+  static getAll(): Array<{ userId: string; token: string }> {
+    const stmt = db.prepare('SELECT userId, token FROM push_tokens');
+    return stmt.all() as Array<{ userId: string; token: string }>;
+  }
+
+  // Push Token 삭제
+  static delete(userId: string): void {
+    const stmt = db.prepare('DELETE FROM push_tokens WHERE userId = ?');
+    stmt.run(userId);
   }
 }
 

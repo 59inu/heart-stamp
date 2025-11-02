@@ -13,7 +13,7 @@ import { PushNotificationService } from './services/pushNotificationService';
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 3000;
+const PORT: number = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 // Middleware
 app.use(cors());
@@ -24,7 +24,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Stamp Diary Backend is running' });
+  res.json({ status: 'ok', message: 'Heart Stamp Backend is running' });
 });
 
 // API Routes
@@ -45,36 +45,28 @@ initializeClaudeService(CLAUDE_API_KEY);
 initializeReportService(CLAUDE_API_KEY);
 const claudeService = new ClaudeService(CLAUDE_API_KEY);
 
-// Initialize Push Notification Service
-const pushNotificationService = new PushNotificationService();
-
 // Start AI Analysis Job
-const aiAnalysisJob = new AIAnalysisJob(claudeService, pushNotificationService);
+const aiAnalysisJob = new AIAnalysisJob(claudeService);
 aiAnalysisJob.start();
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', (req, res) => {
   try {
-    const { token } = req.body;
-    if (!token) {
+    const { userId, token } = req.body;
+    if (!userId || !token) {
       return res.status(400).json({
         success: false,
-        message: 'Push token is required',
+        message: 'userId and token are required',
       });
     }
 
-    const success = pushNotificationService.registerToken(token);
-    if (success) {
-      res.json({
-        success: true,
-        message: 'Push token registered successfully',
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid push token',
-      });
-    }
+    const { PushTokenDatabase } = require('./services/database');
+    PushTokenDatabase.upsert(userId, token);
+
+    res.json({
+      success: true,
+      message: 'Push token registered successfully',
+    });
   } catch (error) {
     console.error('Error registering push token:', error);
     res.status(500).json({
@@ -102,7 +94,9 @@ app.post('/api/jobs/trigger-analysis', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📔 Stamp Diary Backend - AI-powered diary comments`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on:`);
+  console.log(`   - Local:   http://localhost:${PORT}`);
+  console.log(`   - Network: http://192.168.0.14:${PORT}`);
+  console.log(`📔 Heart Stamp Backend - AI-powered diary comments`);
 });

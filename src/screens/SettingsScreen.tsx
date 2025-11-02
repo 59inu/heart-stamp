@@ -7,37 +7,41 @@ import {
   SafeAreaView,
   ScrollView,
   Switch,
-  Linking,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { SURVEY_URL, SURVEY_BENEFIT } from '../constants/survey';
 import { SurveyService } from '../services/surveyService';
 import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
+import { PrivacyPolicyModal } from '../components/PrivacyPolicyModal';
 import { DiaryStorage } from '../services/diaryStorage';
+import { NotificationStorage } from '../services/notificationStorage';
+import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
 
+type NavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
+
 export const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
-  const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [diaryCount, setDiaryCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
+  const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
 
   const appVersion = '1.0.0';
 
-  // 설문조사 상태 확인
+  // 일기 개수 확인
   React.useEffect(() => {
-    const checkSurveyStatus = async () => {
-      const completed = await SurveyService.hasCompletedSurvey();
-      setSurveyCompleted(completed);
-
+    const loadDiaryCount = async () => {
       // 초기 한 번만 실제 일기 개수로 동기화
       const diaries = await DiaryStorage.getAll();
       await SurveyService.syncDiaryCount(diaries.length);
@@ -46,12 +50,22 @@ export const SettingsScreen: React.FC = () => {
       const count = await SurveyService.getDiaryWriteCount();
       setDiaryCount(count);
     };
-    checkSurveyStatus();
+    loadDiaryCount();
   }, []);
 
+  // 읽지 않은 알림 개수 확인 (화면 포커스될 때마다)
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadUnreadCount = async () => {
+        const count = await NotificationStorage.getUnreadCount();
+        setUnreadNotifications(count);
+      };
+      loadUnreadCount();
+    }, [])
+  );
+
   const handlePrivacyPolicy = () => {
-    // TODO: 개인정보 처리방침 페이지로 이동
-    Alert.alert('개인정보 처리방침', '개인정보 처리방침 페이지가 준비 중입니다.');
+    setShowPrivacyPolicyModal(true);
   };
 
   const handleUserGuide = () => {
@@ -75,9 +89,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleSurvey = async () => {
-    await SurveyService.markSurveyCompleted();
-    setSurveyCompleted(true);
-    Linking.openURL(SURVEY_URL);
+    await WebBrowser.openBrowserAsync(SURVEY_URL);
   };
 
   return (
@@ -96,18 +108,32 @@ export const SettingsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>알림</Text>
 
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Notification')}
+          >
+            <Ionicons name="notifications-outline" size={24} color={COLORS.settingsIconColor} />
+            <Text style={styles.menuItemText}>알림 목록</Text>
+            {unreadNotifications > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unreadNotifications}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
           <View style={styles.settingItem}>
             <View style={styles.settingTextContainer}>
-              <Text style={styles.settingTitle}>푸시 알림</Text>
+              <Text style={styles.settingTitle}>선생님 코멘트 알림</Text>
               <Text style={styles.settingDescription}>
-                선생님 코멘트가 도착하면 알림을 받습니다
+                선생님 코멘트가 도착하면 오전에 알림을 받습니다
               </Text>
             </View>
             <Switch
               value={notificationEnabled}
               onValueChange={setNotificationEnabled}
-              trackColor={{ false: '#d0d0d0', true: COLORS.secondaryLight }}
-              thumbColor={notificationEnabled ? COLORS.secondary : '#f4f3f4'}
+              trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
+              thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
             />
           </View>
 
@@ -121,8 +147,8 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={dailyReminderEnabled}
               onValueChange={setDailyReminderEnabled}
-              trackColor={{ false: '#d0d0d0', true: COLORS.secondaryLight }}
-              thumbColor={dailyReminderEnabled ? COLORS.secondary : '#f4f3f4'}
+              trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
+              thumbColor={dailyReminderEnabled ? '#fff' : '#f4f3f4'}
             />
           </View>
         </View>
@@ -132,7 +158,7 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>데이터 관리</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataBackup}>
-            <Ionicons name="cloud-upload-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="cloud-upload-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>데이터 백업</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -141,7 +167,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataRestore}>
-            <Ionicons name="cloud-download-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="cloud-download-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>데이터 복원</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -150,7 +176,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
-            <Ionicons name="document-text-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>일기 내보내기</Text>
             <View style={styles.comingSoonBadge}>
               <Text style={styles.comingSoonText}>준비중</Text>
@@ -159,8 +185,8 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 설문조사 - 3회 이상 일기 작성자만 표시 */}
-        {diaryCount >= 3 && (
+        {/* 설문조사 - 5회 이상 일기 작성자에게 항상 표시 */}
+        {diaryCount >= 5 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>설문조사</Text>
 
@@ -174,16 +200,13 @@ export const SettingsScreen: React.FC = () => {
               <View style={styles.surveyTextContainer}>
                 <View style={styles.surveyTitleRow}>
                   <Text style={styles.surveyTitle}>사용자 설문조사 참여하기</Text>
-                  {!surveyCompleted && <View style={styles.newBadge}>
+                  <View style={styles.newBadge}>
                     <Text style={styles.newBadgeText}>NEW</Text>
-                  </View>}
+                  </View>
                 </View>
                 <Text style={styles.surveyDescription}>
                   🎁 {SURVEY_BENEFIT.title}
                 </Text>
-                {surveyCompleted && (
-                  <Text style={styles.completedText}>✓ 참여 완료</Text>
-                )}
               </View>
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
@@ -195,28 +218,25 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>정보 및 지원</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleUserGuide}>
-            <Ionicons name="book-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="book-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>사용 가이드</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleFeedback}>
-            <Ionicons name="help-circle-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="help-circle-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>FAQ / 문의하기</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
-            <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>개인정보 처리방침</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>준비중</Text>
-            </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
           <View style={styles.menuItem}>
-            <Ionicons name="information-circle-outline" size={24} color={COLORS.secondary} />
+            <Ionicons name="information-circle-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>앱 버전</Text>
             <Text style={styles.versionText}>{appVersion}</Text>
           </View>
@@ -243,6 +263,13 @@ export const SettingsScreen: React.FC = () => {
       <UserGuideModal
         visible={showUserGuideModal}
         onClose={() => setShowUserGuideModal(false)}
+        hideStartButton={true}
+      />
+
+      {/* 개인정보 처리방침 모달 */}
+      <PrivacyPolicyModal
+        visible={showPrivacyPolicyModal}
+        onClose={() => setShowPrivacyPolicyModal(false)}
       />
     </SafeAreaView>
   );
@@ -341,7 +368,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -396,5 +423,20 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  unreadBadge: {
+    backgroundColor: '#EF4444',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  unreadBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

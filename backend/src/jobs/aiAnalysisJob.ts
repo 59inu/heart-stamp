@@ -5,15 +5,10 @@ import { DiaryDatabase } from '../services/database';
 
 export class AIAnalysisJob {
   private claudeService: ClaudeService;
-  private pushNotificationService: PushNotificationService;
   private isRunning: boolean = false;
 
-  constructor(
-    claudeService: ClaudeService,
-    pushNotificationService: PushNotificationService
-  ) {
+  constructor(claudeService: ClaudeService) {
     this.claudeService = claudeService;
-    this.pushNotificationService = pushNotificationService;
   }
 
   // Schedule the job to run every night at 2 AM
@@ -26,8 +21,20 @@ export class AIAnalysisJob {
       await this.runBatchAnalysis();
     });
 
+    // 아침 9시 일괄 푸시 알림 전송
+    cron.schedule('0 9 * * *', async () => {
+      console.log('📬 아침 9시 - 일괄 푸시 알림 전송 시작...');
+      await PushNotificationService.sendNotificationToAll(
+        '선생님 코멘트 도착 ✨',
+        '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
+        { type: 'ai_comment_complete' }
+      );
+      console.log('✅ 아침 9시 - 일괄 푸시 알림 전송 완료');
+    });
+
     console.log('AI Analysis Job scheduler started.');
-    console.log('- Scheduled: Every day at 10:52 PM');
+    console.log('- Batch Analysis: Every day at 10:52 PM');
+    console.log('- Morning Push: Every day at 9:00 AM');
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
@@ -73,11 +80,12 @@ export class AIAnalysisJob {
 
       console.log('Batch AI analysis completed');
 
-      // 푸시 알림 전송
+      // Silent Push만 전송 (조용히 데이터 업데이트)
+      // 일반 푸시는 아침 9시에 별도로 전송
       if (pendingDiaries.length > 0) {
-        console.log('📬 푸시 알림 전송 중...');
-        await this.pushNotificationService.sendAICommentNotification();
-        console.log('✅ 푸시 알림 전송 완료');
+        console.log('📬 Silent Push 전송 중...');
+        await PushNotificationService.sendSilentPushToAll();
+        console.log('✅ Silent Push 전송 완료 (일반 푸시는 아침 9시에 전송 예정)');
       }
     } catch (error) {
       console.error('Error in batch analysis:', error);

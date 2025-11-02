@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,18 +14,21 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Calendar, DateData } from 'react-native-calendars';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { DiaryEntry, StampType } from '../models/DiaryEntry';
 import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
+import { NotificationStorage } from '../services/notificationStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
-import { getStampImage } from '../utils/stampUtils';
+import { getStampImage, getRandomStampPosition } from '../utils/stampUtils';
 import { OnboardingService } from '../services/onboardingService';
 import { FirstVisitGuide } from '../components/FirstVisitGuide';
 import { logger } from '../utils/logger';
 import { CALENDAR_MARKING_STYLES } from '../constants/calendarStyles';
 import { COLORS } from '../constants/colors';
+import { getEmotionMessage } from '../constants/emotionMessages';
+import { diaryEvents, EVENTS } from '../services/eventEmitter';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -38,6 +41,7 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   // 오늘 날짜를 한 번만 계산 (성능 최적화)
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -69,6 +73,7 @@ export const DiaryListScreen: React.FC = () => {
           if (serverData && serverData.aiComment) {
             return {
               id: entry._id,
+              date: entry.date,
               updates: {
                 aiComment: serverData.aiComment,
                 stampType: serverData.stampType as StampType,
@@ -85,10 +90,19 @@ export const DiaryListScreen: React.FC = () => {
       const results = await Promise.all(syncPromises);
 
       // Batch update all entries
+      let hasNewNotifications = false;
       for (const result of results) {
         if (result) {
           await DiaryStorage.update(result.id, result.updates);
+          // 알림 추가 (중복 체크는 NotificationStorage에서 처리)
+          await NotificationStorage.addAICommentNotification(result.id, result.date);
+          hasNewNotifications = true;
         }
+      }
+
+      // 알림이 추가되었으면 이벤트 발생
+      if (hasNewNotifications) {
+        diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
       }
     } catch (error) {
       logger.error('동기화 중 오류:', error);
@@ -103,6 +117,13 @@ export const DiaryListScreen: React.FC = () => {
     useCallback(() => {
       loadDiaries();
 
+      // 읽지 않은 알림 개수 가져오기
+      const loadUnreadCount = async () => {
+        const count = await NotificationStorage.getUnreadCount();
+        setUnreadNotifications(count);
+      };
+      loadUnreadCount();
+
       // 첫 방문 온보딩 체크
       const checkOnboarding = async () => {
         const completed = await OnboardingService.hasCompletedOnboarding();
@@ -113,6 +134,23 @@ export const DiaryListScreen: React.FC = () => {
       checkOnboarding();
     }, [loadDiaries])
   );
+
+  // Silent Push 수신 시 자동 새로고침
+  useEffect(() => {
+    const handleAICommentReceived = async () => {
+      console.log('📖 AI comment received event - reloading diaries...');
+      loadDiaries();
+      // 알림 개수도 업데이트
+      const count = await NotificationStorage.getUnreadCount();
+      setUnreadNotifications(count);
+    };
+
+    diaryEvents.on(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
+
+    return () => {
+      diaryEvents.off(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
+    };
+  }, [loadDiaries]);
 
   const handleOnboardingComplete = useCallback(async () => {
     await OnboardingService.markOnboardingCompleted();
@@ -126,21 +164,86 @@ export const DiaryListScreen: React.FC = () => {
     diaries.forEach((diary) => {
       const dateKey = format(new Date(diary.date), 'yyyy-MM-dd');
       const isSelected = dateKey === selectedDate;
+      const isToday = dateKey === today;
       const hasComment = !!diary.aiComment;
 
-      // 선택된 날짜
+      // 선택된 날짜 - 기존 배경색 유지 + 보라색 보더라인 추가
       if (isSelected) {
-        marked[dateKey] = hasComment
-          ? CALENDAR_MARKING_STYLES.selectedWithComment
-          : CALENDAR_MARKING_STYLES.selectedWithoutComment;
+        if (hasComment) {
+          // AI 코멘트 있는 날짜
+          if (diary.mood === 'red') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithCommentRed;
+          } else if (diary.mood === 'yellow') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithCommentYellow;
+          } else if (diary.mood === 'green') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithCommentGreen;
+          } else {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithComment;
+          }
+        } else {
+          // 일반 일기만 있는 날짜
+          if (diary.mood === 'red') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithDiaryRed;
+          } else if (diary.mood === 'yellow') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithDiaryYellow;
+          } else if (diary.mood === 'green') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithDiaryGreen;
+          } else {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.selectedWithDiary;
+          }
+        }
       }
-      // AI 코멘트 있는 날짜 - 피치색 배경
+      // 오늘 날짜 (선택되지 않은 경우) - 두꺼운 보더
+      else if (isToday) {
+        if (hasComment) {
+          // AI 코멘트 있는 날짜
+          if (diary.mood === 'red') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithCommentRed;
+          } else if (diary.mood === 'yellow') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithCommentYellow;
+          } else if (diary.mood === 'green') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithCommentGreen;
+          } else {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithComment;
+          }
+        } else {
+          // 일반 일기만 있는 날짜
+          if (diary.mood === 'red') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithDiaryRed;
+          } else if (diary.mood === 'yellow') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithDiaryYellow;
+          } else if (diary.mood === 'green') {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithDiaryGreen;
+          } else {
+            marked[dateKey] = CALENDAR_MARKING_STYLES.todayWithDiary;
+          }
+        }
+      }
+      // AI 코멘트 있는 날짜 - 감정에 따라 배경색 표시 + 하늘색 테두리
       else if (hasComment) {
-        marked[dateKey] = CALENDAR_MARKING_STYLES.withComment;
+        if (diary.mood === 'red') {
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withCommentRed;
+        } else if (diary.mood === 'yellow') {
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withCommentYellow;
+        } else if (diary.mood === 'green') {
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withCommentGreen;
+        } else {
+          // 기분이 없는 경우
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withComment;
+        }
       }
-      // 일반 일기 있는 날짜 - 볼드체만
+      // 일반 일기 있는 날짜 - 기분에 따라 배경색 표시
       else {
-        marked[dateKey] = CALENDAR_MARKING_STYLES.withDiary;
+        if (diary.mood === 'red') {
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withDiaryRed;
+        } else if (diary.mood === 'yellow') {
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withDiaryYellow;
+        } else if (diary.mood === 'green') {
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withDiaryGreen;
+        } else {
+          // 기분이 없는 경우
+          marked[dateKey] = CALENDAR_MARKING_STYLES.withDiary;
+        }
       }
     });
 
@@ -163,6 +266,11 @@ export const DiaryListScreen: React.FC = () => {
           marked[dateKey] = CALENDAR_MARKING_STYLES.futureDate;
         }
       }
+    }
+
+    // 오늘 날짜가 일기가 없고 선택되지 않은 경우 두꺼운 보더 표시
+    if (!marked[today] && today !== selectedDate) {
+      marked[today] = CALENDAR_MARKING_STYLES.today;
     }
 
     // 선택된 날짜가 일기가 없는 경우에도 표시
@@ -213,21 +321,32 @@ export const DiaryListScreen: React.FC = () => {
     const { red, yellow, green, total } = currentMonthMoodStats;
     if (total === 0) return null;
 
-    // 모두 같은 경우 (다채로운 감정)
-    if (red === yellow && yellow === green) {
-      return '다채로운 감정들과 함께하고 있네요. 응원해요 💪';
-    }
+    const today = new Date();
+    const focusedMonth = currentDate.getMonth();
+    const focusedYear = currentDate.getFullYear();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
 
-    const max = Math.max(red, yellow, green);
+    // 포커싱된 달이 현재 달인 경우: 오늘 날짜 기준
+    // 포커싱된 달이 과거 달인 경우: 말일(end) 기준
+    // 포커싱된 달이 미래 달인 경우: 초반(start) 기준
+    let dayForPeriod: number;
 
-    if (green === max) {
-      return '이번 달은 행복한 날이 가장 많았어요 ✨';
-    } else if (red === max) {
-      return '이번 달은 힘든 날이 많았네요. 안아주고 싶어요 🫂';
+    if (focusedYear === currentYear && focusedMonth === currentMonth) {
+      dayForPeriod = today.getDate();
+    } else if (
+      focusedYear < currentYear ||
+      (focusedYear === currentYear && focusedMonth < currentMonth)
+    ) {
+      // 과거 달: 말일 기준 (21-31)
+      dayForPeriod = 25;
     } else {
-      return '이번 달은 조금 우울한 날이 많았어요. 괜찮아요 🌙';
+      // 미래 달: 초반 기준 (1-10)
+      dayForPeriod = 5;
     }
-  }, [currentMonthMoodStats]);
+
+    return getEmotionMessage(red, yellow, green, dayForPeriod);
+  }, [currentMonthMoodStats, currentDate]);
 
   // 오늘 일기 작성 여부
   const hasTodayDiary = useMemo(() => {
@@ -293,7 +412,7 @@ export const DiaryListScreen: React.FC = () => {
                 onPress={() => handleYearChange(-1)}
                 style={styles.yearArrowButton}
               >
-                <Ionicons name="chevron-back" size={24} color={COLORS.primary} />
+                <Ionicons name="chevron-back" size={24} color={COLORS.buttonText} />
               </TouchableOpacity>
 
               <Text style={styles.modalTitle}>{currentYear}년</Text>
@@ -302,7 +421,7 @@ export const DiaryListScreen: React.FC = () => {
                 onPress={() => handleYearChange(1)}
                 style={styles.yearArrowButton}
               >
-                <Ionicons name="chevron-forward" size={24} color={COLORS.primary} />
+                <Ionicons name="chevron-forward" size={24} color={COLORS.buttonText} />
               </TouchableOpacity>
             </View>
 
@@ -340,13 +459,17 @@ export const DiaryListScreen: React.FC = () => {
           style={styles.iconButton}
           onPress={() => navigation.navigate('Settings')}
         >
-          <Ionicons name="settings" size={26} color="#333" />
+          <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
+          {unreadNotifications > 0 && (
+            <View style={styles.notificationDot} />
+          )}
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Heart Stamp</Text>
         <TouchableOpacity
           style={styles.iconButton}
           onPress={() => navigation.navigate('Report')}
         >
-          <Ionicons name="stats-chart" size={26} color="#333" />
+          <MaterialCommunityIcons name="poll" size={22} color="#4B5563" />
         </TouchableOpacity>
       </View>
 
@@ -354,48 +477,60 @@ export const DiaryListScreen: React.FC = () => {
         {renderMonthYearPicker()}
 
       {/* 이달의 신호등 통계 막대 */}
-      {currentMonthMoodStats.total > 0 && (
-        <View style={styles.moodStatsContainer}>
-          <View style={styles.moodStatsBar}>
-            {currentMonthMoodStats.red > 0 && (
-              <View
-                style={[
-                  styles.moodStatsSegment,
-                  styles.moodStatsRed,
-                  {
-                    flex: currentMonthMoodStats.red,
-                  },
-                ]}
-              />
-            )}
-            {currentMonthMoodStats.yellow > 0 && (
-              <View
-                style={[
-                  styles.moodStatsSegment,
-                  styles.moodStatsYellow,
-                  {
-                    flex: currentMonthMoodStats.yellow,
-                  },
-                ]}
-              />
-            )}
-            {currentMonthMoodStats.green > 0 && (
-              <View
-                style={[
-                  styles.moodStatsSegment,
-                  styles.moodStatsGreen,
-                  {
-                    flex: currentMonthMoodStats.green,
-                  },
-                ]}
-              />
-            )}
-          </View>
-          {moodSummaryText && (
-            <Text style={styles.moodSummaryText}>{moodSummaryText}</Text>
+      <View style={styles.moodStatsContainer}>
+        <View style={styles.moodStatsBar}>
+          {currentMonthMoodStats.total === 0 ? (
+            // 일기가 없을 때 회색 막대
+            <View
+              style={[
+                styles.moodStatsSegment,
+                { backgroundColor: '#d0d0d0', flex: 1 },
+              ]}
+            />
+          ) : (
+            <>
+              {currentMonthMoodStats.red > 0 && (
+                <View
+                  style={[
+                    styles.moodStatsSegment,
+                    styles.moodStatsRed,
+                    {
+                      flex: currentMonthMoodStats.red,
+                    },
+                  ]}
+                />
+              )}
+              {currentMonthMoodStats.yellow > 0 && (
+                <View
+                  style={[
+                    styles.moodStatsSegment,
+                    styles.moodStatsYellow,
+                    {
+                      flex: currentMonthMoodStats.yellow,
+                    },
+                  ]}
+                />
+              )}
+              {currentMonthMoodStats.green > 0 && (
+                <View
+                  style={[
+                    styles.moodStatsSegment,
+                    styles.moodStatsGreen,
+                    {
+                      flex: currentMonthMoodStats.green,
+                    },
+                  ]}
+                />
+              )}
+            </>
           )}
         </View>
-      )}
+        <Text style={styles.moodSummaryText}>
+          {currentMonthMoodStats.total === 0
+            ? '이 달은 어떤 기분으로 채워갈까요'
+            : moodSummaryText}
+        </Text>
+      </View>
 
       <Calendar
         current={format(currentDate, 'yyyy-MM-dd')}
@@ -405,6 +540,15 @@ export const DiaryListScreen: React.FC = () => {
           setCurrentDate(new Date(date.year, date.month - 1, 1));
         }}
         markingType="custom"
+        renderArrow={(direction: 'left' | 'right') => (
+          <View style={styles.calendarArrowButton}>
+            <Ionicons
+              name={direction === 'left' ? 'chevron-back' : 'chevron-forward'}
+              size={20}
+              color={COLORS.buttonText}
+            />
+          </View>
+        )}
         renderHeader={(date: any) => {
           const monthYear = format(new Date(date), 'yyyy년 MM월', { locale: ko });
           return (
@@ -417,26 +561,28 @@ export const DiaryListScreen: React.FC = () => {
           );
         }}
         theme={{
-          selectedDayBackgroundColor: COLORS.primary,
-          todayTextColor: COLORS.primary,
-          arrowColor: COLORS.primary,
-          dotColor: COLORS.primary,
-          textDayFontWeight: '300',
+          selectedDayBackgroundColor: COLORS.buttonSecondaryBackground,
+          todayTextColor: '#2F2B4C',
+          arrowColor: COLORS.buttonText,
+          dotColor: COLORS.buttonSecondaryBackground,
+          textDayFontWeight: '400',
           textDayFontSize: 16,
           textMonthFontWeight: 'bold',
           textDayHeaderFontWeight: '600',
+          textSectionTitleColor: '#9DA3AF',
+          textDayColor: '#6B7280',
+          textDisabledColor: '#9DA3AF',
           'stylesheet.day.basic': {
             base: {
-              width: 32,
-              height: 32,
+              width: 36,
+              height: 36,
               alignItems: 'center',
               justifyContent: 'center',
             },
             text: {
               marginTop: 6,
               fontSize: 16,
-              fontWeight: '300',
-              color: '#bbb',
+              fontWeight: '400',
             },
           },
         }}
@@ -444,18 +590,18 @@ export const DiaryListScreen: React.FC = () => {
       />
 
       <View style={styles.selectedDateSection}>
-        <View style={styles.selectedDateHeader}>
-          <View style={styles.dateWithWeather}>
-            <Text style={styles.selectedDateText}>
-              {format(new Date(selectedDate), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
-            </Text>
-            {selectedDiary?.weather && (
-              <Text style={styles.weatherIconSmall}>
-                {WeatherService.getWeatherEmoji(selectedDiary.weather)}
+        {selectedDate <= today && (
+          <View style={styles.selectedDateHeader}>
+            <View style={styles.dateWithWeather}>
+              <Text style={styles.selectedDateText}>
+                {format(new Date(selectedDate), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
               </Text>
-            )}
-          </View>
-          {selectedDate <= today && (
+              {selectedDiary?.weather && (
+                <Text style={styles.weatherIconSmall}>
+                  {WeatherService.getWeatherEmoji(selectedDiary.weather)}
+                </Text>
+              )}
+            </View>
             <TouchableOpacity
               style={styles.writeButton}
               onPress={handleWriteDiary}
@@ -464,8 +610,8 @@ export const DiaryListScreen: React.FC = () => {
                 {selectedDiary ? '보기' : '작성하기'}
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
 
         {selectedDiary ? (
           <TouchableOpacity
@@ -474,13 +620,6 @@ export const DiaryListScreen: React.FC = () => {
               navigation.navigate('DiaryDetail', { entryId: selectedDiary._id })
             }
           >
-            {selectedDiary.stampType && (
-              <Image
-                source={getStampImage(selectedDiary.stampType)}
-                style={styles.stampImageLarge}
-                resizeMode="contain"
-              />
-            )}
             <View style={styles.cardContent}>
               {selectedDiary.mood && (
                 <View style={styles.moodIndicatorContainer}>
@@ -503,7 +642,29 @@ export const DiaryListScreen: React.FC = () => {
             </View>
             {selectedDiary.aiComment ? (
               <View style={styles.aiCommentPreview}>
-                <Text style={styles.aiCommentLabel}>✨ 선생님 코멘트</Text>
+                {selectedDiary.stampType && (() => {
+                  const stampPos = getRandomStampPosition(selectedDiary._id);
+                  return (
+                    <Image
+                      source={getStampImage(selectedDiary.stampType)}
+                      style={[
+                        styles.stampImageLarge,
+                        {
+                          top: stampPos.top,
+                          right: stampPos.right,
+                          transform: [{ rotate: stampPos.rotation }],
+                        },
+                      ]}
+                      resizeMode="contain"
+                    />
+                  );
+                })()}
+                <View style={styles.aiCommentLabelContainer}>
+                  <View style={styles.emojiCircle}>
+                    <Ionicons name="sparkles" size={12} color="#fff" />
+                  </View>
+                  <Text style={styles.aiCommentLabel}>선생님 코멘트</Text>
+                </View>
                 <Text style={styles.aiCommentPreviewText}>
                   {selectedDiary.aiComment}
                 </Text>
@@ -542,7 +703,7 @@ export const DiaryListScreen: React.FC = () => {
             </Text>
             <Text style={styles.noDiarySubText}>
               {selectedDate > today
-                ? '기대하며 기다려볼까요'
+                ? '기대하며 기다려볼까요 ✨'
                 : selectedDate === today
                 ? '선생님이 기다리고 있어요'
                 : '기억을 기록해주세요'}
@@ -574,25 +735,42 @@ export const DiaryListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   header: {
     backgroundColor: '#fff',
-    padding: 12,
+    height: 56,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
   },
   iconButton: {
-    padding: 4,
+    padding: 0,
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#EF4444',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   calendar: {
+    marginTop: 14,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -600,7 +778,7 @@ const styles = StyleSheet.create({
   selectedDateSection: {
     backgroundColor: '#fff',
     padding: 16,
-    marginTop: 12,
+    marginTop: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -608,7 +786,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 4,
     minHeight: 40,
   },
   dateWithWeather: {
@@ -617,7 +795,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selectedDateText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: '#333',
   },
@@ -625,43 +803,28 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   writeButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 20,
   },
   writeButtonText: {
-    color: '#fff',
+    color: COLORS.buttonSecondaryText,
     fontSize: 14,
     fontWeight: '600',
   },
   selectedDiaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    position: 'relative',
-    // iOS 그림자
-    shadowColor: COLORS.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    // Android 그림자
-    elevation: 5,
+    marginBottom: 24,
   },
   stampImageLarge: {
-    width: 125,
-    height: 125,
+    width: 150,
+    height: 150,
     position: 'absolute',
-    top: 30,
-    right: -10,
-    opacity: 0.85,
+    opacity: 0.95,
     zIndex: 1,
   },
   cardContent: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   diaryContentText: {
     fontSize: 14,
@@ -669,23 +832,41 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   aiCommentPreview: {
-    backgroundColor: COLORS.secondaryLight,
-    padding: 12,
+    backgroundColor: '#F0F6FF',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    position: 'relative',
+  },
+  aiCommentLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  emojiCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#60A5FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiText: {
+    fontSize: 12,
   },
   aiCommentLabel: {
-    fontSize: 12,
-    color: COLORS.secondary,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 14,
+    color: COLORS.teacherTitle,
+    fontWeight: 'bold',
   },
   aiCommentPreviewText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#333',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   noAiCommentPreview: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F0F6FF',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -698,7 +879,7 @@ const styles = StyleSheet.create({
   moodIndicatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 20,
     gap: 8,
   },
   moodIndicator: {
@@ -707,13 +888,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   moodRed: {
-    backgroundColor: COLORS.emotionNegativeLight,
+    backgroundColor: COLORS.emotionNegativeStrong,
   },
   moodYellow: {
-    backgroundColor: COLORS.emotionNeutralLight,
+    backgroundColor: COLORS.emotionNeutralStrong,
   },
   moodGreen: {
-    backgroundColor: COLORS.emotionPositiveLight,
+    backgroundColor: COLORS.emotionPositiveStrong,
   },
   moodTagText: {
     fontSize: 12,
@@ -749,6 +930,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     color: '#333',
+  },
+  calendarArrowButton: {
+    width: 36,
+    height: 36,
+    backgroundColor: COLORS.buttonBackground,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -792,7 +981,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pickerItemSelected: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
   },
   pickerItemText: {
     fontSize: 16,
@@ -804,36 +993,47 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   yearArrowButton: {
-    padding: 8,
+    width: 36,
+    height: 36,
+    backgroundColor: COLORS.buttonBackground,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   moodStatsContainer: {
-    marginHorizontal: 20,
-    marginVertical: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginTop: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   moodStatsBar: {
     flexDirection: 'row',
     height: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
     borderRadius: 4,
     overflow: 'hidden',
+    marginHorizontal: 20,
   },
   moodSummaryText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: '#555',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 12,
+    lineHeight: 18,
   },
   moodStatsSegment: {
     height: '100%',
   },
   moodStatsRed: {
-    backgroundColor: COLORS.emotionNegativeLight,
+    backgroundColor: COLORS.emotionNegativeStrong,
   },
   moodStatsYellow: {
-    backgroundColor: COLORS.emotionNeutralLight,
+    backgroundColor: COLORS.emotionNeutralStrong,
   },
   moodStatsGreen: {
-    backgroundColor: COLORS.emotionPositiveLight,
+    backgroundColor: COLORS.emotionPositiveStrong,
   },
   floatingButton: {
     position: 'absolute',
@@ -842,7 +1042,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.buttonSecondaryBackground,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

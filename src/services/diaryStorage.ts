@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DiaryEntry } from '../models/DiaryEntry';
+import { apiService } from './apiService';
+import { NotificationStorage } from './notificationStorage';
 
 const STORAGE_KEY = '@stamp_diary:entries';
 
@@ -113,6 +115,57 @@ export class DiaryStorage {
 
   private static generateId(): string {
     return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * 서버에서 AI 코멘트 업데이트 동기화
+   * Silent Push 수신 시 호출되어 백그라운드 데이터 새로고침
+   */
+  static async syncWithServer(): Promise<void> {
+    console.log('🔄 [DiaryStorage] syncWithServer started...');
+    try {
+      const entries = await this.getAllEntries();
+      console.log(`📚 [DiaryStorage] Total entries: ${entries.length}`);
+
+      let updatedCount = 0;
+
+      // AI 코멘트가 없는 일기들만 서버에서 확인
+      const pendingEntries = entries.filter((entry) => !entry.aiComment);
+      console.log(`⏳ [DiaryStorage] Pending entries without AI comment: ${pendingEntries.length}`);
+
+      for (const entry of pendingEntries) {
+        try {
+          console.log(`🔍 [DiaryStorage] Checking diary ${entry._id}...`);
+          const serverData = await apiService.syncDiaryFromServer(entry._id);
+          if (serverData?.aiComment) {
+            await this.update(entry._id, {
+              aiComment: serverData.aiComment,
+              stampType: serverData.stampType,
+              syncedWithServer: true,
+            });
+            updatedCount++;
+            console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment from server`);
+
+            // 알림 추가
+            await NotificationStorage.addAICommentNotification(entry._id, entry.date);
+            console.log(`🔔 [DiaryStorage] Notification added for diary ${entry._id}`);
+          } else {
+            console.log(`⚠️ [DiaryStorage] No AI comment yet for diary ${entry._id}`);
+          }
+        } catch (error) {
+          console.error(`❌ [DiaryStorage] Error syncing diary ${entry._id}:`, error);
+          // 개별 일기 동기화 실패 시 다음 일기로 계속 진행
+        }
+      }
+
+      if (updatedCount > 0) {
+        console.log(`🎉 [DiaryStorage] Synced ${updatedCount} diary entries with server`);
+      } else {
+        console.log('✅ [DiaryStorage] All diaries are up to date');
+      }
+    } catch (error) {
+      console.error('❌ [DiaryStorage] Error syncing with server:', error);
+    }
   }
 
   // 개발/디버깅용: 모든 로컬 데이터 클리어
