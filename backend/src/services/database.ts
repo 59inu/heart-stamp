@@ -184,10 +184,13 @@ export class DiaryDatabase {
   // AI 코멘트 없는 일기 조회 (전날 작성된 일기만)
   // 배치 작업이 새벽에 실행되므로, 전날 작성된 일기에 코멘트를 달아야 함
   static getPending(): DiaryEntry[] {
-    // 어제 날짜 계산 (배치 작업 실행 기준 "어제")
+    // 어제 날짜 계산 (로컬 타임존 기준)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0]; // "2025-11-02"
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const day = String(yesterday.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`; // "2025-11-02"
 
     console.log(`📅 [DiaryDatabase] 배치 작업 대상 날짜: ${yesterdayStr}`);
 
@@ -211,10 +214,13 @@ export class DiaryDatabase {
 
   // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회 (중복 제거)
   static getUsersWithAICommentYesterday(): string[] {
-    // 어제 날짜 계산
+    // 어제 날짜 계산 (로컬 타임존 기준)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0]; // "2025-11-02"
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const day = String(yesterday.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`; // "2025-11-02"
 
     console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기`);
 

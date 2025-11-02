@@ -50,68 +50,6 @@ export const DiaryListScreen: React.FC = () => {
     setDiaries(entries);
   }, []);
 
-  // 서버 동기화 + 로컬 데이터 로드 (이벤트 핸들러에서만 사용)
-  const syncAndReload = useCallback(async () => {
-    let entries = await DiaryStorage.getAll();
-
-    // 로컬에 일기가 없으면 서버에서 전체 가져오기
-    if (entries.length === 0) {
-      try {
-        const serverDiaries = await apiService.getAllDiaries();
-        logger.log(`📥 서버에서 ${serverDiaries.length}개 일기 가져오기`);
-
-        for (const diary of serverDiaries) {
-          await DiaryStorage.saveFromServer(diary);
-        }
-
-        entries = await DiaryStorage.getAll();
-      } catch (error) {
-        logger.error('서버에서 일기 가져오기 실패:', error);
-      }
-    }
-
-    // 서버에서 AI 코멘트 동기화 - 병렬 처리로 성능 개선 (N+1 쿼리 패턴 제거)
-    try {
-      const syncPromises = entries.map(async (entry) => {
-        try {
-          const serverData = await apiService.syncDiaryFromServer(entry._id);
-          if (serverData && serverData.aiComment) {
-            return {
-              id: entry._id,
-              date: entry.date,
-              updates: {
-                aiComment: serverData.aiComment,
-                stampType: serverData.stampType as StampType,
-              },
-            };
-          }
-          return null;
-        } catch (error) {
-          logger.debug(`서버 동기화 오류 (${entry._id}):`, error);
-          return null;
-        }
-      });
-
-      const results = await Promise.all(syncPromises);
-
-      // Batch update all entries
-      for (const result of results) {
-        if (result) {
-          await DiaryStorage.update(result.id, result.updates);
-        }
-      }
-
-      // 주의: 여기서 이벤트를 emit하면 안됨! (순환 참조 방지)
-      // 이벤트는 외부(App.tsx)에서만 발생해야 함
-    } catch (error) {
-      logger.error('동기화 중 오류:', error);
-    }
-
-    // 동기화 후 다시 로드
-    const updatedEntries = await DiaryStorage.getAll();
-    setDiaries(updatedEntries);
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       loadDiaries();

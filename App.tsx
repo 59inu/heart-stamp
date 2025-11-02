@@ -8,6 +8,8 @@ import { diaryEvents, EVENTS } from './src/services/eventEmitter';
 
 export default function App() {
   const appState = useRef(AppState.currentState);
+  const lastSyncTime = useRef(0);
+  const SYNC_DEBOUNCE_MS = 30000; // 30초 디바운스
 
   useEffect(() => {
     // 푸시 알림 등록 및 리스너 설정
@@ -38,11 +40,20 @@ export default function App() {
     const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
       console.log(`[App] AppState changed: ${appState.current} -> ${nextAppState}`);
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('📱 [App] App became active - syncing data...');
-        await DiaryStorage.syncWithServer();
-        console.log('📱 [App] Sync completed, emitting event...');
-        diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
-        console.log('✅ [App] Event emitted, screens should update now');
+        const now = Date.now();
+        const timeSinceLastSync = now - lastSyncTime.current;
+
+        // 마지막 동기화 후 30초 이상 지났을 때만 동기화
+        if (timeSinceLastSync > SYNC_DEBOUNCE_MS) {
+          console.log(`📱 [App] App became active - syncing data (${Math.round(timeSinceLastSync/1000)}s since last sync)...`);
+          lastSyncTime.current = now;
+          await DiaryStorage.syncWithServer();
+          console.log('📱 [App] Sync completed, emitting event...');
+          diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
+          console.log('✅ [App] Event emitted, screens should update now');
+        } else {
+          console.log(`⏭️ [App] Skipping sync (only ${Math.round(timeSinceLastSync/1000)}s since last sync)`);
+        }
       }
       appState.current = nextAppState;
     });

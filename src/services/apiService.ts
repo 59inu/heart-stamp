@@ -18,6 +18,7 @@ export class ApiService {
     console.log(`🌐 [apiService] Initializing with baseURL: ${this.baseURL}`);
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
+      timeout: 15000, // 15초 타임아웃
     });
 
     // 모든 요청에 userId 헤더 추가
@@ -38,13 +39,25 @@ export class ApiService {
         return response;
       },
       (error) => {
-        console.error(`❌ [apiService] Request failed:`, {
+        // 에러 타입 구분
+        let errorType = 'unknown';
+        if (error.code === 'ECONNABORTED') {
+          errorType = 'timeout';
+        } else if (error.code === 'ERR_NETWORK') {
+          errorType = 'network';
+        } else if (error.response) {
+          errorType = 'server';
+        }
+
+        console.error(`❌ [apiService] Request failed [${errorType}]:`, {
           url: error.config?.url,
           method: error.config?.method,
           status: error.response?.status,
           data: error.response?.data,
           message: error.message,
+          code: error.code,
         });
+
         return Promise.reject(error);
       }
     );

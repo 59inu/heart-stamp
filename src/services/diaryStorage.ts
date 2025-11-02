@@ -5,6 +5,8 @@ import { apiService } from './apiService';
 const STORAGE_KEY = '@stamp_diary:entries';
 
 export class DiaryStorage {
+  private static isSyncing = false;
+
   private static async getAllEntries(): Promise<DiaryEntry[]> {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
@@ -118,75 +120,75 @@ export class DiaryStorage {
 
   /**
    * 서버에서 AI 코멘트 업데이트 동기화
-   * Silent Push 수신 시 호출되어 백그라운드 데이터 새로고침
+   * 중복 실행 방지 기능 포함
    */
   static async syncWithServer(): Promise<void> {
+    // 이미 동기화 중이면 스킵
+    if (this.isSyncing) {
+      console.log('⏭️ [DiaryStorage] Sync already in progress, skipping...');
+      return;
+    }
+
+    this.isSyncing = true;
     console.log('🔄 [DiaryStorage] syncWithServer started...');
     try {
-      // 1단계: 서버에서 전체 일기 목록 가져오기
-      try {
-        const serverDiaries = await apiService.getAllDiaries();
-        console.log(`📥 [DiaryStorage] Server has ${serverDiaries.length} diaries`);
+      // 서버에서 전체 일기 목록 가져오기 (한 번의 API 호출로 모든 데이터 획득)
+      const serverDiaries = await apiService.getAllDiaries();
+      console.log(`📥 [DiaryStorage] Server has ${serverDiaries.length} diaries`);
 
-        // 서버에 있는 일기를 로컬에 저장 (없으면 추가, 있으면 업데이트)
-        for (const serverDiary of serverDiaries) {
-          await this.saveFromServer(serverDiary);
-        }
-        console.log(`✅ [DiaryStorage] Synced all diaries from server`);
-      } catch (error) {
-        console.error('❌ [DiaryStorage] Error fetching all diaries from server:', error);
-      }
+      // 서버 데이터를 Map으로 변환 (빠른 조회를 위해)
+      const serverDiaryMap = new Map(
+        serverDiaries.map(diary => [diary._id, diary])
+      );
 
-      // 2단계: 로컬 일기들의 AI 코멘트 동기화
+      // 로컬 일기 목록 가져오기
       const entries = await this.getAllEntries();
       console.log(`📚 [DiaryStorage] Total local entries: ${entries.length}`);
 
       let updatedCount = 0;
+      let addedCount = 0;
 
-      // 모든 일기를 서버와 동기화 (코멘트가 있어도 업데이트될 수 있음)
-      console.log(`⏳ [DiaryStorage] Syncing all ${entries.length} entries with server...`);
-
-      for (const entry of entries) {
-        try {
-          console.log(`🔍 [DiaryStorage] Checking diary ${entry._id}...`);
-          const serverData = await apiService.syncDiaryFromServer(entry._id);
-          console.log(`📦 [DiaryStorage] Server data:`, serverData);
-          console.log(`📦 [DiaryStorage] Has AI comment? ${!!serverData?.aiComment}`);
-
-          if (serverData?.aiComment) {
-            console.log(`✅ [DiaryStorage] AI 코멘트 발견!`);
-            // 서버 데이터가 로컬과 다른 경우에만 업데이트
-            const needsUpdate =
-              entry.aiComment !== serverData.aiComment ||
-              entry.stampType !== serverData.stampType;
-
-            if (needsUpdate) {
-              await this.update(entry._id, {
-                aiComment: serverData.aiComment,
-                stampType: serverData.stampType,
-                syncedWithServer: true,
-              });
-              updatedCount++;
-              console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment from server`);
-            } else {
-              console.log(`ℹ️ [DiaryStorage] Diary ${entry._id} is already up to date`);
-            }
-          } else {
-            console.log(`⚠️ [DiaryStorage] No AI comment yet for diary ${entry._id}`);
-          }
-        } catch (error) {
-          console.error(`❌ [DiaryStorage] Error syncing diary ${entry._id}:`, error);
-          // 개별 일기 동기화 실패 시 다음 일기로 계속 진행
+      // 서버에만 있는 일기 로컬에 추가
+      for (const serverDiary of serverDiaries) {
+        const localEntry = entries.find(e => e._id === serverDiary._id);
+        if (!localEntry) {
+          await this.saveFromServer(serverDiary);
+          addedCount++;
         }
       }
 
-      if (updatedCount > 0) {
-        console.log(`🎉 [DiaryStorage] Synced ${updatedCount} diary entries with server`);
+      // 로컬 일기를 서버 데이터와 동기화 (N+1 쿼리 제거)
+      for (const entry of entries) {
+        const serverData = serverDiaryMap.get(entry._id);
+
+        if (serverData?.aiComment) {
+          // 서버 데이터가 로컬과 다른 경우에만 업데이트
+          const needsUpdate =
+            entry.aiComment !== serverData.aiComment ||
+            entry.stampType !== serverData.stampType;
+
+          if (needsUpdate) {
+            await this.update(entry._id, {
+              aiComment: serverData.aiComment,
+              stampType: serverData.stampType,
+              syncedWithServer: true,
+            });
+            updatedCount++;
+            console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment`);
+          }
+        }
+      }
+
+      if (addedCount > 0 || updatedCount > 0) {
+        console.log(`🎉 [DiaryStorage] Sync complete: ${addedCount} added, ${updatedCount} updated`);
       } else {
         console.log('✅ [DiaryStorage] All diaries are up to date');
       }
     } catch (error) {
       console.error('❌ [DiaryStorage] Error syncing with server:', error);
+    } finally {
+      this.isSyncing = false;
+      console.log('🏁 [DiaryStorage] Sync completed, lock released');
     }
   }
 
