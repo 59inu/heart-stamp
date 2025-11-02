@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
+import { requireAdminToken } from './middleware/auth';
 import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
 import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
@@ -85,8 +86,8 @@ app.post('/api/push/register', (req, res) => {
   }
 });
 
-// Manual trigger endpoint for testing (관리 리미터 적용)
-app.post('/api/jobs/trigger-analysis', adminLimiter, async (req, res) => {
+// Manual trigger endpoint for testing (관리 리미터 + 토큰 인증)
+app.post('/api/jobs/trigger-analysis', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     await aiAnalysisJob.triggerManually();
     res.json({
@@ -102,8 +103,8 @@ app.post('/api/jobs/trigger-analysis', adminLimiter, async (req, res) => {
   }
 });
 
-// 일반 Push 테스트 엔드포인트 (관리 리미터 적용)
-app.post('/api/push/test-regular', adminLimiter, async (req, res) => {
+// 일반 Push 테스트 엔드포인트 (관리 리미터 + 토큰 인증)
+app.post('/api/push/test-regular', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     console.log('🧪 [TEST] Sending regular push to all users...');
     await PushNotificationService.sendNotificationToAll(
@@ -124,8 +125,8 @@ app.post('/api/push/test-regular', adminLimiter, async (req, res) => {
   }
 });
 
-// AI 코멘트 완료 알림 테스트 엔드포인트 (관리 리미터 적용)
-app.post('/api/push/test-ai-comment', adminLimiter, async (req, res) => {
+// AI 코멘트 완료 알림 테스트 엔드포인트 (관리 리미터 + 토큰 인증)
+app.post('/api/push/test-ai-comment', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     console.log('🧪 [TEST] Sending AI comment complete notification...');
     await PushNotificationService.sendNotificationToAll(
