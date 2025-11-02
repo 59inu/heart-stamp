@@ -1,12 +1,14 @@
 {
   "expo": {
-    "name": "stamp-diary",
-    "slug": "stamp-diary",
+    "name": "heart-stamp",
+    "slug": "heart-stamp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "owner": "59nuna",
+    "projectId": "46e61da8-364c-4ce8-b1b8-03883e7e6919",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -25,6 +27,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "46e61da8-364c-4ce8-b1b8-03883e7e6919"
+      }
     }
   }
 }
