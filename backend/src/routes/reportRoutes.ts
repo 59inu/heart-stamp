@@ -141,22 +141,6 @@ router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) =
       });
     }
 
-    // 일기 개수 확인 (최소 3개 필요)
-    const { DiaryDatabase } = await import('../services/database');
-    const allDiaries = DiaryDatabase.getAllByUserId(userId);
-    const periodDiaries = allDiaries.filter((diary) => {
-      const diaryDate = new Date(diary.date);
-      return diaryDate >= startDate && diaryDate <= endDate;
-    });
-
-    if (periodDiaries.length < 3) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least 3 diaries required for report generation',
-        diaryCount: periodDiaries.length,
-      });
-    }
-
     const report = await reportService.getOrCreateWeeklyReport(
       userId,
       year,

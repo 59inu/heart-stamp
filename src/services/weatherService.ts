@@ -112,7 +112,7 @@ export class WeatherService {
       case 'snowy':
         return '눈';
       case 'stormy':
-        return '폭우';
+        return '뇌우';
       default:
         return '흐림';
     }

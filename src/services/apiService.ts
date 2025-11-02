@@ -4,7 +4,10 @@ import { Report } from '../models/Report';
 import { UserService } from './userService';
 
 // Change this to your backend server URL
-const API_BASE_URL = 'http://localhost:3000/api';
+// localhost는 시뮬레이터에서만 작동, 실제 디바이스에서는 컴퓨터 IP 사용
+const API_BASE_URL = __DEV__
+  ? 'http://192.168.0.14:3000/api'  // 개발 모드: 컴퓨터 IP 사용 (실제 디바이스 지원)
+  : 'https://your-production-server.com/api';  // 프로덕션 모드
 
 export class ApiService {
   private baseURL: string;
@@ -98,15 +101,16 @@ export class ApiService {
     }
   }
 
-  async registerPushToken(token: string): Promise<boolean> {
+  async registerPushToken(userId: string, token: string): Promise<{ success: boolean; message?: string }> {
     try {
       const response = await this.axiosInstance.post('/push/register', {
+        userId,
         token,
       });
-      return response.data.success;
+      return { success: response.data.success, message: response.data.message };
     } catch (error) {
       console.error('Error registering push token:', error);
-      return false;
+      return { success: false, message: 'Failed to register push token' };
     }
   }
 

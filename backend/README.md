@@ -1,4 +1,4 @@
-# Stamp Diary Backend
+# Heart Stamp Backend
 
 도장 일기 앱의 백엔드 서버입니다.
 
