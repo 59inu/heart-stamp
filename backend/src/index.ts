@@ -9,6 +9,7 @@ import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
+import { BackupJob } from './jobs/backupJob';
 import { PushNotificationService } from './services/pushNotificationService';
 
 // Load environment variables
@@ -85,6 +86,10 @@ const claudeService = new ClaudeService(CLAUDE_API_KEY);
 const aiAnalysisJob = new AIAnalysisJob(claudeService);
 aiAnalysisJob.start();
 
+// Start Backup Job
+const backupJob = new BackupJob();
+backupJob.start();
+
 // 푸시 토큰 등록 API
 app.post('/api/push/register', (req, res) => {
   try {
@@ -125,6 +130,41 @@ app.post('/api/jobs/trigger-analysis', adminLimiter, requireAdminToken, async (r
     res.status(500).json({
       success: false,
       message: 'Failed to trigger batch analysis',
+    });
+  }
+});
+
+// Manual backup trigger endpoint (관리 리미터 + 토큰 인증)
+app.post('/api/jobs/trigger-backup', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    await backupJob.triggerManually();
+    res.json({
+      success: true,
+      message: 'Backup triggered successfully',
+    });
+  } catch (error) {
+    console.error('Error triggering backup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to trigger backup',
+    });
+  }
+});
+
+// List backups endpoint (관리 리미터 + 토큰 인증)
+app.get('/api/jobs/backups', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { BackupService } = require('./services/backupService');
+    const backups = BackupService.listBackups();
+    res.json({
+      success: true,
+      data: backups,
+    });
+  } catch (error) {
+    console.error('Error listing backups:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to list backups',
     });
   }
 });

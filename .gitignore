@@ -53,6 +53,7 @@ backend/dist/
 backend/node_modules/
 backend/*.db
 backend/*.db-*
+backend/backups/
 
 # Realm
 default.realm*
