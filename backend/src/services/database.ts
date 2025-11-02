@@ -59,10 +59,34 @@ try {
   // 컬럼이 이미 존재하면 에러 발생 (무시)
 }
 
+// 마이그레이션: deleted_at 컬럼 추가 (소프트 삭제 지원)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN deletedAt TEXT`);
+  console.log('✅ Added deletedAt column to diaries table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
+// 마이그레이션: version 컬럼 추가 (충돌 해결 지원)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN version INTEGER DEFAULT 1`);
+  console.log('✅ Added version column to diaries table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
 // userId 인덱스 생성 (성능 향상)
 try {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries(userId)`);
   console.log('✅ Created userId index');
+} catch (error) {
+  // 인덱스가 이미 존재하면 무시
+}
+
+// deletedAt 인덱스 생성 (소프트 삭제 쿼리 성능 향상)
+try {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON diaries(deletedAt)`);
+  console.log('✅ Created deletedAt index on diaries table');
 } catch (error) {
   // 인덱스가 이미 존재하면 무시
 }
@@ -77,14 +101,30 @@ db.exec(`
   )
 `);
 
+// 마이그레이션: push_tokens에 deletedAt 컬럼 추가
+try {
+  db.exec(`ALTER TABLE push_tokens ADD COLUMN deletedAt TEXT`);
+  console.log('✅ Added deletedAt column to push_tokens table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
+// 마이그레이션: push_tokens에 version 컬럼 추가
+try {
+  db.exec(`ALTER TABLE push_tokens ADD COLUMN version INTEGER DEFAULT 1`);
+  console.log('✅ Added version column to push_tokens table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
 console.log('✅ SQLite database initialized');
 
 export class DiaryDatabase {
   // 일기 저장
   static create(diary: DiaryEntry): DiaryEntry {
     const stmt = db.prepare(`
-      INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer, version)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -99,7 +139,8 @@ export class DiaryDatabase {
       diary.stampType || null,
       diary.createdAt,
       diary.updatedAt,
-      diary.syncedWithServer ? 1 : 0
+      diary.syncedWithServer ? 1 : 0,
+      diary.version || 1 // 초기 버전은 1
     );
 
     return diary;
@@ -142,12 +183,15 @@ export class DiaryDatabase {
     fields.push('updatedAt = ?');
     values.push(new Date().toISOString());
 
+    // 버전 증가 (Last-Write-Wins 충돌 해결)
+    fields.push('version = version + 1');
+
     values.push(id);
 
     const stmt = db.prepare(`
       UPDATE diaries
       SET ${fields.join(', ')}
-      WHERE _id = ?
+      WHERE _id = ? AND deletedAt IS NULL
     `);
 
     stmt.run(...values);
@@ -155,7 +199,7 @@ export class DiaryDatabase {
 
   // 일기 조회 (ID)
   static getById(id: string): DiaryEntry | null {
-    const stmt = db.prepare('SELECT * FROM diaries WHERE _id = ?');
+    const stmt = db.prepare('SELECT * FROM diaries WHERE _id = ? AND deletedAt IS NULL');
     const row = stmt.get(id) as any;
 
     if (!row) return null;
@@ -168,7 +212,7 @@ export class DiaryDatabase {
 
   // 특정 사용자의 모든 일기 조회
   static getAllByUserId(userId: string): DiaryEntry[] {
-    const stmt = db.prepare('SELECT * FROM diaries WHERE userId = ? ORDER BY date DESC');
+    const stmt = db.prepare('SELECT * FROM diaries WHERE userId = ? AND deletedAt IS NULL ORDER BY date DESC');
     const rows = stmt.all(userId) as any[];
 
     return rows.map(row => ({
@@ -179,7 +223,7 @@ export class DiaryDatabase {
 
   // 모든 일기 조회 (관리용)
   static getAll(): DiaryEntry[] {
-    const stmt = db.prepare('SELECT * FROM diaries ORDER BY date DESC');
+    const stmt = db.prepare('SELECT * FROM diaries WHERE deletedAt IS NULL ORDER BY date DESC');
     const rows = stmt.all() as any[];
 
     return rows.map(row => ({
@@ -201,8 +245,8 @@ export class DiaryDatabase {
 
     console.log(`📅 [DiaryDatabase] 배치 작업 대상 날짜: ${yesterdayStr}`);
 
-    // 어제 날짜(00:00:00 ~ 23:59:59)에 작성된 일기 중 AI 코멘트 없는 것만 조회
-    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL AND date LIKE ? ORDER BY date DESC');
+    // 어제 날짜(00:00:00 ~ 23:59:59)에 작성된 일기 중 AI 코멘트 없는 것만 조회 (소프트 삭제 제외)
+    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL AND date LIKE ? AND deletedAt IS NULL ORDER BY date DESC');
     const rows = stmt.all(`${yesterdayStr}%`) as any[];
 
     console.log(`📋 [DiaryDatabase] ${yesterdayStr} 날짜 일기 중 AI 코멘트 대기: ${rows.length}개`);
@@ -213,10 +257,15 @@ export class DiaryDatabase {
     }));
   }
 
-  // 일기 삭제
+  // 일기 삭제 (소프트 삭제)
   static delete(id: string): void {
-    const stmt = db.prepare('DELETE FROM diaries WHERE _id = ?');
-    stmt.run(id);
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE diaries
+      SET deletedAt = ?, updatedAt = ?, version = version + 1
+      WHERE _id = ? AND deletedAt IS NULL
+    `);
+    stmt.run(now, now, id);
   }
 
   // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회 (중복 제거)
@@ -231,8 +280,8 @@ export class DiaryDatabase {
 
     console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기`);
 
-    // 어제 날짜에 작성되고 AI 코멘트가 있는 일기의 userId 조회 (중복 제거)
-    const stmt = db.prepare('SELECT DISTINCT userId FROM diaries WHERE date LIKE ? AND aiComment IS NOT NULL');
+    // 어제 날짜에 작성되고 AI 코멘트가 있는 일기의 userId 조회 (중복 제거, 소프트 삭제 제외)
+    const stmt = db.prepare('SELECT DISTINCT userId FROM diaries WHERE date LIKE ? AND aiComment IS NOT NULL AND deletedAt IS NULL');
     const rows = stmt.all(`${yesterdayStr}%`) as Array<{ userId: string }>;
 
     const userIds = rows.map(row => row.userId);
@@ -247,32 +296,39 @@ export class PushTokenDatabase {
   static upsert(userId: string, token: string): void {
     const now = new Date().toISOString();
     const stmt = db.prepare(`
-      INSERT INTO push_tokens (userId, token, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO push_tokens (userId, token, createdAt, updatedAt, version)
+      VALUES (?, ?, ?, ?, 1)
       ON CONFLICT(userId) DO UPDATE SET
         token = excluded.token,
-        updatedAt = excluded.updatedAt
+        updatedAt = excluded.updatedAt,
+        version = version + 1,
+        deletedAt = NULL
     `);
     stmt.run(userId, token, now, now);
   }
 
   // Push Token 조회
   static get(userId: string): string | null {
-    const stmt = db.prepare('SELECT token FROM push_tokens WHERE userId = ?');
+    const stmt = db.prepare('SELECT token FROM push_tokens WHERE userId = ? AND deletedAt IS NULL');
     const row = stmt.get(userId) as any;
     return row ? row.token : null;
   }
 
   // 모든 Push Token 조회
   static getAll(): Array<{ userId: string; token: string }> {
-    const stmt = db.prepare('SELECT userId, token FROM push_tokens');
+    const stmt = db.prepare('SELECT userId, token FROM push_tokens WHERE deletedAt IS NULL');
     return stmt.all() as Array<{ userId: string; token: string }>;
   }
 
-  // Push Token 삭제
+  // Push Token 삭제 (소프트 삭제)
   static delete(userId: string): void {
-    const stmt = db.prepare('DELETE FROM push_tokens WHERE userId = ?');
-    stmt.run(userId);
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE push_tokens
+      SET deletedAt = ?, updatedAt = ?, version = version + 1
+      WHERE userId = ? AND deletedAt IS NULL
+    `);
+    stmt.run(now, now, userId);
   }
 }
 

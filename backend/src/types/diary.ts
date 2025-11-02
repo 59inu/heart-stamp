@@ -16,6 +16,8 @@ export interface DiaryEntry {
   createdAt: string;
   updatedAt: string;
   syncedWithServer: boolean;
+  deletedAt?: string; // 소프트 삭제 타임스탬프
+  version: number; // 충돌 해결용 버전 번호 (Last-Write-Wins)
 }
 
 export interface AIAnalysisResult {

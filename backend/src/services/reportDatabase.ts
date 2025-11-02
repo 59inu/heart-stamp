@@ -31,11 +31,38 @@ db.exec(`
   )
 `);
 
+// 마이그레이션: updatedAt 컬럼 추가
+try {
+  db.exec(`ALTER TABLE reports ADD COLUMN updatedAt TEXT`);
+  // 기존 레코드의 updatedAt을 createdAt으로 초기화
+  db.exec(`UPDATE reports SET updatedAt = createdAt WHERE updatedAt IS NULL`);
+  console.log('✅ Added updatedAt column to reports table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
+// 마이그레이션: deletedAt 컬럼 추가 (소프트 삭제 지원)
+try {
+  db.exec(`ALTER TABLE reports ADD COLUMN deletedAt TEXT`);
+  console.log('✅ Added deletedAt column to reports table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
+// 마이그레이션: version 컬럼 추가 (충돌 해결 지원)
+try {
+  db.exec(`ALTER TABLE reports ADD COLUMN version INTEGER DEFAULT 1`);
+  console.log('✅ Added version column to reports table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
 // 인덱스 생성 (빠른 조회)
 try {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_userId_period ON reports(userId, period)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_year_week ON reports(year, week)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_year_month ON reports(year, month)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON reports(deletedAt)`);
   console.log('✅ Reports table and indexes created');
 } catch (error) {
   // 인덱스가 이미 존재하면 무시
@@ -44,9 +71,10 @@ try {
 export class ReportDatabase {
   // 리포트 저장
   static create(report: Report): Report {
+    const now = new Date().toISOString();
     const stmt = db.prepare(`
-      INSERT INTO reports (_id, userId, period, year, week, month, startDate, endDate, keywords, moodDistribution, summary, insight, diaryCount, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO reports (_id, userId, period, year, week, month, startDate, endDate, keywords, moodDistribution, summary, insight, diaryCount, createdAt, updatedAt, version)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -63,7 +91,9 @@ export class ReportDatabase {
       report.summary,
       report.insight,
       report.diaryCount,
-      report.createdAt
+      report.createdAt,
+      report.updatedAt || now,
+      report.version || 1
     );
 
     return report;
@@ -72,7 +102,7 @@ export class ReportDatabase {
   // 주간 리포트 조회
   static getWeeklyReport(userId: string, year: number, week: number): Report | null {
     const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND week = ?'
+      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND week = ? AND deletedAt IS NULL'
     );
     const row = stmt.get(userId, 'weekly', year, week) as any;
 
@@ -88,7 +118,7 @@ export class ReportDatabase {
   // 월간 리포트 조회
   static getMonthlyReport(userId: string, year: number, month: number): Report | null {
     const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND month = ?'
+      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND month = ? AND deletedAt IS NULL'
     );
     const row = stmt.get(userId, 'monthly', year, month) as any;
 
@@ -104,7 +134,7 @@ export class ReportDatabase {
   // 사용자의 모든 리포트 조회
   static getAllByUserId(userId: string): Report[] {
     const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? ORDER BY year DESC, week DESC, month DESC'
+      'SELECT * FROM reports WHERE userId = ? AND deletedAt IS NULL ORDER BY year DESC, week DESC, month DESC'
     );
     const rows = stmt.all(userId) as any[];
 
@@ -115,9 +145,14 @@ export class ReportDatabase {
     }));
   }
 
-  // 리포트 삭제
+  // 리포트 삭제 (소프트 삭제)
   static delete(id: string): void {
-    const stmt = db.prepare('DELETE FROM reports WHERE _id = ?');
-    stmt.run(id);
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE reports
+      SET deletedAt = ?, updatedAt = ?, version = version + 1
+      WHERE _id = ? AND deletedAt IS NULL
+    `);
+    stmt.run(now, now, id);
   }
 }
