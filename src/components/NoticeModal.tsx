@@ -41,10 +41,10 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
               <Text style={styles.noticeBadgeText}>NEW</Text>
             </View>
             <Text style={styles.noticeDate}>2025.11.02</Text>
-            <Text style={styles.noticeTitle}>Heart Stamp 정식 출시 안내</Text>
+            <Text style={styles.noticeTitle}>Heart Stamp 출시 안내</Text>
             <Text style={styles.noticeContent}>
               안녕하세요, Heart Stamp 팀입니다.{'\n\n'}
-              일기를 쓰면 선생님이 도장을 찍어주는 감성 다이어리 앱, Heart Stamp가 정식 출시되었습니다!{'\n\n'}
+              일기를 쓰면 선생님이 도장을 찍어주는 감성 다이어리 앱, Heart Stamp를 찾아주셔서 감사합니다!{'\n\n'}
 
               <Text style={styles.bold}>주요 기능:</Text>{'\n'}
               • 하루 한 번, 일기 작성{'\n'}
@@ -57,28 +57,18 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
             </Text>
           </View>
 
-          {/* 이전 공지사항 예시 */}
           <View style={styles.noticeItem}>
-            <Text style={styles.noticeDate}>2025.11.01</Text>
-            <Text style={styles.noticeTitle}>베타 테스트 종료 안내</Text>
-            <Text style={styles.noticeContent}>
-              베타 테스트에 참여해주신 모든 분들께 감사드립니다.{'\n\n'}
-              소중한 피드백을 바탕으로 앱을 개선하여 정식 버전으로 출시하게 되었습니다.{'\n\n'}
-              베타 테스트 기간 동안 작성하신 일기는 모두 유지됩니다.
-            </Text>
-          </View>
-
-          <View style={styles.noticeItem}>
-            <Text style={styles.noticeDate}>2025.10.25</Text>
+            <Text style={styles.noticeDate}>2025.11.02</Text>
             <Text style={styles.noticeTitle}>서비스 이용 안내</Text>
             <Text style={styles.noticeContent}>
-              <Text style={styles.bold}>일기 작성 시간</Text>{'\n'}
+              <Text style={styles.bold}>일기 작성</Text>{'\n'}
               • 하루에 한 번, 언제든지 작성 가능합니다{'\n'}
-              • 이전 날짜의 일기는 작성할 수 없습니다{'\n\n'}
+              • 오늘 날짜의 일기만 작성할 수 있습니다{'\n\n'}
 
               <Text style={styles.bold}>AI 코멘트</Text>{'\n'}
               • 매일 새벽 3시에 전날 일기에 코멘트가 달립니다{'\n'}
-              • 오전 8시 30분에 푸시 알림으로 알려드립니다{'\n\n'}
+              • 오전 8시 30분에 푸시 알림으로 알려드립니다{'\n'}
+              • 일기를 작성한 다음 날 아침에 확인하실 수 있습니다{'\n\n'}
 
               <Text style={styles.bold}>문의사항</Text>{'\n'}
               설정 {'>'} FAQ / 문의하기에서 언제든지 문의 주세요!
