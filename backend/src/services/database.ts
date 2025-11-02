@@ -5,6 +5,13 @@ import { DiaryEntry } from '../types/diary';
 const dbPath = path.join(__dirname, '../../diary.db');
 const db = new Database(dbPath);
 
+// WAL 모드 활성화 (성능 및 동시성 향상)
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL'); // WAL과 함께 사용 시 안전하면서도 빠름
+db.pragma('cache_size = -64000'); // 64MB 캐시 (성능 향상)
+db.pragma('busy_timeout = 5000'); // 5초 대기 후 타임아웃
+console.log('✅ WAL mode enabled for better-sqlite3');
+
 // 테이블 생성
 db.exec(`
   CREATE TABLE IF NOT EXISTS diaries (

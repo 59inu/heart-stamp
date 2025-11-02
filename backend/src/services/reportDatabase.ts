@@ -5,6 +5,12 @@ import { Report, MoodDistribution } from '../types/report';
 const dbPath = path.join(__dirname, '../../diary.db');
 const db = new Database(dbPath);
 
+// WAL 모드 활성화 (성능 및 동시성 향상)
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('cache_size = -64000');
+db.pragma('busy_timeout = 5000');
+
 // 리포트 테이블 생성
 db.exec(`
   CREATE TABLE IF NOT EXISTS reports (
