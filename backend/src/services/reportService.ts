@@ -197,6 +197,7 @@ JSON 형식:
     );
 
     // 리포트 생성
+    const now = new Date().toISOString();
     const report: Report = {
       _id: uuidv4(),
       userId,
@@ -211,7 +212,9 @@ JSON 형식:
       summary: aiResult.summary,
       insight: aiResult.insight,
       diaryCount: periodDiaries.length,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
     };
 
     // DB에 저장

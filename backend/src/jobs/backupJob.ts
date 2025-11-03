@@ -1,8 +1,8 @@
-import cron from 'node-cron';
+import cron, { ScheduledTask } from 'node-cron';
 import { BackupService } from '../services/backupService';
 
 export class BackupJob {
-  private job: cron.ScheduledTask | null = null;
+  private job: ScheduledTask | null = null;
 
   constructor() {
     console.log('📦 [BackupJob] Backup job initialized');
