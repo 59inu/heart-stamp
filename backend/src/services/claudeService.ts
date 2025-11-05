@@ -1,16 +1,83 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { AIAnalysisResult, StampType } from '../types/diary';
+import { CircuitBreaker } from '../utils/circuitBreaker';
+import { retryWithCondition, withTimeout, isRetryableError } from '../utils/retry';
+
+/**
+ * Claude API 에러 클래스
+ */
+class ClaudeAPIError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public isRetryable: boolean = false,
+    public originalError?: any
+  ) {
+    super(message);
+    this.name = 'ClaudeAPIError';
+  }
+}
 
 export class ClaudeService {
   private client: Anthropic;
+  private circuitBreaker: CircuitBreaker;
 
   constructor(apiKey: string) {
     this.client = new Anthropic({
       apiKey,
     });
+
+    // Circuit Breaker 초기화
+    // - 5번 연속 실패 시 OPEN
+    // - 1분 후 HALF_OPEN으로 전환
+    this.circuitBreaker = new CircuitBreaker(5, 60000, 3);
+
+    console.log('✅ ClaudeService initialized with Circuit Breaker');
   }
 
   async analyzeDiary(diaryContent: string, date: string): Promise<AIAnalysisResult> {
+    try {
+      // Circuit Breaker로 보호
+      return await this.circuitBreaker.execute(async () => {
+        // 재시도 로직 적용 (최대 3번, exponential backoff)
+        return await retryWithCondition(
+          async () => await this.performAnalysis(diaryContent, date),
+          (error) => {
+            // Claude API 에러가 재시도 가능한지 확인
+            if (error instanceof ClaudeAPIError) {
+              return error.isRetryable;
+            }
+            return isRetryableError(error);
+          },
+          {
+            maxRetries: 3,
+            baseDelay: 1000,
+            onRetry: (attempt, error) => {
+              console.log(`🔄 Claude API retry attempt ${attempt}`);
+            },
+          }
+        );
+      });
+    } catch (error) {
+      // Circuit Breaker OPEN 상태
+      if (error instanceof Error && error.message.includes('Circuit breaker is OPEN')) {
+        console.error('❌ Claude API circuit breaker is OPEN - using fallback');
+        return this.getFallbackResponse();
+      }
+
+      // 기타 에러 - Fallback 사용
+      console.error('❌ Claude API failed after retries - using fallback:', error);
+      return this.getFallbackResponse();
+    }
+  }
+
+  /**
+   * 실제 AI 분석 수행
+   */
+  private async performAnalysis(
+    diaryContent: string,
+    date: string
+  ): Promise<AIAnalysisResult> {
     // ============================================================
     // TODO: 나중에 실제 Claude API를 사용할 때의 프롬프트
     // ============================================================
@@ -81,6 +148,16 @@ export class ClaudeService {
     return {
       comment,
       stampType,
+    };
+  }
+
+  /**
+   * Fallback 응답 (에러 시 사용)
+   */
+  private getFallbackResponse(): AIAnalysisResult {
+    return {
+      comment: '오늘도 일기를 작성해주었네요! 매일 기록하는 습관이 참 좋아요. 조금씩이라도 자신의 감정을 표현하는 것이 중요하답니다.',
+      stampType: 'nice',
     };
   }
 
