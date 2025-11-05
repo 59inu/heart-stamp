@@ -1,7 +1,11 @@
-import { Expo, ExpoPushMessage } from 'expo-server-sdk';
+import { Expo, ExpoPushMessage, ExpoPushTicket, ExpoPushReceipt } from 'expo-server-sdk';
 import { PushTokenDatabase } from './database';
 
 const expo = new Expo();
+
+// Ticket ID와 userId 매핑을 위한 인메모리 저장소
+// 프로덕션에서는 Redis나 DB에 저장하는 것을 권장
+const ticketToUserIdMap = new Map<string, string>();
 
 export class PushNotificationService {
   /**
@@ -21,6 +25,9 @@ export class PushNotificationService {
 
     if (!Expo.isExpoPushToken(token)) {
       console.error(`❌ Invalid Expo push token for user ${userId}: ${token}`);
+      // 잘못된 토큰은 DB에서 제거
+      await PushTokenDatabase.delete(userId);
+      console.log(`🗑️  Removed invalid push token for user ${userId}`);
       return false;
     }
 
@@ -35,11 +42,30 @@ export class PushNotificationService {
 
     try {
       const chunks = expo.chunkPushNotifications([message]);
+      const tickets: ExpoPushTicket[] = [];
+
       for (const chunk of chunks) {
-        const tickets = await expo.sendPushNotificationsAsync(chunk);
-        console.log(`📤 Push notification sent to user ${userId}`);
+        const chunkTickets = await expo.sendPushNotificationsAsync(chunk);
+        tickets.push(...chunkTickets);
       }
-      return true;
+
+      // Ticket ID 저장 (나중에 receipt 확인용)
+      for (const ticket of tickets) {
+        if (ticket.status === 'ok' && ticket.id) {
+          ticketToUserIdMap.set(ticket.id, userId);
+          console.log(`📤 Push notification sent to user ${userId} (ticket: ${ticket.id})`);
+        } else if (ticket.status === 'error') {
+          console.error(`❌ Push ticket error for user ${userId}:`, ticket.message);
+
+          // 에러 타입별 처리
+          if (ticket.details?.error === 'DeviceNotRegistered') {
+            console.log(`🗑️  Device not registered, removing token for user ${userId}`);
+            await PushTokenDatabase.delete(userId);
+          }
+        }
+      }
+
+      return tickets.some(ticket => ticket.status === 'ok');
     } catch (error) {
       console.error(`❌ Failed to send push notification to user ${userId}:`, error);
       return false;
@@ -88,5 +114,96 @@ export class PushNotificationService {
     }
 
     console.log(`✅ Push notifications sent: ${successCount} succeeded, ${failCount} failed`);
+  }
+
+  /**
+   * Push Notification Receipt 확인
+   *
+   * Expo 서버에서 알림 전송 결과를 확인하고 에러를 처리합니다.
+   * 주기적으로 실행되어야 합니다 (예: 15분마다).
+   */
+  static async checkReceipts(): Promise<void> {
+    const ticketIds = Array.from(ticketToUserIdMap.keys());
+
+    if (ticketIds.length === 0) {
+      console.log('ℹ️ No tickets to check');
+      return;
+    }
+
+    console.log(`🔍 Checking ${ticketIds.length} push notification receipts...`);
+
+    try {
+      const receiptIdChunks = expo.chunkPushNotificationReceiptIds(ticketIds);
+
+      for (const chunk of receiptIdChunks) {
+        const receipts = await expo.getPushNotificationReceiptsAsync(chunk);
+
+        for (const receiptId in receipts) {
+          const receipt: ExpoPushReceipt = receipts[receiptId];
+          const userId = ticketToUserIdMap.get(receiptId);
+
+          if (receipt.status === 'ok') {
+            console.log(`✅ Receipt OK for ticket ${receiptId}`);
+            // 성공한 receipt는 맵에서 제거
+            ticketToUserIdMap.delete(receiptId);
+          } else if (receipt.status === 'error') {
+            console.error(`❌ Receipt error for ticket ${receiptId}:`, {
+              message: receipt.message,
+              details: receipt.details,
+            });
+
+            // 에러 타입별 처리
+            const errorCode = receipt.details?.error;
+
+            if (errorCode === 'DeviceNotRegistered') {
+              // 디바이스가 등록 해제됨 → 토큰 삭제
+              if (userId) {
+                console.log(`🗑️  DeviceNotRegistered, removing token for user ${userId}`);
+                await PushTokenDatabase.delete(userId);
+              }
+              ticketToUserIdMap.delete(receiptId);
+            } else if (errorCode === 'MessageTooBig') {
+              // 메시지가 너무 큼 → 로그만 남김
+              console.error(`⚠️  MessageTooBig for ticket ${receiptId}`);
+              ticketToUserIdMap.delete(receiptId);
+            } else if (errorCode === 'MessageRateExceeded') {
+              // Rate limit 초과 → 나중에 다시 시도 (맵에 유지)
+              console.warn(`⏱️  MessageRateExceeded for ticket ${receiptId}, will retry later`);
+            } else if (errorCode === 'InvalidCredentials') {
+              // 잘못된 자격증명 → 심각한 문제, 로그 남김
+              console.error(`🚨 InvalidCredentials for ticket ${receiptId}! Check Expo credentials!`);
+              ticketToUserIdMap.delete(receiptId);
+            } else {
+              // 기타 에러 → 로그 남기고 제거
+              console.error(`⚠️  Unknown error for ticket ${receiptId}: ${errorCode}`);
+              ticketToUserIdMap.delete(receiptId);
+            }
+          }
+        }
+      }
+
+      console.log(`✅ Receipt check completed. Remaining tickets: ${ticketToUserIdMap.size}`);
+    } catch (error) {
+      console.error('❌ Error checking receipts:', error);
+    }
+  }
+
+  /**
+   * Ticket 맵 통계 조회 (모니터링용)
+   */
+  static getTicketStats() {
+    return {
+      pendingTickets: ticketToUserIdMap.size,
+      ticketIds: Array.from(ticketToUserIdMap.keys()),
+    };
+  }
+
+  /**
+   * Ticket 맵 초기화 (테스트/디버깅용)
+   */
+  static clearTicketMap() {
+    const size = ticketToUserIdMap.size;
+    ticketToUserIdMap.clear();
+    console.log(`🗑️  Cleared ${size} tickets from map`);
   }
 }

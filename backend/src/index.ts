@@ -213,6 +213,43 @@ app.post('/api/push/test-ai-comment', adminLimiter, requireAdminToken, async (re
   }
 });
 
+// Push Notification Receipt 확인 엔드포인트 (관리 리미터 + 토큰 인증)
+app.post('/api/push/check-receipts', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    console.log('🔍 [ADMIN] Manually checking push notification receipts...');
+    await PushNotificationService.checkReceipts();
+    const stats = PushNotificationService.getTicketStats();
+    res.json({
+      success: true,
+      message: 'Receipt check completed',
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Error checking receipts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check receipts',
+    });
+  }
+});
+
+// Push Notification Ticket 통계 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/push/ticket-stats', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const stats = PushNotificationService.getTicketStats();
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Error getting ticket stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get ticket stats',
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on:`);

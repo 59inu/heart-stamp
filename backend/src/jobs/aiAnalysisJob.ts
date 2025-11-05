@@ -43,9 +43,16 @@ export class AIAnalysisJob {
       console.log(`✅ 아침 8:30 - ${userIds.length}명에게 푸시 알림 전송 완료`);
     });
 
+    // 15분마다 Push Notification Receipt 확인
+    cron.schedule('*/15 * * * *', async () => {
+      console.log('🔍 Push notification receipt check started...');
+      await PushNotificationService.checkReceipts();
+    });
+
     console.log('AI Analysis Job scheduler started.');
     console.log('- Batch Analysis: Every day at 3:00 AM (어제 날짜 일기)');
     console.log('- Morning Push: Every day at 8:30 AM (어제 일기 작성자만)');
+    console.log('- Receipt Check: Every 15 minutes');
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
