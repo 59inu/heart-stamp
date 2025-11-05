@@ -1,0 +1,31 @@
+name: Daily AI Analysis
+
+on:
+  schedule:
+    # 매일 새벽 3시 (KST) = UTC 18:00
+    - cron: '0 18 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  trigger-ai-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger AI Analysis
+        run: |
+          echo "🤖 Triggering AI analysis at $(date)"
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
+            ${{ secrets.RAILWAY_URL }}/api/jobs/trigger-analysis)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ AI analysis triggered successfully"
+          else
+            echo "❌ Failed to trigger AI analysis"
+            exit 1
+          fi

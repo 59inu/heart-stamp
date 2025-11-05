@@ -1,0 +1,28 @@
+name: Daily Backup
+
+on:
+  schedule:
+    # 매일 새벽 3시 59분 (KST) = UTC 18:59
+    - cron: '59 18 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  wake-server-for-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up server before backup
+        run: |
+          echo "💾 Waking up server at $(date) for backup at 4:00 AM KST"
+          response=$(curl -s -w "\n%{http_code}" ${{ secrets.RAILWAY_URL }}/health)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Server is awake and ready for backup cron job"
+          else
+            echo "⚠️  Server responded with status $http_code"
+          fi

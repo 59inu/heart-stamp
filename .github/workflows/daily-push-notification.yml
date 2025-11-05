@@ -1,0 +1,28 @@
+name: Daily Push Notification
+
+on:
+  schedule:
+    # 매일 아침 8시 29분 (KST) = UTC 23:29
+    - cron: '29 23 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  wake-server-for-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up server before push notification
+        run: |
+          echo "⏰ Waking up server at $(date) for push notification at 8:30 AM KST"
+          response=$(curl -s -w "\n%{http_code}" ${{ secrets.RAILWAY_URL }}/health)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Server is awake and ready for push notification cron job"
+          else
+            echo "⚠️  Server responded with status $http_code"
+          fi

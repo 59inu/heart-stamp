@@ -171,7 +171,21 @@ Claude API 키는 [Anthropic Console](https://console.anthropic.com/)에서 발�
 
 ## 배포
 
-### 🚂 Railway 배포 (권장, 무료)
+### 🚂 Railway 배포 (권장)
+
+#### Railway Free 플랜 사용 시 중요! ⚠️
+
+Railway Free 플랜은 5분간 요청이 없으면 슬립 모드로 전환됩니다.
+새벽 시간대에 cron job이 실행되지 않을 수 있으므로, **GitHub Actions로 서버를 깨워야 합니다**.
+
+이 프로젝트에는 이미 GitHub Actions 워크플로우가 포함되어 있습니다:
+- 새벽 3시: AI 분석 트리거
+- 아침 8시 29분: 푸시 알림 준비 (서버 깨우기)
+- 새벽 3시 59분: 백업 준비 (서버 깨우기)
+
+자세한 설정 방법은 [`.github/workflows/README.md`](.github/workflows/README.md)를 참고하세요.
+
+### Railway 배포 방법
 
 1. **Railway 가입**
    - https://railway.app 접속
