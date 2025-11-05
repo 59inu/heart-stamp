@@ -185,6 +185,16 @@ Railway Free 플랜은 5분간 요청이 없으면 슬립 모드로 전환됩니
 
 자세한 설정 방법은 [`.github/workflows/README.md`](.github/workflows/README.md)를 참고하세요.
 
+### ⚠️ 에러 핸들링 및 안정성
+
+프로젝트의 에러 핸들링 전략과 개선 계획은 [`ERROR_HANDLING_STRATEGY.md`](ERROR_HANDLING_STRATEGY.md)를 참고하세요.
+
+**주요 내용:**
+- 현재 에러 핸들링 현황 분석
+- 취약점 및 개선 필요 영역
+- 우선순위별 개선 계획
+- 구현 예시 코드
+
 ### Railway 배포 방법
 
 1. **Railway 가입**
