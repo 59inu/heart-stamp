@@ -2,20 +2,18 @@ name: Daily AI Analysis
 
 on:
   schedule:
-    # 매일 새벽 3시 (KST) = UTC 18:00
-    - cron: '0 18 * * *'
+    # 매일 새벽 2시 59분 (KST) = UTC 17:59
+    - cron: '59 17 * * *'
   workflow_dispatch: # 수동 실행 가능
 
 jobs:
-  trigger-ai-analysis:
+  wake-server-for-ai-analysis:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger AI Analysis
+      - name: Wake up server before AI analysis
         run: |
-          echo "🤖 Triggering AI analysis at $(date)"
-          response=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Authorization: Bearer ${{ secrets.ADMIN_SECRET }}" \
-            ${{ secrets.RAILWAY_URL }}/api/jobs/trigger-analysis)
+          echo "🤖 Waking up server at $(date) for AI analysis at 3:00 AM KST"
+          response=$(curl -s -w "\n%{http_code}" ${{ secrets.RAILWAY_URL }}/health)
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n-1)
@@ -23,9 +21,8 @@ jobs:
           echo "Response: $body"
           echo "HTTP Status: $http_code"
 
-          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-            echo "✅ AI analysis triggered successfully"
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Server is awake and ready for AI analysis cron job"
           else
-            echo "❌ Failed to trigger AI analysis"
-            exit 1
+            echo "⚠️  Server responded with status $http_code"
           fi

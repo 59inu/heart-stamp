@@ -5,9 +5,9 @@ Railway Free 플랜에서 cron job이 정상 작동하도록 서버를 깨우는
 ## 워크플로우 목록
 
 ### 1. Daily AI Analysis (`daily-ai-analysis.yml`)
-- **실행 시간**: 매일 새벽 3시 (KST)
-- **기능**: AI 코멘트 분석 배치 작업 트리거
-- **API**: `POST /api/jobs/trigger-analysis`
+- **실행 시간**: 매일 새벽 2시 59분 (KST)
+- **기능**: 서버를 깨워서 3시 AI 분석 cron job 실행 준비
+- **API**: `GET /health`
 
 ### 2. Daily Push Notification (`daily-push-notification.yml`)
 - **실행 시간**: 매일 아침 8시 29분 (KST)
@@ -61,11 +61,11 @@ your_admin_secret_here
 - GitHub Actions cron은 **UTC 기준**
 - KST = UTC + 9시간
 
-| KST 시간 | UTC 시간 | 워크플로우 |
-|---------|---------|----------|
-| 03:00   | 18:00   | AI Analysis |
-| 03:59   | 18:59   | Backup Wake |
-| 08:29   | 23:29   | Push Wake |
+| KST 시간 | UTC 시간 | 워크플로우 | 설명 |
+|---------|---------|----------|------|
+| 02:59   | 17:59   | AI Analysis Wake | 3시 AI 분석 준비 |
+| 03:59   | 18:59   | Backup Wake | 4시 백업 준비 |
+| 08:29   | 23:29   | Push Wake | 8:30 푸시 알림 준비 |
 
 ## 문제 해결
 
