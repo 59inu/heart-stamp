@@ -73,7 +73,7 @@ export class AIAnalysisJob {
             diary.date
           );
 
-          DiaryDatabase.update(diary._id, {
+          await DiaryDatabase.update(diary._id, {
             aiComment: analysis.comment,
             stampType: analysis.stampType,
             syncedWithServer: true,

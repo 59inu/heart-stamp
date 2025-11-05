@@ -91,7 +91,7 @@ const backupJob = new BackupJob();
 backupJob.start();
 
 // 푸시 토큰 등록 API
-app.post('/api/push/register', (req, res) => {
+app.post('/api/push/register', async (req, res) => {
   try {
     const { userId, token } = req.body;
     if (!userId || !token) {
@@ -102,7 +102,7 @@ app.post('/api/push/register', (req, res) => {
     }
 
     const { PushTokenDatabase } = require('./services/database');
-    PushTokenDatabase.upsert(userId, token);
+    await PushTokenDatabase.upsert(userId, token);
 
     res.json({
       success: true,

@@ -1,6 +1,14 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { DiaryEntry } from '../types/diary';
+import {
+  DatabaseError,
+  DuplicateKeyError,
+  DiskFullError,
+  DatabaseLockError,
+  DatabaseCorruptError,
+} from '../utils/errors';
+import { sleep } from '../utils/retry';
 
 const dbPath = path.join(__dirname, '../../diary.db');
 const db = new Database(dbPath);
@@ -120,94 +128,179 @@ try {
 console.log('✅ SQLite database initialized');
 
 export class DiaryDatabase {
-  // 일기 저장
-  static create(diary: DiaryEntry): DiaryEntry {
-    const stmt = db.prepare(`
-      INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer, version)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+  /**
+   * SQLite 에러 처리
+   */
+  private static handleDatabaseError(error: any, operation: string): never {
+    const err = error as any;
 
-    stmt.run(
-      diary._id,
-      diary.userId || 'unknown',
-      diary.date,
-      diary.content,
-      diary.weather || null,
-      diary.mood || null,
-      diary.moodTag || null,
-      diary.aiComment || null,
-      diary.stampType || null,
-      diary.createdAt,
-      diary.updatedAt,
-      diary.syncedWithServer ? 1 : 0,
-      diary.version || 1 // 초기 버전은 1
+    // SQLite 에러 코드별 처리
+    if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      throw new DuplicateKeyError(
+        `Duplicate entry in ${operation}`,
+        { originalError: err.message }
+      );
+    }
+
+    if (err.code === 'SQLITE_FULL') {
+      throw new DiskFullError(
+        'Database disk is full',
+        { originalError: err.message }
+      );
+    }
+
+    if (err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_LOCKED') {
+      throw new DatabaseLockError(
+        'Database is locked or busy',
+        { originalError: err.message }
+      );
+    }
+
+    if (err.code === 'SQLITE_CORRUPT' || err.code === 'SQLITE_NOTADB') {
+      throw new DatabaseCorruptError(
+        'Database file is corrupted',
+        { originalError: err.message }
+      );
+    }
+
+    // 기타 SQLite 에러
+    throw new DatabaseError(
+      `Database error in ${operation}: ${err.message}`,
+      err.code,
+      { originalError: err.message }
     );
+  }
 
-    return diary;
+  /**
+   * SQLITE_BUSY 재시도 로직
+   */
+  private static async retryOnBusy<T>(
+    fn: () => T,
+    maxRetries: number = 3
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return fn();
+      } catch (error: any) {
+        if (
+          (error.code === 'SQLITE_BUSY' || error.code === 'SQLITE_LOCKED') &&
+          attempt < maxRetries
+        ) {
+          const delay = 100 * (attempt + 1); // 100ms, 200ms, 300ms
+          console.warn(`⚠️  Database busy, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await sleep(delay);
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new DatabaseLockError('Database busy timeout exceeded');
+  }
+
+  // 일기 저장
+  static async create(diary: DiaryEntry): Promise<DiaryEntry> {
+    try {
+      return await this.retryOnBusy(() => {
+        const stmt = db.prepare(`
+          INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer, version)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        stmt.run(
+          diary._id,
+          diary.userId || 'unknown',
+          diary.date,
+          diary.content,
+          diary.weather || null,
+          diary.mood || null,
+          diary.moodTag || null,
+          diary.aiComment || null,
+          diary.stampType || null,
+          diary.createdAt,
+          diary.updatedAt,
+          diary.syncedWithServer ? 1 : 0,
+          diary.version || 1 // 초기 버전은 1
+        );
+
+        return diary;
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'create');
+    }
   }
 
   // 일기 업데이트
-  static update(id: string, updates: Partial<DiaryEntry>): void {
-    const fields: string[] = [];
-    const values: any[] = [];
+  static async update(id: string, updates: Partial<DiaryEntry>): Promise<void> {
+    try {
+      await this.retryOnBusy(() => {
+        const fields: string[] = [];
+        const values: any[] = [];
 
-    if (updates.content !== undefined) {
-      fields.push('content = ?');
-      values.push(updates.content);
-    }
-    if (updates.weather !== undefined) {
-      fields.push('weather = ?');
-      values.push(updates.weather);
-    }
-    if (updates.mood !== undefined) {
-      fields.push('mood = ?');
-      values.push(updates.mood);
-    }
-    if (updates.moodTag !== undefined) {
-      fields.push('moodTag = ?');
-      values.push(updates.moodTag);
-    }
-    if (updates.aiComment !== undefined) {
-      fields.push('aiComment = ?');
-      values.push(updates.aiComment);
-    }
-    if (updates.stampType !== undefined) {
-      fields.push('stampType = ?');
-      values.push(updates.stampType);
-    }
-    if (updates.syncedWithServer !== undefined) {
-      fields.push('syncedWithServer = ?');
-      values.push(updates.syncedWithServer ? 1 : 0);
-    }
+        if (updates.content !== undefined) {
+          fields.push('content = ?');
+          values.push(updates.content);
+        }
+        if (updates.weather !== undefined) {
+          fields.push('weather = ?');
+          values.push(updates.weather);
+        }
+        if (updates.mood !== undefined) {
+          fields.push('mood = ?');
+          values.push(updates.mood);
+        }
+        if (updates.moodTag !== undefined) {
+          fields.push('moodTag = ?');
+          values.push(updates.moodTag);
+        }
+        if (updates.aiComment !== undefined) {
+          fields.push('aiComment = ?');
+          values.push(updates.aiComment);
+        }
+        if (updates.stampType !== undefined) {
+          fields.push('stampType = ?');
+          values.push(updates.stampType);
+        }
+        if (updates.syncedWithServer !== undefined) {
+          fields.push('syncedWithServer = ?');
+          values.push(updates.syncedWithServer ? 1 : 0);
+        }
 
-    fields.push('updatedAt = ?');
-    values.push(new Date().toISOString());
+        fields.push('updatedAt = ?');
+        values.push(new Date().toISOString());
 
-    // 버전 증가 (Last-Write-Wins 충돌 해결)
-    fields.push('version = version + 1');
+        // 버전 증가 (Last-Write-Wins 충돌 해결)
+        fields.push('version = version + 1');
 
-    values.push(id);
+        values.push(id);
 
-    const stmt = db.prepare(`
-      UPDATE diaries
-      SET ${fields.join(', ')}
-      WHERE _id = ? AND deletedAt IS NULL
-    `);
+        const stmt = db.prepare(`
+          UPDATE diaries
+          SET ${fields.join(', ')}
+          WHERE _id = ? AND deletedAt IS NULL
+        `);
 
-    stmt.run(...values);
+        stmt.run(...values);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'update');
+    }
   }
 
   // 일기 조회 (ID)
   static getById(id: string): DiaryEntry | null {
-    const stmt = db.prepare('SELECT * FROM diaries WHERE _id = ? AND deletedAt IS NULL');
-    const row = stmt.get(id) as any;
+    try {
+      const stmt = db.prepare('SELECT * FROM diaries WHERE _id = ? AND deletedAt IS NULL');
+      const row = stmt.get(id) as any;
 
-    if (!row) return null;
+      if (!row) return null;
 
-    return {
-      ...row,
-      syncedWithServer: row.syncedWithServer === 1,
-    };
+      return {
+        ...row,
+        syncedWithServer: row.syncedWithServer === 1,
+      };
+    } catch (error) {
+      this.handleDatabaseError(error, 'getById');
+    }
   }
 
   // 특정 사용자의 모든 일기 조회
@@ -258,14 +351,20 @@ export class DiaryDatabase {
   }
 
   // 일기 삭제 (소프트 삭제)
-  static delete(id: string): void {
-    const now = new Date().toISOString();
-    const stmt = db.prepare(`
-      UPDATE diaries
-      SET deletedAt = ?, updatedAt = ?, version = version + 1
-      WHERE _id = ? AND deletedAt IS NULL
-    `);
-    stmt.run(now, now, id);
+  static async delete(id: string): Promise<void> {
+    try {
+      await this.retryOnBusy(() => {
+        const now = new Date().toISOString();
+        const stmt = db.prepare(`
+          UPDATE diaries
+          SET deletedAt = ?, updatedAt = ?, version = version + 1
+          WHERE _id = ? AND deletedAt IS NULL
+        `);
+        stmt.run(now, now, id);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'delete');
+    }
   }
 
   // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회 (중복 제거)
@@ -292,43 +391,80 @@ export class DiaryDatabase {
 }
 
 export class PushTokenDatabase {
+  /**
+   * SQLite 에러 처리 (DiaryDatabase와 동일)
+   */
+  private static handleDatabaseError(error: any, operation: string): never {
+    return DiaryDatabase['handleDatabaseError'](error, `PushToken.${operation}`);
+  }
+
+  /**
+   * SQLITE_BUSY 재시도 로직
+   */
+  private static async retryOnBusy<T>(
+    fn: () => T,
+    maxRetries: number = 3
+  ): Promise<T> {
+    return DiaryDatabase['retryOnBusy'](fn, maxRetries);
+  }
+
   // Push Token 저장/업데이트
-  static upsert(userId: string, token: string): void {
-    const now = new Date().toISOString();
-    const stmt = db.prepare(`
-      INSERT INTO push_tokens (userId, token, createdAt, updatedAt, version)
-      VALUES (?, ?, ?, ?, 1)
-      ON CONFLICT(userId) DO UPDATE SET
-        token = excluded.token,
-        updatedAt = excluded.updatedAt,
-        version = version + 1,
-        deletedAt = NULL
-    `);
-    stmt.run(userId, token, now, now);
+  static async upsert(userId: string, token: string): Promise<void> {
+    try {
+      await this.retryOnBusy(() => {
+        const now = new Date().toISOString();
+        const stmt = db.prepare(`
+          INSERT INTO push_tokens (userId, token, createdAt, updatedAt, version)
+          VALUES (?, ?, ?, ?, 1)
+          ON CONFLICT(userId) DO UPDATE SET
+            token = excluded.token,
+            updatedAt = excluded.updatedAt,
+            version = version + 1,
+            deletedAt = NULL
+        `);
+        stmt.run(userId, token, now, now);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'upsert');
+    }
   }
 
   // Push Token 조회
   static get(userId: string): string | null {
-    const stmt = db.prepare('SELECT token FROM push_tokens WHERE userId = ? AND deletedAt IS NULL');
-    const row = stmt.get(userId) as any;
-    return row ? row.token : null;
+    try {
+      const stmt = db.prepare('SELECT token FROM push_tokens WHERE userId = ? AND deletedAt IS NULL');
+      const row = stmt.get(userId) as any;
+      return row ? row.token : null;
+    } catch (error) {
+      this.handleDatabaseError(error, 'get');
+    }
   }
 
   // 모든 Push Token 조회
   static getAll(): Array<{ userId: string; token: string }> {
-    const stmt = db.prepare('SELECT userId, token FROM push_tokens WHERE deletedAt IS NULL');
-    return stmt.all() as Array<{ userId: string; token: string }>;
+    try {
+      const stmt = db.prepare('SELECT userId, token FROM push_tokens WHERE deletedAt IS NULL');
+      return stmt.all() as Array<{ userId: string; token: string }>;
+    } catch (error) {
+      this.handleDatabaseError(error, 'getAll');
+    }
   }
 
   // Push Token 삭제 (소프트 삭제)
-  static delete(userId: string): void {
-    const now = new Date().toISOString();
-    const stmt = db.prepare(`
-      UPDATE push_tokens
-      SET deletedAt = ?, updatedAt = ?, version = version + 1
-      WHERE userId = ? AND deletedAt IS NULL
-    `);
-    stmt.run(now, now, userId);
+  static async delete(userId: string): Promise<void> {
+    try {
+      await this.retryOnBusy(() => {
+        const now = new Date().toISOString();
+        const stmt = db.prepare(`
+          UPDATE push_tokens
+          SET deletedAt = ?, updatedAt = ?, version = version + 1
+          WHERE userId = ? AND deletedAt IS NULL
+        `);
+        stmt.run(now, now, userId);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'delete');
+    }
   }
 }
 

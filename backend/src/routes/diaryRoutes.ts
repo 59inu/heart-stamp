@@ -54,9 +54,9 @@ router.post('/diaries',
       // 기존 일기가 있으면 업데이트, 없으면 생성
       const existing = DiaryDatabase.getById(diaryEntry._id);
       if (existing) {
-        DiaryDatabase.update(diaryEntry._id, diaryEntry);
+        await DiaryDatabase.update(diaryEntry._id, diaryEntry);
       } else {
-        DiaryDatabase.create(diaryEntry);
+        await DiaryDatabase.create(diaryEntry);
       }
 
       res.status(201).json({
@@ -150,7 +150,7 @@ router.post('/diaries/:id/analyze',
 
       const analysis = await claudeService.analyzeDiary(diary.content, diary.date);
 
-      DiaryDatabase.update(id, {
+      await DiaryDatabase.update(id, {
         aiComment: analysis.comment,
         stampType: analysis.stampType,
         syncedWithServer: true,
@@ -223,7 +223,7 @@ router.get('/diaries/pending', async (req: Request, res: Response) => {
 router.delete('/diaries/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    DiaryDatabase.delete(id);
+    await DiaryDatabase.delete(id);
 
     res.json({
       success: true,
