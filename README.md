@@ -138,7 +138,44 @@ Claude API 키는 [Anthropic Console](https://console.anthropic.com/)에서 발�
 
 ## 배포
 
-### 백엔드 배포
+### 🚂 Railway 배포 (권장, 무료)
+
+1. **Railway 가입**
+   - https://railway.app 접속
+   - GitHub 계정으로 로그인
+
+2. **새 프로젝트 생성**
+   - Dashboard → "New Project"
+   - "Deploy from GitHub repo" 선택
+   - `59inu/heart-stamp` 저장소 선택
+
+3. **환경 변수 설정**
+   - 프로젝트 Settings → Variables 탭
+   - 다음 변수들을 추가:
+   ```
+   CLAUDE_API_KEY=sk-ant-xxx...
+   PORT=3000
+   ADMIN_SECRET=your_secure_random_string_here
+   ALLOWED_ORIGINS=*
+   ```
+
+4. **자동 배포**
+   - Git push 시 자동으로 배포됩니다
+   - 빌드 로그에서 진행 상황 확인 가능
+
+5. **공개 URL 확인**
+   - Settings → Domains 탭
+   - 생성된 URL 확인 (예: `https://heart-stamp.up.railway.app`)
+
+6. **프론트엔드 업데이트**
+   `src/services/apiService.ts` 파일 수정:
+   ```typescript
+   const API_BASE_URL = __DEV__
+     ? 'http://192.168.0.14:3000/api'
+     : 'https://heart-stamp.up.railway.app/api';  // Railway URL로 변경
+   ```
+
+### 백엔드 수동 배포
 
 1. TypeScript 빌드:
 ```bash
@@ -158,8 +195,8 @@ npm start
 1. `src/services/apiService.ts`의 `API_BASE_URL`을 실제 서버 URL로 변경
 2. Expo EAS Build를 사용하여 앱 빌드:
 ```bash
-npx expo build:ios
-npx expo build:android
+eas build --platform ios
+eas build --platform android
 ```
 
 ## 향후 개선 사항
