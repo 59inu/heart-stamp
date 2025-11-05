@@ -5,13 +5,18 @@ AI 선생님이 코멘트와 도장을 달아주는 일기 앱입니다.
 ## 주요 기능
 
 - 📝 **일기 작성**: 간단하고 직관적인 인터페이스로 일기를 작성할 수 있습니다
-- 💾 **로컬 저장**: Realm 데이터베이스를 사용하여 일기를 기기에 안전하게 저장합니다
+- 🖼️ **이미지 첨부**: 일기에 사진을 첨부하여 더 생생한 기록을 남길 수 있습니다
+- 💾 **로컬 저장**: AsyncStorage를 사용하여 일기를 기기에 안전하게 저장합니다
+- 🗄️ **데이터베이스**: SQLite (better-sqlite3)로 백엔드에서 안전하게 관리됩니다
 - 🤖 **AI 코멘트**: Anthropic Claude API를 통해 따뜻한 코멘트를 받습니다
 - 🌟 **도장 시스템**: AI가 일기를 분석하여 적절한 도장을 찍어줍니다
   - 🌟 **아주 잘했어요** (excellent)
   - 😊 **잘했어요** (good)
   - 👍 **좋아요** (nice)
   - 💪 **계속 노력해요** (keep_going)
+- 📊 **통계 및 리포트**: 주간/월간 감정 분석 리포트를 확인할 수 있습니다
+- 💾 **자동 백업**: 매일 새벽 3시에 데이터베이스와 이미지가 자동으로 백업됩니다
+- 🔔 **푸시 알림**: AI 코멘트가 완료되면 알림을 받을 수 있습니다
 - ⏰ **자동 배치 작업**: 매일 밤 2시에 자동으로 AI 코멘트가 생성됩니다
 
 ## 기술 스택
@@ -26,8 +31,14 @@ AI 선생님이 코멘트와 도장을 달아주는 일기 앱입니다.
 ### 백엔드 서버
 - **Node.js** + **Express**
 - **TypeScript**
+- **SQLite** (better-sqlite3) - 데이터베이스
 - **Anthropic Claude API** - AI 코멘트 생성
 - **node-cron** - 배치 작업 스케줄링
+- **Multer** - 이미지 업로드 처리
+- **Archiver** - 백업 ZIP 압축
+- **Expo Server SDK** - 푸시 알림
+- **express-rate-limit** - API 속도 제한
+- **express-validator** - 입력 검증
 
 ## 프로젝트 구조
 
@@ -89,12 +100,34 @@ npm run web
 
 ### 백엔드 API
 
+#### 기본
 - `GET /health` - 서버 상태 확인
+
+#### 일기 관리
 - `POST /api/diaries` - 일기 업로드
 - `GET /api/diaries/:id/ai-comment` - AI 코멘트 가져오기
 - `POST /api/diaries/:id/analyze` - 특정 일기 즉시 분석 (테스트용)
 - `GET /api/diaries/pending` - AI 분석 대기 중인 일기 목록
-- `POST /api/jobs/trigger-analysis` - 배치 작업 수동 실행 (테스트용)
+
+#### 이미지 업로드
+- `POST /api/upload/image` - 일기 이미지 업로드 (multipart/form-data)
+
+#### 리포트
+- `GET /api/reports/weekly/:year/:week` - 주간 리포트 조회
+- `POST /api/reports/weekly/:year/:week` - 주간 리포트 생성
+- `DELETE /api/reports/weekly/:year/:week` - 주간 리포트 삭제
+- `GET /api/reports/monthly/:year/:month` - 월간 리포트 조회/생성
+- `DELETE /api/reports/monthly/:year/:month` - 월간 리포트 삭제
+
+#### 푸시 알림
+- `POST /api/push/register` - 푸시 토큰 등록
+- `POST /api/push/test-regular` - 일반 푸시 테스트 (관리자 전용)
+- `POST /api/push/test-ai-comment` - AI 코멘트 알림 테스트 (관리자 전용)
+
+#### 배치 작업 (관리자 전용)
+- `POST /api/jobs/trigger-analysis` - AI 분석 배치 작업 수동 실행
+- `POST /api/jobs/trigger-backup` - 백업 작업 수동 실행
+- `GET /api/jobs/backups` - 백업 목록 조회
 
 ## 사용 방법
 
@@ -199,15 +232,35 @@ eas build --platform ios
 eas build --platform android
 ```
 
+## 구현 완료된 기능 ✅
+
+- [x] **클라우드 데이터베이스 연동** - SQLite (better-sqlite3) 사용
+  - WAL 모드로 성능 최적화
+  - 소프트 삭제 및 버전 관리
+  - 자동 마이그레이션 지원
+- [x] **일기 이미지 첨부 기능** - Multer 기반 이미지 업로드
+  - JPEG, PNG, GIF, WEBP 지원
+  - 2MB 파일 크기 제한
+  - UUID 기반 고유 파일명
+- [x] **통계 및 감정 분석 대시보드** - 주간/월간 리포트
+  - AI 기반 감정 분석
+  - 주간 리포트 (3개 이상 일기 필요)
+  - 월간 리포트
+- [x] **일기 백업 및 동기화 기능** - 자동 백업 시스템
+  - 매일 새벽 3시 자동 백업
+  - 데이터베이스 + 이미지 파일 ZIP 압축
+  - 7일치 백업 자동 보관
+- [x] **푸시 알림** - Expo Push Notifications
+  - AI 코멘트 완료 시 자동 알림
+  - 개별/전체 사용자 알림 지원
+
 ## 향후 개선 사항
 
-- [ ] 클라우드 데이터베이스 연동 (백엔드에서 실제 DB 사용)
-- [ ] 사용자 인증 시스템
-- [ ] 일기 이미지 첨부 기능
+- [ ] 사용자 인증 시스템 (현재는 userId만 사용)
 - [ ] 도장 이미지 디자인 개선
-- [ ] 통계 및 감정 분석 대시보드
-- [ ] 일기 백업 및 동기화 기능
-- [ ] 푸시 알림 (AI 코멘트 도착 시)
+- [ ] 일기 검색 기능
+- [ ] 일기 공유 기능
+- [ ] 다크 모드 지원
 
 ## 라이선스
 
