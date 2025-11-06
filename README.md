@@ -15,9 +15,10 @@ AI 선생님이 코멘트와 도장을 달아주는 일기 앱입니다.
   - 👍 **좋아요** (nice)
   - 💪 **계속 노력해요** (keep_going)
 - 📊 **통계 및 리포트**: 주간/월간 감정 분석 리포트를 확인할 수 있습니다
-- 💾 **자동 백업**: 매일 새벽 3시에 데이터베이스와 이미지가 자동으로 백업됩니다
+- ☁️ **AWS S3 통합**: 이미지와 백업 파일을 S3에 안전하게 저장합니다
+- 💾 **자동 백업**: 매일 새벽 4시에 데이터베이스와 이미지가 자동으로 백업됩니다 (로컬 + S3)
 - 🔔 **푸시 알림**: AI 코멘트가 완료되면 알림을 받을 수 있습니다
-- ⏰ **자동 배치 작업**: 매일 밤 2시에 자동으로 AI 코멘트가 생성됩니다
+- ⏰ **자동 배치 작업**: 스케줄된 시간에 자동으로 AI 분석 및 백업이 실행됩니다
 
 ## 기술 스택
 
@@ -33,12 +34,14 @@ AI 선생님이 코멘트와 도장을 달아주는 일기 앱입니다.
 - **TypeScript**
 - **SQLite** (better-sqlite3) - 데이터베이스
 - **Anthropic Claude API** - AI 코멘트 생성
+- **AWS S3** - 이미지 및 백업 저장소
 - **node-cron** - 배치 작업 스케줄링
 - **Multer** - 이미지 업로드 처리
 - **Archiver** - 백업 ZIP 압축
 - **Expo Server SDK** - 푸시 알림
 - **express-rate-limit** - API 속도 제한
 - **express-validator** - 입력 검증
+- **Circuit Breaker** - 장애 대응 패턴
 
 ## 프로젝트 구조
 
@@ -158,13 +161,33 @@ curl -X POST http://localhost:3000/api/diaries/[일기ID]/analyze
 curl -X POST http://localhost:3000/api/jobs/trigger-analysis
 ```
 
+## ⏰ 자동 배치 작업 스케줄
+
+| 시간 | 작업 | 설명 |
+|------|------|------|
+| **새벽 3시** | AI 분석 | 어제 날짜 일기에 AI 코멘트 생성 |
+| **새벽 4시** | 자동 백업 | DB + uploads 백업 (로컬 + S3) |
+| **아침 8시 30분** | 푸시 알림 | 어제 일기 작성자에게 알림 전송 |
+| **15분마다** | 영수증 확인 | 푸시 알림 전송 결과 확인 |
+
 ## 환경 변수
 
 ### backend/.env
 
 ```env
+# 필수
 CLAUDE_API_KEY=your_claude_api_key_here
 PORT=3000
+
+# 선택 (프로덕션)
+ADMIN_SECRET=your_secure_admin_token_here
+ALLOWED_ORIGINS=*
+
+# 선택 (AWS S3)
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_REGION=ap-southeast-2
+S3_BUCKET_NAME=heart-stamp-diary-images
 ```
 
 Claude API 키는 [Anthropic Console](https://console.anthropic.com/)에서 발급받을 수 있습니다.
@@ -262,10 +285,11 @@ eas build --platform android
   - WAL 모드로 성능 최적화
   - 소프트 삭제 및 버전 관리
   - 자동 마이그레이션 지원
-- [x] **일기 이미지 첨부 기능** - Multer 기반 이미지 업로드
+- [x] **일기 이미지 첨부 기능** - Multer + AWS S3 기반 이미지 업로드
   - JPEG, PNG, GIF, WEBP 지원
-  - 2MB 파일 크기 제한
+  - 5MB 파일 크기 제한
   - UUID 기반 고유 파일명
+  - S3 또는 로컬 저장 (자동 Fallback)
 - [x] **도장 이미지 디자인** - 선생님 도장 이미지 적용
 - [x] **통계 및 감정 분석 대시보드** - 주간/월간 리포트
   - AI 기반 감정 분석
@@ -275,17 +299,22 @@ eas build --platform android
   - 매일 새벽 4시 자동 백업
   - 데이터베이스 + 이미지 파일 ZIP 압축
   - 7일치 백업 자동 보관
-  - ⚠️ 현재: 로컬 저장 (Railway 재배포 시 삭제됨)
+  - **로컬 + AWS S3 이중 백업** ⭐
 - [x] **푸시 알림** - Expo Push Notifications
   - AI 코멘트 완료 시 자동 알림
   - 개별/전체 사용자 알림 지원
+  - 영수증 확인 및 재시도 로직
+- [x] **AWS S3 통합** ⭐
+  - 일기 이미지 S3 저장
+  - 백업 파일 S3 저장
+  - 자동 Fallback (S3 설정 없으면 로컬 저장)
+  - 영구 저장소 확보 및 확장성 확보
+- [x] **에러 핸들링 강화** ⭐
+  - Circuit Breaker 패턴 (Claude API 장애 대응)
+  - Retry 로직 (지수 백오프, 최대 3회)
+  - Push Notification 에러 핸들링
 
 ## 향후 개선 사항
-
-- [ ] **AWS S3 통합** (우선순위 높음)
-  - 일기 이미지를 S3에 저장 (현재: 로컬 uploads 폴더)
-  - 백업 파일을 S3에 저장 (현재: 로컬 backups 폴더, Railway 재배포 시 삭제됨)
-  - 영구 저장소 확보 및 확장성 개선
 - [ ] **데이터 백업 및 복원** (클라우드)
   - 사용자가 직접 클라우드에 백업 가능
   - 기기 변경 시 데이터 복원 기능
