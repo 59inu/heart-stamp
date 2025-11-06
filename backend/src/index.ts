@@ -1,6 +1,9 @@
+// Load environment variables FIRST (before any other imports)
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Application } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
 import { requireAdminToken } from './middleware/auth';
@@ -11,9 +14,6 @@ import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
 import { PushNotificationService } from './services/pushNotificationService';
-
-// Load environment variables
-dotenv.config();
 
 const app: Application = express();
 const PORT: number = process.env.PORT ? Number(process.env.PORT) : 3000;
