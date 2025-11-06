@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,6 +22,7 @@ import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
+import { SurveyService } from '../services/surveyService';
 import { getStampImage, getRandomStampPosition } from '../utils/stampUtils';
 import { OnboardingService } from '../services/onboardingService';
 import { FirstVisitGuide } from '../components/FirstVisitGuide';
@@ -42,6 +44,10 @@ export const DiaryListScreen: React.FC = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // 테스트용 리셋 기능 (헤더 5번 탭)
+  const tapCountRef = useRef(0);
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 오늘 날짜를 한 번만 계산 (성능 최적화)
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -65,6 +71,65 @@ export const DiaryListScreen: React.FC = () => {
       logger.error('Pull-to-refresh 오류:', error);
     } finally {
       setRefreshing(false);
+    }
+  }, [loadDiaries]);
+
+  // 테스트용: 헤더 5번 탭으로 데이터 초기화 (개발 모드에서만)
+  const handleHeaderTap = useCallback(() => {
+    // 프로덕션 모드에서는 작동하지 않음
+    if (!__DEV__) {
+      return;
+    }
+
+    tapCountRef.current += 1;
+
+    // 이전 타이머 취소
+    if (tapTimeoutRef.current) {
+      clearTimeout(tapTimeoutRef.current);
+    }
+
+    // 5번 탭하면 리셋 메뉴 표시
+    if (tapCountRef.current >= 5) {
+      tapCountRef.current = 0;
+      Alert.alert(
+        '🧪 테스트용 데이터 초기화',
+        '모든 로컬 데이터를 삭제하시겠습니까?\n\n(서버 데이터는 삭제되지 않습니다)',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '초기화',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // 모든 일기 삭제
+                const allDiaries = await DiaryStorage.getAll();
+                for (const diary of allDiaries) {
+                  await DiaryStorage.delete(diary._id);
+                }
+
+                // SurveyService 데이터 초기화
+                await SurveyService.clearAllData();
+
+                // OnboardingService 초기화
+                await OnboardingService.resetOnboarding();
+
+                // 화면 새로고침
+                await loadDiaries();
+
+                Alert.alert('✅ 초기화 완료', '로컬 데이터가 모두 삭제되었습니다.\n\n앱을 다시 시작하면 온보딩이 표시됩니다.');
+              } catch (error) {
+                Alert.alert('오류', '데이터 초기화 중 오류가 발생했습니다.');
+                console.error('Reset error:', error);
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      // 2초 내에 5번 탭하지 않으면 카운트 리셋
+      tapTimeoutRef.current = setTimeout(() => {
+        tapCountRef.current = 0;
+      }, 2000);
     }
   }, [loadDiaries]);
 
@@ -409,7 +474,9 @@ export const DiaryListScreen: React.FC = () => {
         >
           <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Heart Stamp</Text>
+        <TouchableOpacity onPress={handleHeaderTap} activeOpacity={0.9}>
+          <Text style={styles.headerTitle}>Heart Stamp</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.iconButton}
           onPress={() => navigation.navigate('Report')}

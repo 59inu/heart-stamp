@@ -80,4 +80,18 @@ export class SurveyService {
       console.error('Error syncing diary count:', error);
     }
   }
+
+  // 모든 SurveyService 데이터 초기화 (테스트용)
+  static async clearAllData(): Promise<void> {
+    try {
+      await AsyncStorage.multiRemove([
+        SURVEY_SHOWN_KEY,
+        DIARY_COUNT_KEY,
+        'survey_completed'
+      ]);
+      console.log('✅ SurveyService data cleared');
+    } catch (error) {
+      console.error('Error clearing survey data:', error);
+    }
+  }
 }
