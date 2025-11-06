@@ -2,12 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { DiaryEntry } from '../models/DiaryEntry';
 import { Report } from '../models/Report';
 import { UserService } from './userService';
-
-// Backend server URL
-// localhost는 시뮬레이터에서만 작동, 실제 디바이스에서는 컴퓨터 IP 사용
-const API_BASE_URL = __DEV__
-  ? 'http://192.168.0.14:3000/api'  // 개발 모드: 로컬 서버 (실제 디바이스 지원)
-  : 'https://heart-stamp-dev.up.railway.app/api';  // 프로덕션: Railway 서버
+import { API_BASE_URL, ENV } from '../config/environment';
 
 export class ApiService {
   private baseURL: string;
