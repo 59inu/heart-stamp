@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import archiver from 'archiver';
 import Database from 'better-sqlite3';
+import { S3Service } from './s3Service';
 
 const BACKUP_DIR = path.join(__dirname, '../../backups');
 const DB_PATH = path.join(__dirname, '../../diary.db');
@@ -157,6 +158,24 @@ export class BackupService {
   }
 
   /**
+   * S3에 백업 파일 업로드
+   */
+  private static async uploadToS3(filePath: string, filename: string): Promise<void> {
+    if (!S3Service.isConfigured()) {
+      console.log('⚠️  [Backup] S3 not configured, skipping S3 upload');
+      return;
+    }
+
+    try {
+      const s3Key = `backups/${filename}`;
+      await S3Service.uploadBackupFile(filePath, s3Key);
+    } catch (error) {
+      console.error(`❌ [Backup] Failed to upload ${filename} to S3:`, error);
+      // S3 업로드 실패해도 로컬 백업은 유지되므로 에러 던지지 않음
+    }
+  }
+
+  /**
    * 전체 백업 수행 (메인 함수)
    */
   static async performFullBackup(): Promise<void> {
@@ -175,7 +194,31 @@ export class BackupService {
       // 이미지 폴더 백업
       const uploadsBackup = await this.performUploadsBackup(timestamp);
 
-      // 오래된 백업 정리
+      // S3에 백업 업로드
+      if (S3Service.isConfigured()) {
+        console.log('📤 [Backup] Uploading backups to S3...');
+
+        // DB 백업 업로드
+        if (dbBackup.path) {
+          await this.uploadToS3(dbBackup.path, path.basename(dbBackup.path));
+        }
+
+        // uploads 백업 업로드
+        if (uploadsBackup.path) {
+          await this.uploadToS3(uploadsBackup.path, path.basename(uploadsBackup.path));
+        }
+
+        // 메타데이터 업로드
+        const metadataPath = path.join(BACKUP_DIR, `${timestamp}_metadata.json`);
+        if (fs.existsSync(metadataPath)) {
+          await this.uploadToS3(metadataPath, `${timestamp}_metadata.json`);
+        }
+
+        // S3 오래된 백업 정리
+        await S3Service.cleanOldBackups('backups/', RETENTION_DAYS);
+      }
+
+      // 로컬 오래된 백업 정리
       this.cleanOldBackups();
 
       const duration = (Date.now() - startTime) / 1000;
