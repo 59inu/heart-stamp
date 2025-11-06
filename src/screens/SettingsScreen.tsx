@@ -166,11 +166,9 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 설문조사 - 5회 이상 일기 작성자에게 항상 표시 */}
+        {/* 설문조사 배너 - 5회 이상 일기 작성자에게 표시 */}
         {diaryCount >= 5 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>설문조사</Text>
-
             <TouchableOpacity
               style={[styles.menuItem, styles.surveyItem]}
               onPress={handleSurvey}
