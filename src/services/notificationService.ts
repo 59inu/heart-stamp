@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { COLORS } from '../constants/colors';
-import { apiService } from './apiService';
+import { apiService, ApiErrorType } from './apiService';
 import { UserService } from './userService';
 
 const PUSH_TOKEN_KEY = '@stamp_diary:push_token';
@@ -21,14 +21,18 @@ Notifications.setNotificationHandler({
   },
 });
 
+export type PushNotificationStatus =
+  | { success: true; token: string }
+  | { success: false; reason: 'permission_denied' | 'network_error' | 'not_device' | 'unknown'; retriedCount?: number };
+
 export class NotificationService {
   private static notificationListener: any = null;
   private static responseListener: any = null;
 
-  static async registerForPushNotifications(): Promise<string | null> {
+  static async registerForPushNotifications(): Promise<PushNotificationStatus> {
     if (!Device.isDevice) {
       console.log('⚠️ 푸시 알림은 실제 기기에서만 작동합니다');
-      return null;
+      return { success: false, reason: 'not_device' };
     }
 
     try {
@@ -43,7 +47,7 @@ export class NotificationService {
 
       if (finalStatus !== 'granted') {
         console.log('⚠️ 푸시 알림 권한이 거부되었습니다');
-        return null;
+        return { success: false, reason: 'permission_denied' };
       }
 
       // 푸시 토큰 받기
@@ -53,14 +57,18 @@ export class NotificationService {
         Constants.expoConfig?.extra?.eas?.projectId ||
         Constants.easConfig?.projectId;
 
-      console.log('🔍 Constants.expoConfig:', Constants.expoConfig);
-      console.log('🔍 Attempting to get projectId...');
-      console.log('📱 Project ID found:', projectId);
+      if (__DEV__) {
+        console.log('🔍 Constants.expoConfig:', Constants.expoConfig);
+        console.log('🔍 Attempting to get projectId...');
+        console.log('📱 Project ID found:', projectId);
+      }
 
       if (!projectId) {
         console.log('⚠️ Project ID가 설정되지 않았습니다.');
-        console.log('💡 개발 모드에서는 푸시 알림이 제한적으로 작동할 수 있습니다.');
-        console.log('💡 실제 디바이스에서 테스트하려면 app.json에 projectId를 설정하세요.');
+        if (__DEV__) {
+          console.log('💡 개발 모드에서는 푸시 알림이 제한적으로 작동할 수 있습니다.');
+          console.log('💡 실제 디바이스에서 테스트하려면 app.json에 projectId를 설정하세요.');
+        }
       }
 
       const tokenData = await Notifications.getExpoPushTokenAsync({
@@ -72,9 +80,20 @@ export class NotificationService {
 
       // 기존에 저장된 토큰과 다르면 백엔드에 등록
       const savedToken = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+      let backendRegistrationResult: { success: boolean; retriedCount: number } | null = null;
+
       if (savedToken !== token) {
-        await this.registerTokenWithBackend(token);
-        await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+        console.log('🔄 New push token detected, registering with backend...');
+        backendRegistrationResult = await this.registerTokenWithBackend(token);
+        if (backendRegistrationResult.success) {
+          await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+          console.log('✅ Token saved to AsyncStorage after successful backend registration');
+        } else {
+          console.error('❌ Token NOT saved to AsyncStorage due to backend registration failure');
+          console.error('💡 Will retry on next app launch');
+        }
+      } else {
+        console.log('ℹ️ Push token unchanged, skipping registration');
       }
 
       // Android 알림 채널 설정
@@ -87,28 +106,65 @@ export class NotificationService {
         });
       }
 
-      return token;
+      // 백엔드 등록 실패 시 재시도 횟수와 함께 반환
+      if (backendRegistrationResult && !backendRegistrationResult.success) {
+        return {
+          success: false,
+          reason: 'network_error',
+          retriedCount: backendRegistrationResult.retriedCount
+        };
+      }
+
+      return { success: true, token };
     } catch (error) {
       console.error('❌ 푸시 알림 등록 오류:', error);
-      return null;
+      return { success: false, reason: 'unknown' };
     }
   }
 
   /**
-   * 백엔드에 푸시 토큰 등록
+   * 백엔드에 푸시 토큰 등록 (재시도 로직 포함)
+   * @returns { success: boolean, retriedCount: number }
    */
-  private static async registerTokenWithBackend(token: string): Promise<void> {
+  private static async registerTokenWithBackend(
+    token: string,
+    retryCount: number = 0
+  ): Promise<{ success: boolean; retriedCount: number }> {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1초
+
     try {
       const userId = await UserService.getOrCreateUserId();
       const response = await apiService.registerPushToken(userId, token);
 
       if (response.success) {
         console.log('✅ Push token registered with backend');
+        return { success: true, retriedCount: retryCount };
       } else {
+        // 서버가 명시적으로 실패를 반환
         console.error('❌ Failed to register push token:', response.message);
+
+        // 네트워크 오류인 경우에만 재시도
+        const isRetryable = response.errorType === ApiErrorType.NETWORK_ERROR;
+        if (isRetryable && retryCount < MAX_RETRIES) {
+          console.log(`🔄 Retrying push token registration (${retryCount + 1}/${MAX_RETRIES})...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+          return this.registerTokenWithBackend(token, retryCount + 1);
+        }
+
+        return { success: false, retriedCount: retryCount };
       }
     } catch (error) {
       console.error('❌ Error registering token with backend:', error);
+
+      // 예외 발생 시에도 재시도
+      if (retryCount < MAX_RETRIES) {
+        console.log(`🔄 Retrying push token registration after error (${retryCount + 1}/${MAX_RETRIES})...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+        return this.registerTokenWithBackend(token, retryCount + 1);
+      }
+
+      return { success: false, retriedCount: retryCount };
     }
   }
 

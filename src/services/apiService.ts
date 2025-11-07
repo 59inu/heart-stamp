@@ -4,6 +4,12 @@ import { Report } from '../models/Report';
 import { UserService } from './userService';
 import { API_BASE_URL, ENV } from '../config/environment';
 
+export enum ApiErrorType {
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  SERVER_ERROR = 'SERVER_ERROR',
+  REQUEST_ERROR = 'REQUEST_ERROR',
+}
+
 export class ApiService {
   private baseURL: string;
   private axiosInstance: AxiosInstance;
@@ -13,7 +19,7 @@ export class ApiService {
     console.log(`🌐 [apiService] Initializing with baseURL: ${this.baseURL}`);
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
-      timeout: 15000, // 15초 타임아웃
+      timeout: 10000, // 10초 타임아웃 (푸시 토큰 등록은 개별 설정)
     });
 
     // 모든 요청에 userId 헤더 추가
@@ -134,16 +140,49 @@ export class ApiService {
     }
   }
 
-  async registerPushToken(userId: string, token: string): Promise<{ success: boolean; message?: string }> {
+  async registerPushToken(userId: string, token: string): Promise<{
+    success: boolean;
+    message?: string;
+    errorType?: ApiErrorType;
+  }> {
     try {
       const response = await this.axiosInstance.post('/push/register', {
         userId,
         token,
+      }, {
+        timeout: 5000, // 푸시 토큰 등록은 5초로 짧게 설정 (재시도 3회 있으므로)
       });
       return { success: response.data.success, message: response.data.message };
-    } catch (error) {
-      console.error('Error registering push token:', error);
-      return { success: false, message: 'Failed to register push token' };
+    } catch (error: any) {
+      // 에러 상세 정보 로깅
+      if (error.response) {
+        // 서버가 응답했지만 에러 상태 코드 반환
+        console.error('[API] Push token registration failed:', {
+          status: error.response.status,
+          data: error.response.data,
+        });
+        return {
+          success: false,
+          message: error.response.data?.message || `Server error: ${error.response.status}`,
+          errorType: ApiErrorType.SERVER_ERROR,
+        };
+      } else if (error.request) {
+        // 요청은 보냈지만 응답을 받지 못함 (네트워크 오류)
+        console.error('[API] Push token registration - no response received:', error.message);
+        return {
+          success: false,
+          message: 'Network error: Could not reach server',
+          errorType: ApiErrorType.NETWORK_ERROR,
+        };
+      } else {
+        // 요청 설정 중 에러 발생
+        console.error('[API] Push token registration - request setup failed:', error.message);
+        return {
+          success: false,
+          message: `Request failed: ${error.message}`,
+          errorType: ApiErrorType.REQUEST_ERROR,
+        };
+      }
     }
   }
 
