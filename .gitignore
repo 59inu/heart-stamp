@@ -58,3 +58,7 @@ backend/backups/
 # Realm
 default.realm*
 *.realm*
+# Local database files
+diary.db
+*.db
+backend/database.sqlite
