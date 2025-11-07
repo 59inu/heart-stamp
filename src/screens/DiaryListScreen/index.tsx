@@ -63,6 +63,11 @@ export const DiaryListScreen: React.FC = () => {
     });
   }, [diaries, selectedDate]);
 
+  // 도장 위치 (매 렌더링마다 새 객체 생성 방지)
+  const stampPosition = useMemo(() => {
+    return selectedDiary?.stamp ? { diaryId: selectedDiary._id } : null;
+  }, [selectedDiary?._id]);
+
   // 오늘 일기 작성 여부
   const hasTodayDiary = useMemo(() => {
     return diaries.some((diary) => {

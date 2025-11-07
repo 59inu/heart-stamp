@@ -157,8 +157,10 @@ export class DiaryStorage {
         }
       }
 
-      // 로컬 일기를 서버 데이터와 동기화 (N+1 쿼리 제거)
-      for (const entry of entries) {
+      // 로컬 일기를 서버 데이터와 동기화 (배치 업데이트로 I/O 최적화)
+      let hasUpdates = false;
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
         const serverData = serverDiaryMap.get(entry._id);
 
         if (serverData?.aiComment) {
@@ -168,15 +170,24 @@ export class DiaryStorage {
             entry.stampType !== serverData.stampType;
 
           if (needsUpdate) {
-            await this.update(entry._id, {
+            // 메모리에서만 업데이트 (파일 I/O 없음)
+            entries[i] = {
+              ...entry,
               aiComment: serverData.aiComment,
               stampType: serverData.stampType,
               syncedWithServer: true,
-            });
+              updatedAt: new Date().toISOString(),
+            };
             updatedCount++;
+            hasUpdates = true;
             console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment`);
           }
         }
+      }
+
+      // 모든 업데이트를 한 번의 파일 I/O로 저장
+      if (hasUpdates) {
+        await this.saveAllEntries(entries);
       }
 
       if (addedCount > 0 || updatedCount > 0) {

@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   RefreshControl,
+  FlatList,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -38,47 +39,66 @@ const HORIZONTAL_PADDING = 0; // 패딩 없음 (전체 화면 너비 사용)
 const AVAILABLE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING;
 const CELLS_PER_ROW = Math.floor(AVAILABLE_WIDTH / CELL_WIDTH);
 
-// 원고지 스타일 컴포넌트 (React.memo로 최적화)
+// 원고지 스타일 컴포넌트 (FlatList로 가상화하여 성능 최적화)
 const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) => {
   // 텍스트를 한 글자씩 분리하고 빈 칸 계산 (useMemo로 최적화)
-  const { characters, emptyCellsNeeded } = React.useMemo(() => {
+  const allCells = React.useMemo(() => {
     const chars = content.split('');
     const totalCells = chars.length;
     const minCells = CELLS_PER_ROW * 10; // 최소 10줄 보장
 
     // 최소 줄 수를 보장하기 위한 빈 칸 계산
-    let empty = 0;
+    let emptyCellsNeeded = 0;
     if (totalCells < minCells) {
       // 10줄보다 적으면 10줄까지 채움
-      empty = minCells - totalCells;
+      emptyCellsNeeded = minCells - totalCells;
     } else {
       // 10줄 이상이면 마지막 줄만 채움
       const lastRowCells = totalCells % CELLS_PER_ROW;
-      empty = lastRowCells > 0 ? CELLS_PER_ROW - lastRowCells : 0;
+      emptyCellsNeeded = lastRowCells > 0 ? CELLS_PER_ROW - lastRowCells : 0;
     }
 
-    return {
-      characters: chars,
-      emptyCellsNeeded: empty,
-    };
+    // 모든 셀을 하나의 배열로 통합
+    const cells = [
+      ...chars.map((char, index) => ({ char, isEmpty: false, index })),
+      ...Array.from({ length: emptyCellsNeeded }).map((_, index) => ({
+        char: ' ',
+        isEmpty: true,
+        index: chars.length + index,
+      })),
+    ];
+
+    return cells;
   }, [content]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: { char: string; isEmpty: boolean; index: number } }) => (
+      <View style={styles.manuscriptCell}>
+        <Text style={styles.manuscriptChar}>{item.char === '\n' ? '' : item.char}</Text>
+      </View>
+    ),
+    []
+  );
+
+  const keyExtractor = useCallback(
+    (item: { char: string; isEmpty: boolean; index: number }) =>
+      `${content.substring(0, 10)}-${item.isEmpty ? 'empty' : 'char'}-${item.index}`,
+    [content]
+  );
+
   return (
-    <View style={styles.manuscriptContainer}>
-      {characters.map((char, index) => (
-        <View key={`char-${index}`} style={styles.manuscriptCell}>
-          <Text style={styles.manuscriptChar}>
-            {char === '\n' ? '' : char}
-          </Text>
-        </View>
-      ))}
-      {/* 마지막 줄 빈 칸 채우기 */}
-      {Array.from({ length: emptyCellsNeeded }).map((_, index) => (
-        <View key={`empty-${index}`} style={styles.manuscriptCell}>
-          <Text style={styles.manuscriptChar}> </Text>
-        </View>
-      ))}
-    </View>
+    <FlatList
+      data={allCells}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      numColumns={CELLS_PER_ROW}
+      scrollEnabled={false}
+      contentContainerStyle={styles.manuscriptContainer}
+      initialNumToRender={50}
+      maxToRenderPerBatch={50}
+      windowSize={5}
+      removeClippedSubviews={true}
+    />
   );
 });
 
