@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView } fr
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import { logger } from '../utils/logger';
+import * as Sentry from '@sentry/react-native';
 
 interface Props {
   children: ReactNode;
@@ -55,13 +56,23 @@ export class ErrorBoundary extends Component<Props, State> {
     logger.error('❌ [ErrorBoundary] Caught error:', error);
     logger.error('❌ [ErrorBoundary] Error info:', errorInfo);
 
-    // 커스텀 에러 핸들러 호출 (Sentry 등)
+    // Sentry에 에러 전송
+    Sentry.captureException(error, {
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack,
+        },
+      },
+      level: this.props.level === 'app' ? 'fatal' : 'error',
+      tags: {
+        boundary_level: this.props.level || 'component',
+      },
+    });
+
+    // 커스텀 에러 핸들러 호출
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-
-    // TODO: Sentry 통합
-    // Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
   }
 
   resetError = (): void => {

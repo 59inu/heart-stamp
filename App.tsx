@@ -11,6 +11,10 @@ import { OfflineBanner } from './src/components/OfflineBanner';
 import { logger } from './src/utils/logger';
 import { AnalyticsService } from './src/services/analyticsService';
 import { RetentionService } from './src/services/retentionService';
+import { initSentry, setUser } from './src/config/sentry';
+
+// Sentry 초기화 (앱 시작 전)
+initSentry();
 
 export default function App() {
   const appState = useRef(AppState.currentState);
@@ -21,6 +25,12 @@ export default function App() {
     // Analytics 및 리텐션 추적 초기화
     const initAnalytics = async () => {
       await AnalyticsService.initialize();
+
+      // Sentry에 사용자 ID 설정 (AnalyticsService가 이미 생성한 ID 사용)
+      const { UserService } = await import('./src/services/userService');
+      const userId = await UserService.getOrCreateUserId();
+      setUser(userId);
+
       const isFirstOpen = await RetentionService.checkAndLogFirstOpen();
 
       if (!isFirstOpen) {
