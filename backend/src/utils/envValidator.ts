@@ -155,5 +155,5 @@ export function printEnvironmentInfo(): void {
   console.log(`   - CORS Origins: ${process.env.ALLOWED_ORIGINS || '*'}`);
   console.log(`   - Claude API: ${process.env.CLAUDE_API_KEY ? 'Configured' : 'Not Set'}`);
   console.log(`   - Encryption: ${process.env.ENCRYPTION_KEY ? 'Custom Key' : 'Default Dev Key'}`);
-  console.log(`   - S3 Storage: ${process.env.AWS_S3_BUCKET_NAME ? 'Enabled' : 'Local Storage'}\n`);
+  console.log(`   - S3 Storage: ${process.env.S3_BUCKET_NAME ? 'Enabled' : 'Local Storage'}\n`);
 }
