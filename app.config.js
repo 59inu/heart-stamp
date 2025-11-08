@@ -14,6 +14,30 @@ export default ({ config }) => {
     }
   };
 
+  // 빌드 프로파일에 따라 Bundle Identifier 결정
+  const getBundleIdentifier = () => {
+    switch (buildProfile) {
+      case 'development':
+        return 'com.heartstamp.app.dev';
+      case 'preview':
+        return 'com.heartstamp.app.preview';
+      default:
+        return 'com.heartstamp.app';
+    }
+  };
+
+  // 빌드 프로파일에 따라 Android Package 결정
+  const getAndroidPackage = () => {
+    switch (buildProfile) {
+      case 'development':
+        return 'com.heartstamp.app.dev';
+      case 'preview':
+        return 'com.heartstamp.app.preview';
+      default:
+        return 'com.heartstamp.app';
+    }
+  };
+
   return {
     ...config,
     expo: {
@@ -33,7 +57,7 @@ export default ({ config }) => {
       },
       ios: {
         supportsTablet: true,
-        bundleIdentifier: 'com.heartstamp.app',
+        bundleIdentifier: getBundleIdentifier(),
         config: {
           usesNonExemptEncryption: false,
         },
@@ -44,7 +68,7 @@ export default ({ config }) => {
         },
       },
       android: {
-        package: 'com.heartstamp.app',
+        package: getAndroidPackage(),
         adaptiveIcon: {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',
