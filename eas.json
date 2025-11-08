@@ -10,13 +10,23 @@
         "APP_ENV": "development"
       },
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "bundleIdentifier": "com.heartstamp.app.dev"
+      },
+      "android": {
+        "package": "com.heartstamp.app.dev"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
         "APP_ENV": "development"
+      },
+      "ios": {
+        "bundleIdentifier": "com.heartstamp.app.preview"
+      },
+      "android": {
+        "package": "com.heartstamp.app.preview"
       }
     },
     "production": {
