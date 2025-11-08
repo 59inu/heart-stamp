@@ -85,9 +85,10 @@ export const PrivacyDetailScreen: React.FC = () => {
           수집한 개인정보는 다음의 목적으로만 이용됩니다:{'\n\n'}
           • 일기 작성, 저장 및 조회 서비스 제공{'\n'}
           • AI 기반 일기 코멘트 생성{'\n'}
-          • 감정 분석 및 주간 리포트 제공{'\n'}
+          • 감정 분석 및 주간/월간 리포트 제공{'\n'}
+          • 감정 스탬프 컬렉션 및 통계 제공{'\n'}
           • 푸시 알림 발송{'\n'}
-          • 서비스 개선 및 통계 분석{'\n'}
+          • 서비스 개선 및 에러 추적{'\n'}
           • 고객 문의 응대
         </Text>
 
@@ -104,12 +105,23 @@ export const PrivacyDetailScreen: React.FC = () => {
             • 제공 항목: 일기 내용, 작성 날짜, 감정 정보{'\n'}
             • 보유 및 이용기간:{'\n'}
               - Anthropic은 API를 통해 전송된 데이터를 모델 학습에 사용하지 않습니다{'\n'}
-              - Trust & Safety 목적으로 최대 90일 보관 후 자동 삭제됩니다{'\n'}
+              - 신뢰 및 안전(Trust & Safety) 목적으로 최대 30일 보관 후 자동 삭제됩니다{'\n'}
               - 자세한 내용:
           </Text>
           <TouchableOpacity onPress={openAnthropicPrivacy}>
             <Text style={styles.link}>https://www.anthropic.com/legal/privacy</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.highlightBox}>
+          <Text style={styles.highlightTitle}>Sentry (에러 추적)</Text>
+          <Text style={styles.highlightText}>
+            • 제공받는 자: Functional Software, Inc. (미국){'\n'}
+            • 제공 목적: 앱 오류 및 성능 모니터링{'\n'}
+            • 제공 항목: 에러 로그, 기기 정보, 앱 버전{'\n'}
+            • 보유 및 이용기간: 90일 보관 후 자동 삭제{'\n'}
+            • 개인정보 보호: 일기 내용, 사용자 식별 정보 등은 전송되지 않습니다
+          </Text>
         </View>
 
         <Text style={styles.importantText}>
@@ -118,10 +130,11 @@ export const PrivacyDetailScreen: React.FC = () => {
 
         <Text style={styles.sectionTitle}>4. 개인정보의 보유 및 이용기간</Text>
         <Text style={styles.text}>
-          • 서비스 이용 중: 이용자가 앱을 삭제할 때까지{'\n'}
-          • 앱 삭제 시: 디바이스 내 모든 데이터 즉시 삭제{'\n'}
-          • 서버 데이터: 백업 목적으로 30일 보관 후 자동 삭제{'\n'}
-          • Anthropic 전송 데이터: 처리 완료 후 최대 90일 보관 후 삭제
+          • 서비스 이용 중: 이용자가 삭제 요청할 때까지 보관{'\n'}
+          • 앱 삭제 시: 디바이스 내 모든 데이터 즉시 삭제 (서버 데이터는 별도 삭제 요청 필요){'\n'}
+          • 서버 데이터: 이용자가 삭제 요청 시 즉시 삭제 (자동 백업 파일은 14일 보관){'\n'}
+          • Anthropic 전송 데이터: 처리 완료 후 최대 30일 보관 후 자동 삭제{'\n'}
+          • Sentry 에러 로그: 90일 보관 후 자동 삭제
         </Text>
 
         <Text style={styles.sectionTitle}>5. 개인정보의 파기 절차 및 방법</Text>
