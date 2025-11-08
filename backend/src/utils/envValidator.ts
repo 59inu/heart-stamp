@@ -29,11 +29,11 @@ export function validateEnvironment(): void {
       });
     }
 
-    // Firebase 서비스 계정 (필수)
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    // Firebase 서비스 계정 (필수 - JSON 또는 파일 경로 중 하나)
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
       errors.push({
-        variable: 'FIREBASE_SERVICE_ACCOUNT_PATH',
-        message: 'Firebase service account path is required in production',
+        variable: 'FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH',
+        message: 'Firebase service account is required in production (set either FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH)',
         severity: 'error',
       });
     }
