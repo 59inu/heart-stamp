@@ -3,8 +3,12 @@
  *
  * 리텐션 추적 및 사용자 행동 분석을 위한 이벤트 로깅
  *
- * ⚠️ 현재 Firebase Analytics가 설치되지 않아 MOCK 모드로 동작합니다.
- * Firebase 설정 완료 후 MOCK_MODE를 false로 변경하세요.
+ * MOCK 모드:
+ * - 개발 모드 (__DEV__ = true): MOCK 사용 (콘솔 로그만)
+ * - 프로덕션 빌드 (__DEV__ = false): 실제 Firebase 사용
+ *
+ * ⚠️ 주의: Firebase Analytics 패키지 설치 전까지는 프로덕션 빌드 금지!
+ * 설치 방법: npm install @react-native-firebase/app @react-native-firebase/analytics
  */
 
 // import analytics from '@react-native-firebase/analytics';
@@ -14,8 +18,10 @@ import { DiaryEntry } from '../models/DiaryEntry';
 import { logger } from '../utils/logger';
 import { ANALYTICS_CONFIG } from '../config/analytics';
 
-// Firebase 미설치로 인한 임시 MOCK 모드
-const MOCK_MODE = true;
+// 환경별 자동 조절: 개발 모드에서는 MOCK, 프로덕션에서는 실제 Firebase
+// Firebase 설치 전까지는 항상 true로 유지하거나, 아래처럼 __DEV__로 변경
+const FIREBASE_INSTALLED = false;  // Firebase 설치 후 true로 변경
+const MOCK_MODE = FIREBASE_INSTALLED ? __DEV__ : true;
 
 export class AnalyticsService {
   private static isInitialized = false;
