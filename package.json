@@ -1,6 +1,10 @@
 {
   "name": "heart-stamp-diary",
   "version": "1.0.0",
+  "description": "AI-powered emotional diary app with daily stamp collection",
+  "author": "Bangsil Choi <59inu.dev@gmail.com>",
+  "license": "UNLICENSED",
+  "private": true,
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
