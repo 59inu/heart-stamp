@@ -13,7 +13,7 @@ export const CALENDAR_MARKING_STYLES = {
         backgroundColor: 'transparent',
         borderRadius: 8,
         borderWidth: 1.5,
-        borderColor: '#8A9BC0', // 밝은 슬레이트 블루 테두리
+        borderColor: '#87A6D1', // 하트 블루 테두리
       },
       text: {
         color: '#2F2B4C',
@@ -29,7 +29,7 @@ export const CALENDAR_MARKING_STYLES = {
         backgroundColor: COLORS.emotionNegativeLight,
         borderRadius: 8,
         borderWidth: 1.5,
-        borderColor: '#8A9BC0', // 밝은 슬레이트 블루 테두리
+        borderColor: '#87A6D1', // 하트 블루 테두리
       },
       text: {
         color: COLORS.emotionNegative,
@@ -45,7 +45,7 @@ export const CALENDAR_MARKING_STYLES = {
         backgroundColor: COLORS.emotionNeutralLight,
         borderRadius: 8,
         borderWidth: 1.5,
-        borderColor: '#8A9BC0', // 밝은 슬레이트 블루 테두리
+        borderColor: '#87A6D1', // 하트 블루 테두리
       },
       text: {
         color: COLORS.emotionNeutral,
@@ -61,7 +61,7 @@ export const CALENDAR_MARKING_STYLES = {
         backgroundColor: COLORS.emotionPositiveLight,
         borderRadius: 8,
         borderWidth: 1.5,
-        borderColor: '#8A9BC0', // 밝은 슬레이트 블루 테두리
+        borderColor: '#87A6D1', // 하트 블루 테두리
       },
       text: {
         color: COLORS.emotionPositive,
@@ -139,16 +139,16 @@ export const CALENDAR_MARKING_STYLES = {
     },
   },
 
-  // === 선택된 날짜 버전 (연한 보라색 배경 + 보더) ===
+  // === 선택된 날짜 버전 (원래 배경색 유지 + 진한 테두리 추가) ===
 
   // 선택됨 + AI 코멘트 (감정 없음)
   selectedWithComment: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: 'transparent',
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
         color: '#2F2B4C',
@@ -161,13 +161,13 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithCommentRed: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: COLORS.emotionNegativeLight,
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: COLORS.emotionNegative,
         fontWeight: '400' as const,
       },
     },
@@ -177,13 +177,13 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithCommentYellow: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: COLORS.emotionNeutralLight,
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: COLORS.emotionNeutral,
         fontWeight: '400' as const,
       },
     },
@@ -193,13 +193,13 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithCommentGreen: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: COLORS.emotionPositiveLight,
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: COLORS.emotionPositive,
         fontWeight: '400' as const,
       },
     },
@@ -209,13 +209,13 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithDiary: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: 'transparent',
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: '#000',
         fontWeight: '400' as const,
       },
     },
@@ -225,13 +225,13 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithDiaryRed: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: COLORS.emotionNegativeLight,
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: COLORS.emotionNegative,
         fontWeight: '400' as const,
       },
     },
@@ -241,13 +241,13 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithDiaryYellow: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: COLORS.emotionNeutralLight,
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: COLORS.emotionNeutral,
         fontWeight: '400' as const,
       },
     },
@@ -257,26 +257,26 @@ export const CALENDAR_MARKING_STYLES = {
   selectedWithDiaryGreen: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: COLORS.emotionPositiveLight,
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
-        color: '#2F2B4C',
+        color: COLORS.emotionPositive,
         fontWeight: '400' as const,
       },
     },
   },
 
-  // 선택됨 + 일기 없음
+  // 선택됨 + 일기 없음 (과거 날짜)
   selectedEmpty: {
     customStyles: {
       container: {
-        backgroundColor: '#D5C9F5',
+        backgroundColor: 'transparent',
         borderRadius: 8,
-        borderWidth: 3,
-        borderColor: '#D5C9F5',
+        borderWidth: 2,
+        borderColor: '#666666',
       },
       text: {
         color: '#2F2B4C',
@@ -285,16 +285,32 @@ export const CALENDAR_MARKING_STYLES = {
     },
   },
 
-  // === 오늘 날짜 표시 (두꺼운 보더) ===
+  // 오늘 날짜 선택됨 (일기 유무 무관)
+  todaySelected: {
+    customStyles: {
+      container: {
+        backgroundColor: '#C9DAF0', // 연한 블루
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#666666',
+      },
+      text: {
+        color: '#2F2B4C',
+        fontWeight: '400' as const,
+      },
+    },
+  },
+
+  // === 오늘 날짜 표시 (연한 블루 배경 + 보더) ===
 
   // 오늘 + 일기 없음
   today: {
     customStyles: {
       container: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
         color: '#2F2B4C',
@@ -307,10 +323,10 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithComment: {
     customStyles: {
       container: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
         color: '#2F2B4C',
@@ -323,13 +339,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithCommentRed: {
     customStyles: {
       container: {
-        backgroundColor: COLORS.emotionNegativeLight,
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: COLORS.emotionNegative,
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },
@@ -339,13 +355,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithCommentYellow: {
     customStyles: {
       container: {
-        backgroundColor: COLORS.emotionNeutralLight,
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: COLORS.emotionNeutral,
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },
@@ -355,13 +371,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithCommentGreen: {
     customStyles: {
       container: {
-        backgroundColor: COLORS.emotionPositiveLight,
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: COLORS.emotionPositive,
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },
@@ -371,13 +387,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithDiary: {
     customStyles: {
       container: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: '#000',
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },
@@ -387,13 +403,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithDiaryRed: {
     customStyles: {
       container: {
-        backgroundColor: COLORS.emotionNegativeLight,
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: COLORS.emotionNegative,
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },
@@ -403,13 +419,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithDiaryYellow: {
     customStyles: {
       container: {
-        backgroundColor: COLORS.emotionNeutralLight,
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: COLORS.emotionNeutral,
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },
@@ -419,13 +435,13 @@ export const CALENDAR_MARKING_STYLES = {
   todayWithDiaryGreen: {
     customStyles: {
       container: {
-        backgroundColor: COLORS.emotionPositiveLight,
+        backgroundColor: '#C9DAF0', // 연한 블루
         borderRadius: 8,
         borderWidth: 3,
-        borderColor: '#2F2B4C',
+        borderColor: '#C9DAF0',
       },
       text: {
-        color: COLORS.emotionPositive,
+        color: '#2F2B4C',
         fontWeight: '400' as const,
       },
     },

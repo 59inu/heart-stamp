@@ -7,7 +7,7 @@ export const InfoCard: React.FC = () => {
   return (
     <View style={styles.infoCard}>
       <View style={styles.infoHeader}>
-        <MaterialCommunityIcons name="information-outline" size={20} color={COLORS.emotionPositive} />
+        <MaterialCommunityIcons name="information-outline" size={20} color="#5F8A7A" />
         <Text style={styles.infoText}>
           한 번 생성된 리포트는 과거 일기가 수정되어도 업데이트되지 않습니다
         </Text>
@@ -18,13 +18,13 @@ export const InfoCard: React.FC = () => {
 
 const styles = StyleSheet.create({
   infoCard: {
-    backgroundColor: '#f0f7f0',
+    backgroundColor: COLORS.emotionPositiveLight, // 하트 민트 배경
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.emotionPositive,
+    borderLeftColor: COLORS.emotionPositiveStrong, // 하트 민트
   },
   infoHeader: {
     flexDirection: 'row',
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.emotionPositive,
+    color: '#5F8A7A', // 진한 민트
     lineHeight: 18,
   },
 });

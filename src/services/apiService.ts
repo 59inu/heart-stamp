@@ -3,6 +3,8 @@ import { DiaryEntry } from '../models/DiaryEntry';
 import { Report } from '../models/Report';
 import { UserService } from './userService';
 import { API_BASE_URL, ENV } from '../config/environment';
+import { getLocalizedErrorMessage, ErrorContext } from '../utils/errorMessages';
+import { logger } from '../utils/logger';
 
 export enum ApiErrorType {
   NETWORK_ERROR = 'NETWORK_ERROR',
@@ -10,13 +12,17 @@ export enum ApiErrorType {
   REQUEST_ERROR = 'REQUEST_ERROR',
 }
 
+export type ApiResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; errorType?: ApiErrorType };
+
 export class ApiService {
   private baseURL: string;
   private axiosInstance: AxiosInstance;
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
-    console.log(`🌐 [apiService] Initializing with baseURL: ${this.baseURL}`);
+    logger.log(`🌐 [apiService] Initializing with baseURL: ${this.baseURL}`);
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
       timeout: 10000, // 10초 타임아웃 (푸시 토큰 등록은 개별 설정)
@@ -26,17 +32,17 @@ export class ApiService {
     this.axiosInstance.interceptors.request.use(async (config) => {
       const userId = await UserService.getOrCreateUserId();
       config.headers['X-User-Id'] = userId;
-      console.log(`🔍 [apiService] Request interceptor - URL: ${config.baseURL}${config.url}`);
-      console.log(`🔍 [apiService] Request method: ${config.method}`);
-      console.log(`🔍 [apiService] Request headers:`, JSON.stringify(config.headers));
-      console.log(`🔍 [apiService] Request data:`, JSON.stringify(config.data));
+      logger.log(`🔍 [apiService] Request interceptor - URL: ${config.baseURL}${config.url}`);
+      logger.log(`🔍 [apiService] Request method: ${config.method}`);
+      logger.log(`🔍 [apiService] Request headers:`, JSON.stringify(config.headers));
+      logger.log(`🔍 [apiService] Request data:`, JSON.stringify(config.data));
       return config;
     });
 
     // 응답 로깅
     this.axiosInstance.interceptors.response.use(
       (response) => {
-        console.log(`✅ [apiService] Response from ${response.config.url}:`, JSON.stringify(response.data));
+        logger.log(`✅ [apiService] Response from ${response.config.url}:`, JSON.stringify(response.data));
         return response;
       },
       (error) => {
@@ -50,7 +56,7 @@ export class ApiService {
           errorType = 'server';
         }
 
-        console.error(`❌ [apiService] Request failed [${errorType}]:`, {
+        logger.error(`❌ [apiService] Request failed [${errorType}]:`, {
           url: error.config?.url,
           method: error.config?.method,
           status: error.response?.status,
@@ -64,9 +70,9 @@ export class ApiService {
     );
   }
 
-  async uploadDiary(diary: DiaryEntry): Promise<boolean> {
+  async uploadDiary(diary: DiaryEntry): Promise<ApiResult<boolean>> {
     try {
-      console.log(`📤 [apiService] Uploading diary ${diary._id} to server...`);
+      logger.log(`📤 [apiService] Uploading diary ${diary._id} to server...`);
       const response = await this.axiosInstance.post('/diaries', {
         _id: diary._id,
         date: diary.date,
@@ -81,49 +87,64 @@ export class ApiService {
         syncedWithServer: diary.syncedWithServer,
       });
 
-      console.log(`✅ [apiService] Diary ${diary._id} uploaded successfully`);
-      return response.data.success;
-    } catch (error) {
-      console.error(`❌ [apiService] Error uploading diary ${diary._id}:`, error);
-      return false;
+      logger.log(`✅ [apiService] Diary ${diary._id} uploaded successfully`);
+      return { success: true, data: response.data.success };
+    } catch (error: any) {
+      logger.error(`❌ [apiService] Error uploading diary ${diary._id}:`, error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_UPLOAD),
+        errorType
+      };
     }
   }
 
-  async getAIComment(diaryId: string): Promise<{
+  async getAIComment(diaryId: string): Promise<ApiResult<{
     aiComment?: string;
     stampType?: string;
-  } | null> {
+  }>> {
     try {
       const response = await this.axiosInstance.get(
         `/diaries/${diaryId}/ai-comment`
       );
 
       if (response.data.success) {
-        return response.data.data;
+        return { success: true, data: response.data.data };
       }
-      return null;
-    } catch (error) {
-      console.error('Error getting AI comment:', error);
-      return null;
+      return { success: false, error: 'AI 코멘트를 찾을 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error getting AI comment:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
     }
   }
 
-  async triggerAnalysis(diaryId: string): Promise<{
+  async triggerAnalysis(diaryId: string): Promise<ApiResult<{
     aiComment: string;
     stampType: string;
-  } | null> {
+  }>> {
     try {
       const response = await this.axiosInstance.post(
         `/diaries/${diaryId}/analyze`
       );
 
       if (response.data.success) {
-        return response.data.data;
+        return { success: true, data: response.data.data };
       }
-      return null;
-    } catch (error) {
-      console.error('Error triggering analysis:', error);
-      return null;
+      return { success: false, error: '분석 결과를 받을 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error triggering analysis:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
     }
   }
 
@@ -135,7 +156,7 @@ export class ApiService {
       );
       return response.data.status === 'ok';
     } catch (error) {
-      console.error('Error checking server health:', error);
+      logger.error('Error checking server health:', error);
       return false;
     }
   }
@@ -157,73 +178,123 @@ export class ApiService {
       // 에러 상세 정보 로깅
       if (error.response) {
         // 서버가 응답했지만 에러 상태 코드 반환
-        console.error('[API] Push token registration failed:', {
+        logger.error('[API] Push token registration failed:', {
           status: error.response.status,
           data: error.response.data,
         });
         return {
           success: false,
-          message: error.response.data?.message || `Server error: ${error.response.status}`,
+          message: getLocalizedErrorMessage(error, ErrorContext.PUSH_NOTIFICATION),
           errorType: ApiErrorType.SERVER_ERROR,
         };
       } else if (error.request) {
         // 요청은 보냈지만 응답을 받지 못함 (네트워크 오류)
-        console.error('[API] Push token registration - no response received:', error.message);
+        logger.error('[API] Push token registration - no response received:', error.message);
         return {
           success: false,
-          message: 'Network error: Could not reach server',
+          message: getLocalizedErrorMessage(error, ErrorContext.NETWORK),
           errorType: ApiErrorType.NETWORK_ERROR,
         };
       } else {
         // 요청 설정 중 에러 발생
-        console.error('[API] Push token registration - request setup failed:', error.message);
+        logger.error('[API] Push token registration - request setup failed:', error.message);
         return {
           success: false,
-          message: `Request failed: ${error.message}`,
+          message: getLocalizedErrorMessage(error, ErrorContext.PUSH_NOTIFICATION),
           errorType: ApiErrorType.REQUEST_ERROR,
         };
       }
     }
   }
 
-  async syncDiaryFromServer(diaryId: string): Promise<{
+  async deletePushToken(userId: string): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const response = await this.axiosInstance.delete(`/push/unregister/${userId}`, {
+        timeout: 5000,
+      });
+      return { success: response.data.success };
+    } catch (error: any) {
+      if (error.response) {
+        logger.error('[API] Push token deletion failed:', {
+          status: error.response.status,
+          data: error.response.data,
+        });
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.PUSH_NOTIFICATION),
+        };
+      } else if (error.request) {
+        logger.error('[API] Push token deletion - no response received:', error.message);
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.NETWORK),
+        };
+      } else {
+        logger.error('[API] Push token deletion - request setup failed:', error.message);
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.PUSH_NOTIFICATION),
+        };
+      }
+    }
+  }
+
+  async syncDiaryFromServer(diaryId: string): Promise<ApiResult<{
     aiComment?: string;
     stampType?: string;
-  } | null> {
+  }>> {
     try {
       const response = await this.axiosInstance.get(
         `/diaries/${diaryId}/ai-comment`
       );
       if (response.data.success) {
-        return response.data.data;
+        return { success: true, data: response.data.data };
       }
-      return null;
-    } catch (error) {
-      console.error('Error syncing diary from server:', error);
-      return null;
+      return { success: false, error: '서버 데이터를 찾을 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error syncing diary from server:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.SYNC),
+        errorType
+      };
     }
   }
 
-  async getAllDiaries(): Promise<DiaryEntry[]> {
+  async getAllDiaries(): Promise<ApiResult<DiaryEntry[]>> {
     try {
       const response = await this.axiosInstance.get('/diaries');
       if (response.data.success) {
-        return response.data.data;
+        return { success: true, data: response.data.data };
       }
-      return [];
-    } catch (error) {
-      console.error('Error getting all diaries from server:', error);
-      return [];
+      return { success: false, error: '일기 목록을 불러올 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error getting all diaries from server:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
     }
   }
 
-  async deleteDiary(diaryId: string): Promise<boolean> {
+  async deleteDiary(diaryId: string): Promise<ApiResult<boolean>> {
     try {
       const response = await this.axiosInstance.delete(`/diaries/${diaryId}`);
-      return response.data.success;
-    } catch (error) {
-      console.error('Error deleting diary:', error);
-      return false;
+      return { success: true, data: response.data.success };
+    } catch (error: any) {
+      logger.error('Error deleting diary:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_DELETE),
+        errorType
+      };
     }
   }
 
@@ -258,8 +329,8 @@ export class ApiService {
           canGenerate: error.response.data.canGenerate,
         };
       }
-      console.error('Error getting weekly report:', error);
-      return { success: false, error: 'Unknown error' };
+      logger.error('Error getting weekly report:', error);
+      return { success: false, error: getLocalizedErrorMessage(error, ErrorContext.REPORT_FETCH) };
     }
   }
 
@@ -284,8 +355,8 @@ export class ApiService {
           diaryCount: error.response.data.diaryCount,
         };
       }
-      console.error('Error creating weekly report:', error);
-      return { success: false, error: 'Unknown error' };
+      logger.error('Error creating weekly report:', error);
+      return { success: false, error: getLocalizedErrorMessage(error, ErrorContext.REPORT_GENERATE) };
     }
   }
 
@@ -310,8 +381,8 @@ export class ApiService {
           diaryCount: error.response.data.diaryCount,
         };
       }
-      console.error('Error getting monthly report:', error);
-      return { success: false, error: 'Unknown error' };
+      logger.error('Error getting monthly report:', error);
+      return { success: false, error: getLocalizedErrorMessage(error, ErrorContext.REPORT_FETCH) };
     }
   }
 
@@ -323,7 +394,7 @@ export class ApiService {
       );
       return response.data.success;
     } catch (error) {
-      console.error('Error deleting weekly report:', error);
+      logger.error('Error deleting weekly report:', error);
       return false;
     }
   }
@@ -336,13 +407,13 @@ export class ApiService {
       );
       return response.data.success;
     } catch (error) {
-      console.error('Error deleting monthly report:', error);
+      logger.error('Error deleting monthly report:', error);
       return false;
     }
   }
 
   // 이미지 업로드
-  async uploadImage(uri: string): Promise<string | null> {
+  async uploadImage(uri: string): Promise<ApiResult<string>> {
     try {
       const formData = new FormData();
 
@@ -366,12 +437,18 @@ export class ApiService {
 
       if (response.data.success) {
         // 서버 URL과 결합하여 전체 URL 반환
-        return `${this.baseURL.replace('/api', '')}${response.data.imageUrl}`;
+        const imageUrl = `${this.baseURL.replace('/api', '')}${response.data.imageUrl}`;
+        return { success: true, data: imageUrl };
       }
-      return null;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      return null;
+      return { success: false, error: '이미지 업로드 응답 실패' };
+    } catch (error: any) {
+      logger.error('Error uploading image:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.IMAGE_UPLOAD),
+        errorType
+      };
     }
   }
 }

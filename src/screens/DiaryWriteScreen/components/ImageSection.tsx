@@ -13,6 +13,7 @@ import { COLORS } from '../../../constants/colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const IMAGE_HEIGHT = (SCREEN_WIDTH * 3) / 5; // 3:5 비율
+const PLACEHOLDER_HEIGHT = 120; // 플레이스홀더 높이 (작게)
 
 interface ImageSectionProps {
   imageUri: string | null;
@@ -39,7 +40,10 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
 }) => {
   return (
     <TouchableOpacity
-      style={styles.imageContainer}
+      style={[
+        styles.imageContainer,
+        { height: imageUri ? IMAGE_HEIGHT : PLACEHOLDER_HEIGHT }
+      ]}
       onPress={onImagePick}
       activeOpacity={0.7}
       disabled={uploadingImage}
@@ -98,7 +102,6 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
 const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
-    height: IMAGE_HEIGHT,
     backgroundColor: '#f5f5f5',
     position: 'relative',
     justifyContent: 'center',
@@ -109,9 +112,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   placeholderImage: {
-    opacity: 0.3,
-    width: '80%',
-    height: '80%',
+    opacity: 0.4,
+    width: 100,
+    height: 100,
   },
   imagePlaceholderOverlay: {
     position: 'absolute',
@@ -124,7 +127,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   imagePlaceholderText: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#666',
     fontWeight: '500',
   },

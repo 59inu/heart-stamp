@@ -9,6 +9,7 @@ import {
   DatabaseCorruptError,
 } from '../utils/errors';
 import { sleep } from '../utils/retry';
+import { encryptFields, decryptFields } from './encryptionService';
 
 const dbPath = path.join(__dirname, '../../diary.db');
 const db = new Database(dbPath);
@@ -201,28 +202,31 @@ export class DiaryDatabase {
   static async create(diary: DiaryEntry): Promise<DiaryEntry> {
     try {
       return await this.retryOnBusy(() => {
+        // 암호화: content, moodTag, aiComment
+        const encrypted = encryptFields(diary);
+
         const stmt = db.prepare(`
           INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer, version)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(
-          diary._id,
-          diary.userId || 'unknown',
-          diary.date,
-          diary.content,
-          diary.weather || null,
-          diary.mood || null,
-          diary.moodTag || null,
-          diary.aiComment || null,
-          diary.stampType || null,
-          diary.createdAt,
-          diary.updatedAt,
-          diary.syncedWithServer ? 1 : 0,
-          diary.version || 1 // 초기 버전은 1
+          encrypted._id,
+          encrypted.userId || 'unknown',
+          encrypted.date,
+          encrypted.content,
+          encrypted.weather || null,
+          encrypted.mood || null,
+          encrypted.moodTag || null,
+          encrypted.aiComment || null,
+          encrypted.stampType || null,
+          encrypted.createdAt,
+          encrypted.updatedAt,
+          encrypted.syncedWithServer ? 1 : 0,
+          encrypted.version || 1 // 초기 버전은 1
         );
 
-        return diary;
+        return diary; // 원본 반환 (평문)
       });
     } catch (error) {
       this.handleDatabaseError(error, 'create');
@@ -233,36 +237,39 @@ export class DiaryDatabase {
   static async update(id: string, updates: Partial<DiaryEntry>): Promise<void> {
     try {
       await this.retryOnBusy(() => {
+        // 암호화: content, moodTag, aiComment
+        const encrypted = encryptFields(updates);
+
         const fields: string[] = [];
         const values: any[] = [];
 
-        if (updates.content !== undefined) {
+        if (encrypted.content !== undefined) {
           fields.push('content = ?');
-          values.push(updates.content);
+          values.push(encrypted.content);
         }
-        if (updates.weather !== undefined) {
+        if (encrypted.weather !== undefined) {
           fields.push('weather = ?');
-          values.push(updates.weather);
+          values.push(encrypted.weather);
         }
-        if (updates.mood !== undefined) {
+        if (encrypted.mood !== undefined) {
           fields.push('mood = ?');
-          values.push(updates.mood);
+          values.push(encrypted.mood);
         }
-        if (updates.moodTag !== undefined) {
+        if (encrypted.moodTag !== undefined) {
           fields.push('moodTag = ?');
-          values.push(updates.moodTag);
+          values.push(encrypted.moodTag);
         }
-        if (updates.aiComment !== undefined) {
+        if (encrypted.aiComment !== undefined) {
           fields.push('aiComment = ?');
-          values.push(updates.aiComment);
+          values.push(encrypted.aiComment);
         }
-        if (updates.stampType !== undefined) {
+        if (encrypted.stampType !== undefined) {
           fields.push('stampType = ?');
-          values.push(updates.stampType);
+          values.push(encrypted.stampType);
         }
-        if (updates.syncedWithServer !== undefined) {
+        if (encrypted.syncedWithServer !== undefined) {
           fields.push('syncedWithServer = ?');
-          values.push(updates.syncedWithServer ? 1 : 0);
+          values.push(encrypted.syncedWithServer ? 1 : 0);
         }
 
         fields.push('updatedAt = ?');
@@ -294,10 +301,13 @@ export class DiaryDatabase {
 
       if (!row) return null;
 
-      return {
+      const entry = {
         ...row,
         syncedWithServer: row.syncedWithServer === 1,
       };
+
+      // 복호화: content, moodTag, aiComment
+      return decryptFields(entry);
     } catch (error) {
       this.handleDatabaseError(error, 'getById');
     }
@@ -308,10 +318,14 @@ export class DiaryDatabase {
     const stmt = db.prepare('SELECT * FROM diaries WHERE userId = ? AND deletedAt IS NULL ORDER BY date DESC');
     const rows = stmt.all(userId) as any[];
 
-    return rows.map(row => ({
-      ...row,
-      syncedWithServer: row.syncedWithServer === 1,
-    }));
+    return rows.map(row => {
+      const entry = {
+        ...row,
+        syncedWithServer: row.syncedWithServer === 1,
+      };
+      // 복호화: content, moodTag, aiComment
+      return decryptFields(entry);
+    });
   }
 
   // 모든 일기 조회 (관리용)
@@ -319,10 +333,14 @@ export class DiaryDatabase {
     const stmt = db.prepare('SELECT * FROM diaries WHERE deletedAt IS NULL ORDER BY date DESC');
     const rows = stmt.all() as any[];
 
-    return rows.map(row => ({
-      ...row,
-      syncedWithServer: row.syncedWithServer === 1,
-    }));
+    return rows.map(row => {
+      const entry = {
+        ...row,
+        syncedWithServer: row.syncedWithServer === 1,
+      };
+      // 복호화: content, moodTag, aiComment
+      return decryptFields(entry);
+    });
   }
 
   // AI 코멘트 없는 일기 조회 (전날 작성된 일기만)
@@ -344,10 +362,14 @@ export class DiaryDatabase {
 
     console.log(`📋 [DiaryDatabase] ${yesterdayStr} 날짜 일기 중 AI 코멘트 대기: ${rows.length}개`);
 
-    return rows.map(row => ({
-      ...row,
-      syncedWithServer: row.syncedWithServer === 1,
-    }));
+    return rows.map(row => {
+      const entry = {
+        ...row,
+        syncedWithServer: row.syncedWithServer === 1,
+      };
+      // 복호화: content, moodTag (AI 분석용)
+      return decryptFields(entry);
+    });
   }
 
   // 일기 삭제 (소프트 삭제)

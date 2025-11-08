@@ -1,85 +1,56 @@
 /**
- * 앱 전체 색상 팔레트
+ * Heart Stamp 앱 색상 팔레트
  *
- * 색상 체계:
- * - Primary: 따뜻한 베이지 (메인 브랜드 컬러)
- * - Emotion Traffic Light: 감정 신호등 시스템
- *   * Red: 불안정/부정적 감정
- *   * Yellow: 중립/변화하는 감정
- *   * Green: 긍정/안정적 감정
- * - Secondary: 부드러운 퍼플 (액센트)
+ * 🎨 하트 색상 테마:
+ * - 핑크 (#F19392): 부정 감정
+ * - 베이지 (#F5EFE5): 중립 감정
+ * - 민트 (#9DD2B6): 긍정 감정
+ * - 블루 (#87A6D1): 액센트/버튼
  */
 
 export const COLORS = {
-  // Primary
-  primary: '#C4B4A3',           // 따뜻한 베이지 (어둡게 조정)
-  primaryLight: '#E8DED5',      // 밝은 베이지
-  primaryDark: '#A89888',       // 어두운 베이지
+  // Primary - 따뜻한 베이지 (메인 브랜드 컬러)
+  primary: '#C4B4A3',           // 따뜻한 베이지
+  primaryLight: '#E8DED5',      // 밝은 베이지 (사용: 2회)
 
-  // Emotion Traffic Light (감정 신호등)
-  emotionNegative: '#2F2B4C',   // 감정 부정 - 불안정/부정적
-  emotionNegativeStrong: '#F97171', // 감정 부정 강조 (미리보기용)
-  emotionNeutral: '#A16207',    // 감정 중립 - 중립/변화
-  emotionNeutralStrong: '#FACC14', // 감정 중립 강조 (미리보기용)
-  emotionPositive: '#16803C',   // 감정 초록 - 긍정/안정
-  emotionPositiveStrong: '#4BDE80', // 감정 긍정 강조 (미리보기용)
+  // 하트 색상 시스템 - 감정 표현
+  // 부정 감정 (핑크)
+  emotionNegative: '#2F2B4C',        // 진한 네이비 (텍스트/아이콘용)
+  emotionNegativeStrong: '#F19392',  // 하트 핑크 (강조)
+  emotionNegativeLight: '#FADADD',   // 연한 핑크 (배경)
 
-  // Emotion backgrounds (배경용 - 더 연한 버전)
-  emotionNegativeLight: '#F9C5BD',  // 감정 부정 배경
-  emotionNeutralLight: '#FEF9C3',   // 감정 중립 배경
-  emotionPositiveLight: '#DCFCE7',  // 감정 초록 배경
+  // 중립 감정 (베이지)
+  emotionNeutral: '#A16207',         // 진한 갈색 (텍스트/아이콘용)
+  emotionNeutralStrong: '#F5EFE5',   // 하트 베이지 (강조)
+  emotionNeutralLight: '#FAF8F3',    // 연한 베이지 (배경)
 
-  // Secondary
-  secondary: '#8C7E9B',          // 부드러운 퍼플 (어둡게 조정)
-  secondaryLight: '#C7BDCF',     // 밝은 퍼플
-  secondaryDark: '#6F6380',      // 어두운 퍼플
+  // 긍정 감정 (민트)
+  emotionPositive: '#16803C',        // 진한 그린 (텍스트/아이콘용)
+  emotionPositiveStrong: '#9DD2B6',  // 하트 민트 (강조)
+  emotionPositiveLight: '#E8F5EE',   // 연한 민트 (배경)
 
-  // Grays (변경하지 않음)
-  gray50: '#fafafa',
-  gray100: '#f5f5f5',
-  gray200: '#e0e0e0',
-  gray300: '#d0d0d0',
-  gray400: '#b0b0b0',
-  gray500: '#909090',
-  gray600: '#707070',
-  gray700: '#505050',
-  gray800: '#303030',
-  gray900: '#202020',
+  // 하트 블루 (액센트 컬러)
+  secondary: '#87A6D1',         // 하트 블루 (버튼, 아이콘)
+  secondaryLight: '#B3CEE8',    // 밝은 블루 (사용: 1회)
 
-  // Text colors (변경하지 않음)
-  textPrimary: '#333333',
-  textSecondary: '#666666',
-  textLight: '#999999',
-  textWhite: '#ffffff',
-  teacherTitle: '#2F2B4C',  // 선생님 타이틀 색상
+  // 배경
+  background: '#F7F6F9',        // 메인 배경색
 
-  // Background
-  background: '#F7F6F9',
-  backgroundLight: '#fafafa',
+  // 버튼
+  buttonBackground: '#F7F6F9',              // 버튼 배경
+  buttonText: '#87A6D1',                    // 버튼 텍스트 (하트 블루)
+  buttonSecondaryBackground: '#87A6D1',     // 강조 버튼 배경 (하트 블루)
+  buttonSecondaryText: '#FFFFFF',           // 강조 버튼 텍스트
 
-  // Button
-  buttonBackground: '#F7F6F9',
-  buttonText: '#B9A8E0',
-  buttonSecondaryBackground: '#B9A8E0',
-  buttonSecondaryText: '#FFFFFF',
+  // 설정 화면
+  settingsIconBackground: '#f5f5f5',  // 설정 아이콘 배경
+  settingsIconColor: '#87A6D1',       // 설정 아이콘 색상 (하트 블루)
 
-  // Settings
-  settingsIconBackground: '#f5f5f5',  // 설정 아이콘 배경색
-  settingsIconColor: '#8C7E9B',       // 설정 아이콘 색상
+  // 선생님 코멘트
+  teacherTitle: '#2F2B4C',      // 선생님 타이틀 색상 (진한 네이비)
 
-  // Status (시스템 색상 - 변경하지 않음)
-  error: '#d32f2f',
-  warning: '#f57c00',
-  info: '#1976d2',
-  success: '#388e3c',
-
-  // Stamp types (도장 타입별 색상)
-  stamp: {
-    excellent: '#7DBFA0',      // 최고예요 - 긍정 그린
-    good: '#7DBFA0',           // 잘했어요 - 긍정 그린
-    nice: '#D4B857',           // 좋아요 - 중립 옐로우
-    keep_going: '#D98B7F',     // 힘내요 - 부정 레드
-  }
+  // 시스템 색상
+  error: '#d32f2f',             // 에러 표시
 } as const;
 
 // 감정별 색상 매핑 (편의 함수)

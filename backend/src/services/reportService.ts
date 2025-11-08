@@ -74,11 +74,22 @@ ${diariesText}
 
 이 일기들을 분석하여 다음 항목을 JSON 형식으로 작성해주세요:
 
-1. keywords: 가장 자주 등장하거나 중요한 감정/상황 키워드 3-5개 (배열)
-2. summary: ${periodLabel} 동안의 주요 감정과 경험을 간단히 요약한 한 문장 (예: "성취와 피로 사이에서 균형을 찾으려 노력했어요.")
-3. insight: 사용자에게 공감하고 격려하는 따뜻한 메시지 1-2문장
+1. keywords: 주요 감정 키워드 (배열)
+   - 먼저 사용자가 선택한 '감정' 태그를 우선적으로 참고하여 일기를 분석하세요.
+   - 그 다음 일기 본문의 내용과 맥락을 고려하세요
+   - 일기에 직접 등장하지 않더라도, 전체적인 감정과 분위기를 잘 표현하는 키워드를 선택하세요
+   - 단, 일기 내용과 **완전히 무관하거나 반대되는** 키워드는 피하세요
+   - 일기 개수가 적거나 내용이 부족하면 1-2개 정도만 추출해도 됩니다
+   - 예시: "스트레스", "성취감", "외로움", "설렘", "불안", "행복" 등
+   - 구체적인 단어를 사용하고, 2-4글자의 명사형으로 작성
 
-JSON 형식:
+2. summary: ${periodLabel} 동안의 주요 감정과 경험을 간단히 요약한 한 문장
+   - 예: "성취와 피로 사이에서 균형을 찾으려 노력했어요."
+
+3. insight: 사용자에게 공감하고 격려하는 따뜻한 메시지 1-2문장
+   - 선생님이 학생에게 따뜻하게 격려하는 톤으로 작성
+
+JSON 형식 (키워드는 2-3개 정도):
 {
   "keywords": ["키워드1", "키워드2", "키워드3"],
   "summary": "요약 문장",
@@ -87,8 +98,8 @@ JSON 형식:
 
     try {
       const message = await this.anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 500,
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1000,
         messages: [
           {
             role: 'user',
@@ -105,6 +116,7 @@ JSON 형식:
           const aiKeywords: string[] = result.keywords || [];
 
           // AI가 추출한 키워드의 실제 출현 빈도 계산
+          // 1. moodTag에서 빈도수 확인
           const tagCounts: { [tag: string]: number } = {};
           diaries.forEach((diary) => {
             if (diary.moodTag) {
@@ -112,11 +124,21 @@ JSON 형식:
             }
           });
 
-          // AI 키워드에 실제 빈도수 매칭
-          const keywords: KeywordWithCount[] = aiKeywords.map((keyword) => ({
-            keyword,
-            count: tagCounts[keyword] || 0,
-          }));
+          // 2. AI 키워드가 일기 본문에 등장하는 빈도수 계산
+          const keywords: KeywordWithCount[] = aiKeywords.slice(0, 3).map((keyword) => {
+            // moodTag에 있으면 그 빈도수 사용
+            if (tagCounts[keyword]) {
+              return { keyword, count: tagCounts[keyword] };
+            }
+
+            // 없으면 본문에서 해당 키워드가 등장하는 일기 개수 카운트
+            const count = diaries.filter((diary) =>
+              diary.content.includes(keyword)
+            ).length;
+
+            // AI가 의미적으로 판단한 키워드이므로 최소 1개로 표시
+            return { keyword, count: count || 1 };
+          });
 
           return {
             keywords,

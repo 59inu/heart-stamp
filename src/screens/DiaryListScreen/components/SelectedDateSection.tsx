@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { DiaryEntry } from '../../../models/DiaryEntry';
@@ -36,14 +37,15 @@ export const SelectedDateSection: React.FC<SelectedDateSectionProps> = ({
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            style={styles.writeButton}
-            onPress={onWriteDiary}
-          >
-            <Text style={styles.writeButtonText}>
-              {selectedDiary ? '보기' : '작성하기'}
-            </Text>
-          </TouchableOpacity>
+          {!selectedDiary && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={onWriteDiary}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -99,16 +101,18 @@ const styles = StyleSheet.create({
   weatherIconSmall: {
     fontSize: 20,
   },
-  writeButton: {
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.buttonSecondaryBackground,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  writeButtonText: {
-    color: COLORS.buttonSecondaryText,
-    fontSize: 14,
-    fontWeight: '600',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   noDiaryContainer: {
     alignItems: 'center',

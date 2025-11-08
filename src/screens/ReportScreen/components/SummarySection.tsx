@@ -10,16 +10,12 @@ interface DominantMoodInfo {
   mood: 'red' | 'yellow' | 'green';
   name: string;
   percentage: number;
-  change: {
-    value: number;
-    isIncrease: boolean;
-  } | null;
 }
 
 interface SummarySectionProps {
   report: Report;
   period: ReportPeriod;
-  dominantMoodInfo: DominantMoodInfo | null;
+  dominantMoodInfo: DominantMoodInfo[] | null;
   onInfoPress: () => void;
 }
 
@@ -48,40 +44,18 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
         <Text style={styles.summaryValueGreen}>{report.diaryCount}일</Text>
       </View>
 
-      {/* 기분 밸런스 */}
-      {dominantMoodInfo && (
+      {/* 이 주의 대표 감정 */}
+      {dominantMoodInfo && dominantMoodInfo.length > 0 && (
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>기분 밸런스</Text>
-          <View style={styles.summaryValueContainer}>
-            <Text
-              style={[
-                styles.summaryValue,
-                dominantMoodInfo.mood === 'green' && styles.summaryValueGreen,
-                dominantMoodInfo.mood === 'yellow' && styles.summaryValueYellow,
-                dominantMoodInfo.mood === 'red' && styles.summaryValueRed,
-              ]}
-            >
-              {dominantMoodInfo.name} {dominantMoodInfo.percentage}%
-            </Text>
-            {dominantMoodInfo.change && (
-              <View
-                style={[
-                  styles.summaryChangeBadge,
-                  dominantMoodInfo.change.isIncrease ? styles.summaryChangeBadgePositive : styles.summaryChangeBadgeNegative,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.summaryChangeText,
-                    dominantMoodInfo.change.isIncrease ? styles.summaryChangeTextPositive : styles.summaryChangeTextNegative,
-                  ]}
-                >
-                  {dominantMoodInfo.change.isIncrease ? '+' : '-'}
-                  {Math.round(dominantMoodInfo.change.value)}%{dominantMoodInfo.change.isIncrease ? '↑' : '↓'}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Text style={styles.summaryLabel}>이 주의 대표 감정</Text>
+          <Text style={styles.summaryValue}>
+            {dominantMoodInfo.map((mood, index) => (
+              <Text key={mood.mood}>
+                {mood.name}
+                {index < dominantMoodInfo.length - 1 ? ' / ' : ''}
+              </Text>
+            ))}
+          </Text>
         </View>
       )}
 
@@ -132,7 +106,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   summaryTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#333',
   },

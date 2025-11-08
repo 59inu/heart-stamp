@@ -13,114 +13,114 @@ export const MoodStatsCard: React.FC<MoodStatsCardProps> = ({ report, previousRe
     return null;
   }
 
+  // 감정 데이터 정의
+  type MoodType = 'red' | 'yellow' | 'green';
+
+  const moodData: Array<{
+    type: MoodType;
+    name: string;
+    count: number;
+    percentage: number;
+    barStyle: any;
+    dotStyle: any;
+  }> = [
+    {
+      type: 'red',
+      name: '부정',
+      count: report.moodDistribution.red,
+      percentage: report.moodDistribution.percentages.red,
+      barStyle: styles.moodBarRed,
+      dotStyle: styles.moodDotRed,
+    },
+    {
+      type: 'yellow',
+      name: '중립',
+      count: report.moodDistribution.yellow,
+      percentage: report.moodDistribution.percentages.yellow,
+      barStyle: styles.moodBarYellow,
+      dotStyle: styles.moodDotYellow,
+    },
+    {
+      type: 'green',
+      name: '긍정',
+      count: report.moodDistribution.green,
+      percentage: report.moodDistribution.percentages.green,
+      barStyle: styles.moodBarGreen,
+      dotStyle: styles.moodDotGreen,
+    },
+  ];
+
+  // 비율이 높은 순서대로 정렬
+  const sortedMoods = [...moodData].sort((a, b) => b.percentage - a.percentage);
+
+  // 변화 뱃지 렌더링 함수
+  const renderChangeBadge = (mood: MoodType, currentPercentage: number) => {
+    if (!previousReport || previousReport.moodDistribution.total === 0) return null;
+
+    const prevPercentages = previousReport.moodDistribution.percentages;
+    const diff = currentPercentage - prevPercentages[mood];
+
+    if (Math.abs(diff) < 1) return null;
+
+    let badgeStyle, textStyle;
+
+    if (mood === 'red') {
+      // 부정: 감소=좋음(초록), 증가=나쁨(빨강)
+      const isGood = diff < 0;
+      badgeStyle = isGood ? styles.moodChangeBadgeGood : styles.moodChangeBadgeBad;
+      textStyle = isGood ? styles.moodChangeTextGood : styles.moodChangeTextBad;
+    } else if (mood === 'green') {
+      // 긍정: 증가=좋음(초록), 감소=나쁨(빨강)
+      const isGood = diff > 0;
+      badgeStyle = isGood ? styles.moodChangeBadgeGood : styles.moodChangeBadgeBad;
+      textStyle = isGood ? styles.moodChangeTextGood : styles.moodChangeTextBad;
+    } else {
+      // 중립: 중립적 표시
+      badgeStyle = styles.moodChangeBadgeNeutral;
+      textStyle = styles.moodChangeTextNeutral;
+    }
+
+    return (
+      <View style={[styles.moodChangeBadge, badgeStyle]}>
+        <Text style={[styles.moodChangeText, textStyle]}>
+          {diff > 0 ? '+' : ''}{Math.round(diff)}%
+        </Text>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.moodStatsCard}>
       <Text style={styles.cardTitle}>감정 분포</Text>
 
-      {/* 막대 그래프 */}
+      {/* 막대 그래프 - 비율순으로 정렬 */}
       <View style={styles.moodBar}>
-        {report.moodDistribution.red > 0 && (
+        {sortedMoods.map((mood) => mood.count > 0 && (
           <View
+            key={mood.type}
             style={[
               styles.moodBarSegment,
-              styles.moodBarRed,
-              { flex: report.moodDistribution.red },
+              mood.barStyle,
+              { flex: mood.count },
             ]}
           />
-        )}
-        {report.moodDistribution.yellow > 0 && (
-          <View
-            style={[
-              styles.moodBarSegment,
-              styles.moodBarYellow,
-              { flex: report.moodDistribution.yellow },
-            ]}
-          />
-        )}
-        {report.moodDistribution.green > 0 && (
-          <View
-            style={[
-              styles.moodBarSegment,
-              styles.moodBarGreen,
-              { flex: report.moodDistribution.green },
-            ]}
-          />
-        )}
+        ))}
       </View>
 
-      {/* 통계 상세 */}
+      {/* 통계 상세 - 비율순으로 정렬 */}
       <View style={styles.moodDetails}>
-        <View style={styles.moodDetailItem}>
-          <View style={[styles.moodDot, styles.moodDotRed]} />
-          <Text style={styles.moodDetailLabel}>부정</Text>
-          <View style={styles.moodDetailValueContainer}>
-            <Text style={styles.moodDetailValue}>
-              {report.moodDistribution.red}회 ({report.moodDistribution.percentages.red}%)
-            </Text>
-            {previousReport && previousReport.moodDistribution.total > 0 && (() => {
-              const diff = report.moodDistribution.percentages.red - previousReport.moodDistribution.percentages.red;
-              if (Math.abs(diff) >= 1) {
-                // 힘듦(red): 증가=나쁨(빨강), 감소=좋음(초록)
-                const isGood = diff < 0;
-                return (
-                  <View style={[styles.moodChangeBadge, isGood ? styles.moodChangeBadgeGood : styles.moodChangeBadgeBad]}>
-                    <Text style={[styles.moodChangeText, isGood ? styles.moodChangeTextGood : styles.moodChangeTextBad]}>
-                      {diff > 0 ? '+' : ''}{Math.round(diff)}%
-                    </Text>
-                  </View>
-                );
-              }
-              return null;
-            })()}
+        {sortedMoods.map((mood) => (
+          <View key={mood.type} style={styles.moodDetailItem}>
+            <View style={[styles.moodDot, mood.dotStyle]} />
+            <Text style={styles.moodDetailLabel}>{mood.name}</Text>
+            <View style={styles.moodDetailValueContainer}>
+              <Text style={styles.moodDetailValue}>
+                {mood.count}회 ({mood.percentage}%)
+              </Text>
+              {renderChangeBadge(mood.type, mood.percentage)}
+            </View>
           </View>
-        </View>
-        <View style={styles.moodDetailItem}>
-          <View style={[styles.moodDot, styles.moodDotYellow]} />
-          <Text style={styles.moodDetailLabel}>중립</Text>
-          <View style={styles.moodDetailValueContainer}>
-            <Text style={styles.moodDetailValue}>
-              {report.moodDistribution.yellow}회 ({report.moodDistribution.percentages.yellow}%)
-            </Text>
-            {previousReport && previousReport.moodDistribution.total > 0 && (() => {
-              const diff = report.moodDistribution.percentages.yellow - previousReport.moodDistribution.percentages.yellow;
-              if (Math.abs(diff) >= 1) {
-                // 평온(yellow): 중립적이므로 단순 표시
-                return (
-                  <View style={[styles.moodChangeBadge, styles.moodChangeBadgeNeutral]}>
-                    <Text style={[styles.moodChangeText, styles.moodChangeTextNeutral]}>
-                      {diff > 0 ? '+' : ''}{Math.round(diff)}%
-                    </Text>
-                  </View>
-                );
-              }
-              return null;
-            })()}
-          </View>
-        </View>
-        <View style={styles.moodDetailItem}>
-          <View style={[styles.moodDot, styles.moodDotGreen]} />
-          <Text style={styles.moodDetailLabel}>긍정</Text>
-          <View style={styles.moodDetailValueContainer}>
-            <Text style={styles.moodDetailValue}>
-              {report.moodDistribution.green}회 ({report.moodDistribution.percentages.green}%)
-            </Text>
-            {previousReport && previousReport.moodDistribution.total > 0 && (() => {
-              const diff = report.moodDistribution.percentages.green - previousReport.moodDistribution.percentages.green;
-              if (Math.abs(diff) >= 1) {
-                // 행복(green): 증가=좋음(초록), 감소=나쁨(빨강)
-                const isGood = diff > 0;
-                return (
-                  <View style={[styles.moodChangeBadge, isGood ? styles.moodChangeBadgeGood : styles.moodChangeBadgeBad]}>
-                    <Text style={[styles.moodChangeText, isGood ? styles.moodChangeTextGood : styles.moodChangeTextBad]}>
-                      {diff > 0 ? '+' : ''}{Math.round(diff)}%
-                    </Text>
-                  </View>
-                );
-              }
-              return null;
-            })()}
-          </View>
-        </View>
+        ))}
       </View>
     </View>
   );
@@ -142,8 +142,8 @@ const styles = StyleSheet.create({
   },
   moodBar: {
     flexDirection: 'row',
-    height: 40,
-    borderRadius: 20,
+    height: 24,
+    borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 20,
   },
@@ -151,13 +151,13 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   moodBarRed: {
-    backgroundColor: '#F7B5AA',
+    backgroundColor: COLORS.emotionNegativeLight, // 하트 핑크
   },
   moodBarYellow: {
-    backgroundColor: '#F5F0C0',
+    backgroundColor: COLORS.emotionNeutralLight, // 하트 베이지
   },
   moodBarGreen: {
-    backgroundColor: '#D0FADD',
+    backgroundColor: COLORS.emotionPositiveLight, // 하트 민트
   },
   moodDetails: {
     gap: 12,
@@ -205,13 +205,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   moodDotRed: {
-    backgroundColor: '#F7B5AA',
+    backgroundColor: COLORS.emotionNegativeStrong, // 하트 핑크
   },
   moodDotYellow: {
-    backgroundColor: '#F5F0C0',
+    backgroundColor: COLORS.emotionNeutralStrong, // 하트 베이지
   },
   moodDotGreen: {
-    backgroundColor: '#D0FADD',
+    backgroundColor: COLORS.emotionPositiveStrong, // 하트 민트
   },
   moodDetailLabel: {
     fontSize: 15,

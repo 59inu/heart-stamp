@@ -6,8 +6,12 @@ import Constants from 'expo-constants';
 import { COLORS } from '../constants/colors';
 import { apiService, ApiErrorType } from './apiService';
 import { UserService } from './userService';
+import { logger } from '../utils/logger';
 
 const PUSH_TOKEN_KEY = '@stamp_diary:push_token';
+const DAILY_REMINDER_KEY = '@stamp_diary:daily_reminder_enabled';
+const TEACHER_COMMENT_NOTIFICATION_KEY = '@stamp_diary:teacher_comment_notification_enabled';
+const DAILY_REMINDER_NOTIFICATION_ID = 'daily-diary-reminder';
 
 // 알림 핸들러 설정: 포그라운드에서도 알림 표시
 Notifications.setNotificationHandler({
@@ -31,7 +35,7 @@ export class NotificationService {
 
   static async registerForPushNotifications(): Promise<PushNotificationStatus> {
     if (!Device.isDevice) {
-      console.log('⚠️ 푸시 알림은 실제 기기에서만 작동합니다');
+      logger.log('⚠️ 푸시 알림은 실제 기기에서만 작동합니다');
       return { success: false, reason: 'not_device' };
     }
 
@@ -46,7 +50,7 @@ export class NotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('⚠️ 푸시 알림 권한이 거부되었습니다');
+        logger.log('⚠️ 푸시 알림 권한이 거부되었습니다');
         return { success: false, reason: 'permission_denied' };
       }
 
@@ -58,16 +62,16 @@ export class NotificationService {
         Constants.easConfig?.projectId;
 
       if (__DEV__) {
-        console.log('🔍 Constants.expoConfig:', Constants.expoConfig);
-        console.log('🔍 Attempting to get projectId...');
-        console.log('📱 Project ID found:', projectId);
+        logger.log('🔍 Constants.expoConfig:', Constants.expoConfig);
+        logger.log('🔍 Attempting to get projectId...');
+        logger.log('📱 Project ID found:', projectId);
       }
 
       if (!projectId) {
-        console.log('⚠️ Project ID가 설정되지 않았습니다.');
+        logger.log('⚠️ Project ID가 설정되지 않았습니다.');
         if (__DEV__) {
-          console.log('💡 개발 모드에서는 푸시 알림이 제한적으로 작동할 수 있습니다.');
-          console.log('💡 실제 디바이스에서 테스트하려면 app.json에 projectId를 설정하세요.');
+          logger.log('💡 개발 모드에서는 푸시 알림이 제한적으로 작동할 수 있습니다.');
+          logger.log('💡 실제 디바이스에서 테스트하려면 app.json에 projectId를 설정하세요.');
         }
       }
 
@@ -75,25 +79,25 @@ export class NotificationService {
         projectId: projectId,
       });
       const token = tokenData.data;
-      console.log('✅ Expo Push Token:', token);
-      console.log('✅ Project ID:', projectId);
+      logger.log('✅ Expo Push Token:', token);
+      logger.log('✅ Project ID:', projectId);
 
       // 기존에 저장된 토큰과 다르면 백엔드에 등록
       const savedToken = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
       let backendRegistrationResult: { success: boolean; retriedCount: number } | null = null;
 
       if (savedToken !== token) {
-        console.log('🔄 New push token detected, registering with backend...');
+        logger.log('🔄 New push token detected, registering with backend...');
         backendRegistrationResult = await this.registerTokenWithBackend(token);
         if (backendRegistrationResult.success) {
           await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
-          console.log('✅ Token saved to AsyncStorage after successful backend registration');
+          logger.log('✅ Token saved to AsyncStorage after successful backend registration');
         } else {
-          console.error('❌ Token NOT saved to AsyncStorage due to backend registration failure');
-          console.error('💡 Will retry on next app launch');
+          logger.error('❌ Token NOT saved to AsyncStorage due to backend registration failure');
+          logger.error('💡 Will retry on next app launch');
         }
       } else {
-        console.log('ℹ️ Push token unchanged, skipping registration');
+        logger.log('ℹ️ Push token unchanged, skipping registration');
       }
 
       // Android 알림 채널 설정
@@ -117,7 +121,7 @@ export class NotificationService {
 
       return { success: true, token };
     } catch (error) {
-      console.error('❌ 푸시 알림 등록 오류:', error);
+      logger.error('❌ 푸시 알림 등록 오류:', error);
       return { success: false, reason: 'unknown' };
     }
   }
@@ -138,16 +142,16 @@ export class NotificationService {
       const response = await apiService.registerPushToken(userId, token);
 
       if (response.success) {
-        console.log('✅ Push token registered with backend');
+        logger.log('✅ Push token registered with backend');
         return { success: true, retriedCount: retryCount };
       } else {
         // 서버가 명시적으로 실패를 반환
-        console.error('❌ Failed to register push token:', response.message);
+        logger.error('❌ Failed to register push token:', response.message);
 
         // 네트워크 오류인 경우에만 재시도
         const isRetryable = response.errorType === ApiErrorType.NETWORK_ERROR;
         if (isRetryable && retryCount < MAX_RETRIES) {
-          console.log(`🔄 Retrying push token registration (${retryCount + 1}/${MAX_RETRIES})...`);
+          logger.log(`🔄 Retrying push token registration (${retryCount + 1}/${MAX_RETRIES})...`);
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
           return this.registerTokenWithBackend(token, retryCount + 1);
         }
@@ -155,11 +159,11 @@ export class NotificationService {
         return { success: false, retriedCount: retryCount };
       }
     } catch (error) {
-      console.error('❌ Error registering token with backend:', error);
+      logger.error('❌ Error registering token with backend:', error);
 
       // 예외 발생 시에도 재시도
       if (retryCount < MAX_RETRIES) {
-        console.log(`🔄 Retrying push token registration after error (${retryCount + 1}/${MAX_RETRIES})...`);
+        logger.log(`🔄 Retrying push token registration after error (${retryCount + 1}/${MAX_RETRIES})...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
         return this.registerTokenWithBackend(token, retryCount + 1);
       }
@@ -181,18 +185,18 @@ export class NotificationService {
   ): void {
     // 알림 수신 리스너 (앱이 포그라운드/백그라운드일 때)
     this.notificationListener = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('📬 [NotificationService] Notification received');
-      console.log('📋 [NotificationService] Data:', notification.request.content.data);
+      logger.log('📬 [NotificationService] Notification received');
+      logger.log('📋 [NotificationService] Data:', notification.request.content.data);
       onNotification?.(notification);
     });
 
     // 알림 클릭 리스너 (사용자가 알림을 탭했을 때)
     this.responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('👆 Notification tapped:', response);
+      logger.log('👆 Notification tapped:', response);
 
       const data = response.notification.request.content.data;
       if (data?.type === 'ai_comment_complete') {
-        console.log('📖 Navigate to diary list to see new comments');
+        logger.log('📖 Navigate to diary list to see new comments');
         // 필요시 네비게이션 처리
       }
     });
@@ -209,6 +213,149 @@ export class NotificationService {
     if (this.responseListener) {
       this.responseListener.remove();
       this.responseListener = null;
+    }
+  }
+
+  /**
+   * 매일 반복되는 일기 작성 알림 예약
+   * @param hour - 알림 시간 (0-23)
+   * @param minute - 알림 분 (0-59)
+   */
+  static async scheduleDailyReminder(hour: number = 21, minute: number = 0): Promise<void> {
+    try {
+      // 기존 알림 취소
+      await this.cancelDailyReminder();
+
+      // 매일 반복 알림 예약
+      await Notifications.scheduleNotificationAsync({
+        identifier: DAILY_REMINDER_NOTIFICATION_ID,
+        content: {
+          title: '오늘의 일기를 써볼까요? 📝',
+          body: '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요',
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          hour,
+          minute,
+          repeats: true,
+        },
+      });
+
+      logger.log(`✅ Daily reminder scheduled at ${hour}:${String(minute).padStart(2, '0')}`);
+    } catch (error) {
+      logger.error('❌ Failed to schedule daily reminder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 일기 작성 알림 취소
+   */
+  static async cancelDailyReminder(): Promise<void> {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_NOTIFICATION_ID);
+      logger.log('✅ Daily reminder canceled');
+    } catch (error) {
+      logger.error('❌ Failed to cancel daily reminder:', error);
+    }
+  }
+
+  /**
+   * 일기 작성 알림 설정 상태 불러오기
+   */
+  static async getDailyReminderEnabled(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem(DAILY_REMINDER_KEY);
+      // 기본값은 true (처음 설치 시 알림 활성화)
+      return value === null ? true : value === 'true';
+    } catch (error) {
+      logger.error('❌ Failed to get daily reminder setting:', error);
+      return true; // 오류 시 기본값 반환
+    }
+  }
+
+  /**
+   * 일기 작성 알림 설정 저장
+   */
+  static async setDailyReminderEnabled(enabled: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem(DAILY_REMINDER_KEY, String(enabled));
+
+      if (enabled) {
+        // 알림 활성화: 매일 저녁 9시로 예약
+        await this.scheduleDailyReminder(21, 0);
+      } else {
+        // 알림 비활성화: 예약 취소
+        await this.cancelDailyReminder();
+      }
+
+      logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      logger.error('❌ Failed to set daily reminder setting:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 선생님 코멘트 알림 설정 상태 불러오기
+   */
+  static async getTeacherCommentNotificationEnabled(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem(TEACHER_COMMENT_NOTIFICATION_KEY);
+      // 기본값은 true (처음 설치 시 알림 활성화)
+      return value === null ? true : value === 'true';
+    } catch (error) {
+      logger.error('❌ Failed to get teacher comment notification setting:', error);
+      return true; // 오류 시 기본값 반환
+    }
+  }
+
+  /**
+   * 선생님 코멘트 알림 설정 저장
+   */
+  static async setTeacherCommentNotificationEnabled(enabled: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem(TEACHER_COMMENT_NOTIFICATION_KEY, String(enabled));
+
+      if (enabled) {
+        // 알림 활성화: 푸시 토큰 등록
+        const result = await this.registerForPushNotifications();
+        if (!result.success) {
+          throw new Error(`Push notification registration failed: ${result.reason}`);
+        }
+      } else {
+        // 알림 비활성화: 백엔드에서 푸시 토큰 삭제
+        await this.unregisterPushToken();
+      }
+
+      logger.log(`✅ Teacher comment notification ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      logger.error('❌ Failed to set teacher comment notification setting:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 백엔드에서 푸시 토큰 삭제
+   */
+  private static async unregisterPushToken(): Promise<void> {
+    try {
+      const userId = await UserService.getUserId();
+      const result = await apiService.deletePushToken(userId);
+
+      if (result.success) {
+        // 로컬에 저장된 토큰도 삭제
+        await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
+        logger.log('✅ Push token unregistered from backend and local storage');
+      } else {
+        logger.error('❌ Failed to unregister push token from backend:', result.error);
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      logger.error('❌ Error unregistering push token:', error);
+      throw error;
     }
   }
 }

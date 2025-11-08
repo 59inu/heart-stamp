@@ -9,4 +9,5 @@ export type RootStackParamList = {
   DiaryDetail: { entryId: string };
   Report: undefined;
   Settings: undefined;
+  StampCollection: { year: number; month: number };
 };

@@ -12,6 +12,7 @@ import {
   RefreshControl,
   FlatList,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
@@ -22,10 +23,11 @@ import { RootStackParamList } from '../navigation/types';
 import { DiaryStorage } from '../services/diaryStorage';
 import { apiService } from '../services/apiService';
 import { WeatherService } from '../services/weatherService';
-import { getStampImage, getRandomStampPosition } from '../utils/stampUtils';
+import { getStampImage, getRandomStampPosition, getStampColor } from '../utils/stampUtils';
 import { logger } from '../utils/logger';
 import { COLORS } from '../constants/colors';
 import { diaryEvents, EVENTS } from '../services/eventEmitter';
+import { AnalyticsService } from '../services/analyticsService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const IMAGE_HEIGHT = (SCREEN_WIDTH * 3) / 5; // 3:5 비율
@@ -113,24 +115,33 @@ export const DiaryDetailScreen: React.FC = () => {
 
     // 서버에서 AI 코멘트 동기화
     if (diary && !diary.aiComment) {
-      try {
-        const serverData = await apiService.syncDiaryFromServer(diary._id);
+      const result = await apiService.syncDiaryFromServer(diary._id);
 
-        if (serverData && serverData.aiComment) {
-          await DiaryStorage.update(diary._id, {
-            aiComment: serverData.aiComment,
-            stampType: serverData.stampType as StampType,
-          });
+      if (result.success && result.data.aiComment) {
+        await DiaryStorage.update(diary._id, {
+          aiComment: result.data.aiComment,
+          stampType: result.data.stampType as StampType,
+        });
 
-          diary = await DiaryStorage.getById(route.params.entryId);
+        diary = await DiaryStorage.getById(route.params.entryId);
+      } else if (!result.success) {
+        logger.debug('서버 동기화 실패:', result.error);
+        // 네트워크 에러가 아닌 경우에만 로그 (네트워크 에러는 흔하므로)
+        if (result.errorType && result.errorType !== 'NETWORK_ERROR') {
+          logger.warn('AI 코멘트 동기화 실패:', result.error);
         }
-      } catch (error) {
-        logger.debug('서버 동기화 오류 (무시):', error);
       }
     }
 
     if (diary) {
       setEntry(diary);
+
+      // Analytics: AI 코멘트 조회 (핵심 가치 전달 순간!)
+      if (diary.aiComment) {
+        // 알림에서 왔는지, 다이어리 리스트에서 왔는지 등은 별도 파라미터로 추적 가능
+        // 여기서는 'other'로 설정 (화면 진입 경로는 navigation params로 전달 가능)
+        AnalyticsService.logAICommentViewed(diary, 'other');
+      }
     }
   }, [route.params.entryId]);
 
@@ -138,13 +149,32 @@ export const DiaryDetailScreen: React.FC = () => {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      console.log('🔄 [DiaryDetailScreen] Pull-to-refresh triggered - syncing with server...');
-      await DiaryStorage.syncWithServer();
+      logger.log('🔄 [DiaryDetailScreen] Pull-to-refresh triggered - syncing with server...');
+      const result = await DiaryStorage.syncWithServer();
+
+      if (!result.success) {
+        logger.error('동기화 실패:', result.error);
+        Alert.alert(
+          '동기화 실패',
+          `서버와 동기화하지 못했습니다.\n\n${result.error}\n\n나중에 다시 시도해주세요.`,
+          [{ text: '확인' }]
+        );
+      } else {
+        logger.log('✅ [DiaryDetailScreen] Pull-to-refresh completed');
+        diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
+      }
+
+      // 동기화 실패해도 로컬 데이터는 로드
       await fetchData();
-      diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
-      console.log('✅ [DiaryDetailScreen] Pull-to-refresh completed');
     } catch (error) {
       logger.error('Pull-to-refresh 오류:', error);
+      Toast.show({
+        type: 'error',
+        text1: '오류',
+        text2: '새로고침 중 오류가 발생했습니다',
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
     } finally {
       setRefreshing(false);
     }
@@ -159,7 +189,7 @@ export const DiaryDetailScreen: React.FC = () => {
   // Silent Push 수신 시 자동 새로고침
   useEffect(() => {
     const handleAICommentReceived = () => {
-      console.log('📖 AI comment received event - reloading diary detail...');
+      logger.log('📖 AI comment received event - reloading diary detail...');
       fetchData();
     };
 
@@ -211,11 +241,34 @@ export const DiaryDetailScreen: React.FC = () => {
           text: '삭제',
           style: 'destructive',
           onPress: async () => {
-            // 로컬에서 삭제
-            await DiaryStorage.delete(entry._id);
-            // 서버에서도 삭제
-            await apiService.deleteDiary(entry._id);
-            navigation.goBack();
+            // 로컬에서 먼저 삭제
+            const localDeleted = await DiaryStorage.delete(entry._id);
+
+            if (!localDeleted) {
+              Toast.show({
+                type: 'error',
+                text1: '오류',
+                text2: '일기 삭제에 실패했습니다',
+                position: 'bottom',
+                visibilityTime: 3000,
+              });
+              return;
+            }
+
+            // 서버에서도 삭제 시도
+            const result = await apiService.deleteDiary(entry._id);
+
+            if (result.success) {
+              // 성공: 화면 닫기
+              navigation.goBack();
+            } else {
+              // 서버 삭제 실패: 사용자에게 알림
+              Alert.alert(
+                '서버 삭제 실패',
+                `일기가 로컬에서는 삭제되었지만 서버 삭제에 실패했습니다.\n\n${result.error}\n\n다음 동기화 시 자동으로 재시도됩니다.`,
+                [{ text: '확인', onPress: () => navigation.goBack() }]
+              );
+            }
           },
         },
       ]
@@ -295,15 +348,6 @@ export const DiaryDetailScreen: React.FC = () => {
             />
           </View>
         )}
-        {!entry.imageUri && (
-          <View style={styles.imagePlaceholderSection}>
-            <Image
-              source={require('../../assets/image-placeholder.png')}
-              style={styles.placeholderImage}
-              resizeMode="contain"
-            />
-          </View>
-        )}
 
         <View style={styles.diaryContent}>
           <ManuscriptPaper content={entry.content} />
@@ -321,6 +365,7 @@ export const DiaryDetailScreen: React.FC = () => {
                   <Image
                     source={getStampImage(entry.stampType)}
                     style={styles.stampImageSmall}
+                    tintColor={getStampColor(entry._id)}
                     resizeMode="contain"
                   />
                 </View>

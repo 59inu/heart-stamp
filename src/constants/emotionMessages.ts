@@ -20,9 +20,9 @@ export const EMOTION_MESSAGES: Record<EmotionType, Record<DatePeriod, string>> =
     end: '나를 알아주세요. 정말 고생했어요 💙',
   },
   positive_dominant: {
-    start: '좋은 시작이에요 ✨',
+    start: '좋은 시작이에요 ☘️',
     mid: '즐겁게 보내고 있어요 😊',
-    end: '웃는 날이 많았네요 🌟',
+    end: '웃는 날이 많았네요 ☀️',
   },
   neutral_dominant: {
     start: '담담하게 시작하고 있어요 🌾',

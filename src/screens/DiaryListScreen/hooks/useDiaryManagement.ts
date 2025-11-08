@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { DiaryEntry } from '../../../models/DiaryEntry';
 import { DiaryStorage } from '../../../services/diaryStorage';
@@ -15,6 +15,16 @@ export const useDiaryManagement = () => {
   const tapCountRef = useRef(0);
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Cleanup: 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current);
+        tapTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // 로컬 데이터만 빠르게 로드 (화면 진입 시 사용)
   const loadDiaries = useCallback(async () => {
     const entries = await DiaryStorage.getAll();
@@ -25,13 +35,27 @@ export const useDiaryManagement = () => {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      console.log('🔄 [DiaryListScreen] Pull-to-refresh triggered - syncing with server...');
-      await DiaryStorage.syncWithServer();
+      logger.log('🔄 [DiaryListScreen] Pull-to-refresh triggered - syncing with server...');
+      const result = await DiaryStorage.syncWithServer();
+
+      if (!result.success) {
+        logger.error('동기화 실패:', result.error);
+        // 사용자에게 Alert로 알림 (Toast보다 확실함)
+        Alert.alert(
+          '동기화 실패',
+          `서버와 동기화하지 못했습니다.\n\n${result.error}\n\n나중에 다시 시도해주세요.`,
+          [{ text: '확인' }]
+        );
+      } else {
+        logger.log('✅ [DiaryListScreen] Pull-to-refresh completed');
+        diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
+      }
+
+      // 동기화 실패해도 로컬 데이터는 로드
       await loadDiaries();
-      diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
-      console.log('✅ [DiaryListScreen] Pull-to-refresh completed');
     } catch (error) {
       logger.error('Pull-to-refresh 오류:', error);
+      Alert.alert('오류', '새로고침 중 오류가 발생했습니다.');
     } finally {
       setRefreshing(false);
     }
@@ -82,7 +106,7 @@ export const useDiaryManagement = () => {
                 Alert.alert('✅ 초기화 완료', '로컬 데이터가 모두 삭제되었습니다.\n\n앱을 다시 시작하면 온보딩이 표시됩니다.');
               } catch (error) {
                 Alert.alert('오류', '데이터 초기화 중 오류가 발생했습니다.');
-                console.error('Reset error:', error);
+                logger.error('Reset error:', error);
               }
             },
           },

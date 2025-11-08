@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../../../constants/colors';
 
 interface MoodStatsBarProps {
@@ -10,11 +10,15 @@ interface MoodStatsBarProps {
     total: number;
   };
   summaryText: string | null;
+  stampCount: number;
+  onStampPress?: () => void;
 }
 
 export const MoodStatsBar: React.FC<MoodStatsBarProps> = ({
   moodStats,
   summaryText,
+  stampCount,
+  onStampPress,
 }) => {
   return (
     <View style={styles.moodStatsContainer}>
@@ -69,6 +73,17 @@ export const MoodStatsBar: React.FC<MoodStatsBarProps> = ({
           ? '이 달은 어떤 기분으로 채워갈까요'
           : summaryText}
       </Text>
+      {stampCount > 0 && (
+        <TouchableOpacity
+          style={styles.stampCountContainer}
+          onPress={onStampPress}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.stampCountText}>
+            이번 달에 모은 도장 {stampCount}개
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -108,5 +123,19 @@ const styles = StyleSheet.create({
   },
   moodStatsGreen: {
     backgroundColor: COLORS.emotionPositiveStrong,
+  },
+  stampCountContainer: {
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#F5EFE5', // 하트 베이지
+    borderRadius: 12,
+    alignSelf: 'center',
+  },
+  stampCountText: {
+    fontSize: 13,
+    color: '#6B5E4F', // 더 진한 베이지
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

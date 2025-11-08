@@ -17,8 +17,12 @@ export const useCalendarMarking = (
       const isToday = dateKey === today;
       const hasComment = !!diary.aiComment;
 
-      // 선택된 날짜 - 기존 배경색 유지 + 보라색 보더라인 추가
-      if (isSelected) {
+      // 오늘 날짜를 선택한 경우 - 일기 유무 무관하게 보라색 배경 + 진한 테두리
+      if (isSelected && isToday) {
+        marked[dateKey] = CALENDAR_MARKING_STYLES.todaySelected;
+      }
+      // 선택된 날짜 (오늘이 아닌) - 원래 배경색 유지 + 진한 테두리 추가
+      else if (isSelected) {
         if (hasComment) {
           // AI 코멘트 있는 날짜
           if (diary.mood === 'red') {
@@ -43,7 +47,7 @@ export const useCalendarMarking = (
           }
         }
       }
-      // 오늘 날짜 (선택되지 않은 경우) - 두꺼운 보더
+      // 오늘 날짜 (선택되지 않은 경우)
       else if (isToday) {
         if (hasComment) {
           // AI 코멘트 있는 날짜
@@ -125,7 +129,12 @@ export const useCalendarMarking = (
 
     // 선택된 날짜가 일기가 없는 경우에도 표시
     if (!marked[selectedDate]) {
-      marked[selectedDate] = CALENDAR_MARKING_STYLES.selectedEmpty;
+      // 오늘 날짜를 선택한 경우
+      if (selectedDate === today) {
+        marked[selectedDate] = CALENDAR_MARKING_STYLES.todaySelected;
+      } else {
+        marked[selectedDate] = CALENDAR_MARKING_STYLES.selectedEmpty;
+      }
     }
 
     return marked;

@@ -3,7 +3,11 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
+  Text,
+  Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { subWeeks, subMonths } from 'date-fns';
@@ -24,6 +28,11 @@ import { MoodStatsCard } from './components/MoodStatsCard';
 import { KeywordTagsCard } from './components/KeywordTagsCard';
 import { InfoCard } from './components/InfoCard';
 import { InfoModal } from './components/InfoModal';
+import { apiService } from '../../services/apiService';
+import { getISOWeek } from 'date-fns';
+import { COLORS } from '../../constants/colors';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { logger } from '../../utils/logger';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Report'>;
 
@@ -94,6 +103,53 @@ export const ReportScreen: React.FC = () => {
     }
   };
 
+  // 리포트 재생성 (개발 모드 전용)
+  const handleRegenerateReport = async () => {
+    Alert.alert(
+      '리포트 재생성',
+      '기존 리포트를 삭제하고 새로 생성합니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '재생성',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const year = currentDate.getFullYear();
+
+              if (period === 'week') {
+                const week = getISOWeek(currentDate);
+                await apiService.deleteWeeklyReport(year, week);
+              } else {
+                const month = currentDate.getMonth() + 1;
+                await apiService.deleteMonthlyReport(year, month);
+              }
+
+              // 삭제 후 다시 생성
+              await handleGenerateReport();
+              Toast.show({
+                type: 'success',
+                text1: '성공',
+                text2: '리포트가 재생성되었습니다',
+                position: 'bottom',
+                visibilityTime: 3000,
+              });
+            } catch (error) {
+              logger.error('Error regenerating report:', error);
+              Toast.show({
+                type: 'error',
+                text1: '오류',
+                text2: '리포트 재생성에 실패했습니다',
+                position: 'bottom',
+                visibilityTime: 3000,
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* 헤더 */}
@@ -110,11 +166,11 @@ export const ReportScreen: React.FC = () => {
           onNext={handleNextPeriod}
         />
 
-        {/* 로딩 */}
-        {loading && <LoadingView />}
+        {/* 로딩 (초기 로드 또는 재생성 중) */}
+        {(loading || isGenerating) && <LoadingView />}
 
         {/* 에러 또는 빈 상태 */}
-        {!loading && (error || !report) && (
+        {!loading && !isGenerating && (error || !report) && (
           <ErrorStateRenderer
             error={error}
             canGenerate={canGenerate}
@@ -126,7 +182,7 @@ export const ReportScreen: React.FC = () => {
         )}
 
         {/* 리포트 표시 */}
-        {!loading && report && (
+        {!loading && !isGenerating && report && (
           <>
             {/* 경고 배너: 주간 리포트에서 3개 미만일 때 */}
             {period === 'week' && report.diaryCount < 3 && (
@@ -134,21 +190,39 @@ export const ReportScreen: React.FC = () => {
             )}
 
             {/* 요약 섹션 */}
-            <SummarySection
-              report={report}
-              period={period}
-              dominantMoodInfo={dominantMoodInfo}
-              onInfoPress={() => setShowInfoModal(true)}
-            />
+            <ErrorBoundary level="component">
+              <SummarySection
+                report={report}
+                period={period}
+                dominantMoodInfo={dominantMoodInfo}
+                onInfoPress={() => setShowInfoModal(true)}
+              />
+            </ErrorBoundary>
 
             {/* 감정 통계 */}
-            <MoodStatsCard report={report} previousReport={previousReport} />
+            <ErrorBoundary level="component">
+              <MoodStatsCard report={report} previousReport={previousReport} />
+            </ErrorBoundary>
 
             {/* 감정 키워드 순위 (AI 추출) */}
-            <KeywordTagsCard report={report} />
+            <ErrorBoundary level="component">
+              <KeywordTagsCard report={report} />
+            </ErrorBoundary>
 
             {/* 리포트 안내 */}
             <InfoCard />
+
+            {/* 개발 모드 전용: 리포트 재생성 버튼 */}
+            {__DEV__ && (
+              <TouchableOpacity
+                style={styles.devButton}
+                onPress={handleRegenerateReport}
+              >
+                <Text style={styles.devButtonText}>
+                  🔄 리포트 재생성 (Dev Only)
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </ScrollView>
@@ -170,5 +244,21 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  devButton: {
+    backgroundColor: '#FF6B6B',
+    margin: 16,
+    marginTop: 8,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FF5252',
+    borderStyle: 'dashed',
+  },
+  devButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

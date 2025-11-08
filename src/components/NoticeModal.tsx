@@ -48,9 +48,9 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
 
               <Text style={styles.bold}>주요 기능:</Text>{'\n'}
               • 하루 한 번, 일기 작성{'\n'}
-              • AI 선생님의 따뜻한 코멘트와 도장{'\n'}
               • 기분에 따른 감정 메시지{'\n'}
-              • 매월 감정 리포트{'\n\n'}
+              • AI 선생님의 따뜻한 코멘트와 도장{'\n'}
+              • 주간/월간 감정 리포트{'\n\n'}
 
               여러분의 하루를 소중히 기록하고, 선생님의 격려를 받아보세요.{'\n'}
               감사합니다.
@@ -63,7 +63,7 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
             <Text style={styles.noticeContent}>
               <Text style={styles.bold}>일기 작성</Text>{'\n'}
               • 하루에 한 번, 언제든지 작성 가능합니다{'\n'}
-              • 오늘 날짜의 일기만 작성할 수 있습니다{'\n\n'}
+              • 오늘 날짜의 일기만 선생님의 코멘트를 받을 수 있습니다{'\n\n'}
 
               <Text style={styles.bold}>AI 코멘트</Text>{'\n'}
               • 매일 새벽 3시에 전날 일기에 코멘트가 달립니다{'\n'}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { COLORS } from '../../../constants/colors';
 
 type ReportPeriod = 'week' | 'month';
@@ -23,7 +24,13 @@ export const PeriodTabs: React.FC<PeriodTabsProps> = ({ period, onPeriodChange }
       <TouchableOpacity
         style={[styles.periodTab, period === 'month' && styles.periodTabActive]}
         onPress={() => {
-          Alert.alert('월간 리포트', '월간 리포트는 준비 중입니다.');
+          Toast.show({
+            type: 'info',
+            text1: '월간 리포트',
+            text2: '월간 리포트는 준비 중입니다',
+            position: 'bottom',
+            visibilityTime: 2000,
+          });
         }}
       >
         <Text style={[styles.periodTabText, period === 'month' && styles.periodTabTextActive]}>
@@ -54,7 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.settingsIconColor,
   },
   periodTabText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#666',
   },

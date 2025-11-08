@@ -40,6 +40,25 @@ export const getStampLabel = (stampType: StampType): string => {
   }
 };
 
+// 도장 색상 팔레트
+const STAMP_COLORS = [
+  '#DC2626', // 빨간색 (전통적인 도장 색상)
+  '#1E3A8A', // 남색
+  '#374151', // 검은색 (진한 회색)
+];
+
+// 일기 ID를 기반으로 일관된 도장 색상 선택
+export const getStampColor = (diaryId: string): string => {
+  let hash = 0;
+  for (let i = 0; i < diaryId.length; i++) {
+    hash = ((hash << 5) - hash) + diaryId.charCodeAt(i);
+    hash = hash & hash;
+  }
+
+  const colorIndex = Math.abs(hash) % STAMP_COLORS.length;
+  return STAMP_COLORS[colorIndex];
+};
+
 // 일기 ID를 기반으로 일관된 랜덤 도장 위치 생성
 export const getRandomStampPosition = (diaryId: string) => {
   // diaryId를 해시하여 일관된 랜덤 값 생성

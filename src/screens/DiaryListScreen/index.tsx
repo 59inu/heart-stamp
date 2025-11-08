@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,21 @@ import {
   SafeAreaView,
   ScrollView,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { DateData } from 'react-native-calendars';
 import { format } from 'date-fns';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { RootStackParamList } from '../../navigation/types';
 import { OnboardingService } from '../../services/onboardingService';
 import { FirstVisitGuide } from '../../components/FirstVisitGuide';
 import { COLORS } from '../../constants/colors';
 import { diaryEvents, EVENTS } from '../../services/eventEmitter';
+import { logger } from '../../utils/logger';
 import { useDiaryManagement } from './hooks/useDiaryManagement';
 import { useCalendarMarking } from './hooks/useCalendarMarking';
 import { useMoodStats } from './hooks/useMoodStats';
@@ -37,6 +41,10 @@ export const DiaryListScreen: React.FC = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // 하트 애니메이션
+  const heartShake = useRef(new Animated.Value(0)).current;
+  const heartScale = useRef(new Animated.Value(1)).current;
+
   // Custom hooks
   const {
     diaries,
@@ -53,7 +61,7 @@ export const DiaryListScreen: React.FC = () => {
   const markedDates = useCalendarMarking(diaries, selectedDate, today);
 
   // Mood statistics
-  const { currentMonthMoodStats, moodSummaryText } = useMoodStats(diaries, currentDate);
+  const { currentMonthMoodStats, moodSummaryText, stampCount } = useMoodStats(diaries, currentDate);
 
   // 선택된 날짜의 일기
   const selectedDiary = useMemo(() => {
@@ -94,11 +102,11 @@ export const DiaryListScreen: React.FC = () => {
   // AI 코멘트 수신 시 자동 새로고침
   useEffect(() => {
     const handleAICommentReceived = async () => {
-      console.log('📖 [DiaryListScreen] AI comment received event - reloading local data...');
+      logger.log('📖 [DiaryListScreen] AI comment received event - reloading local data...');
       // App.tsx가 이미 DiaryStorage.syncWithServer()로 동기화 완료
       // 여기서는 로컬 데이터만 다시 로드
       await loadDiaries();
-      console.log('✅ [DiaryListScreen] Local data reloaded');
+      logger.log('✅ [DiaryListScreen] Local data reloaded');
     };
 
     diaryEvents.on(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
@@ -146,24 +154,145 @@ export const DiaryListScreen: React.FC = () => {
     });
   }, []);
 
+  const handleStampPress = useCallback(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1; // 0-11 -> 1-12
+    navigation.navigate('StampCollection', { year, month });
+  }, [currentDate, navigation]);
+
+  const handleHeartPress = useCallback(() => {
+    // 흔들림 + 통통 튀는 애니메이션
+    Animated.sequence([
+      // 커지면서
+      Animated.timing(heartScale, {
+        toValue: 1.2,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      // 흔들리기
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(heartShake, {
+            toValue: 10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(heartShake, {
+            toValue: -10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(heartShake, {
+            toValue: 10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(heartShake, {
+            toValue: -10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(heartShake, {
+            toValue: 0,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+        ]),
+        // 크기는 원래대로
+        Animated.timing(heartScale, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [heartShake, heartScale]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => navigation.navigate('Settings')}
-        >
-          <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
+        <TouchableOpacity style={styles.headerLeft} onPress={handleHeartPress} activeOpacity={0.8}>
+          <Animated.View
+            style={{
+              transform: [
+                { rotate: heartShake.interpolate({
+                  inputRange: [-10, 10],
+                  outputRange: ['-10deg', '10deg'],
+                })},
+                { scale: heartScale },
+              ],
+            }}
+          >
+            {/* 동그라미 3개 겹쳐진 하트 */}
+            <MaskedView
+              maskElement={
+                <Ionicons name="heart" size={28} color="#fff" />
+              }
+            >
+              <View style={{ width: 28, height: 28, position: 'relative' }}>
+                {/* 베이지 원 - 왼쪽 위 */}
+                <View style={{
+                  position: 'absolute',
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: '#F5EFE5',
+                  left: 2,
+                  top: 3,
+                  opacity: 1,
+                }} />
+                {/* 핑크 원 - 오른쪽 위 (조금 작게) */}
+                <View style={{
+                  position: 'absolute',
+                  width: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#F19392',
+                  right: -2,
+                  top: 3,
+                  opacity: 1,
+                }} />
+
+                  {/* 블루 원 - 아래 좌측 */}
+                <View style={{
+                  position: 'absolute',
+                  width: 20,
+                  height: 18,
+                  borderRadius: 10,
+                  backgroundColor: '#87A6D1',
+                  left: 5,
+                  bottom: -2,
+                  opacity: 1,
+                }} />
+                                {/* 민트 작은 점 */}
+                <View style={{
+                  position: 'absolute',
+                  width: 15,
+                  height: 8,
+                  borderRadius: 5,
+                  backgroundColor: '#9DD2B6',
+                  left: 0,
+                  bottom: 10,
+                  opacity: 1,
+                }} />
+              </View>
+            </MaskedView>
+          </Animated.View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleHeaderTap} activeOpacity={0.9}>
-          <Text style={styles.headerTitle}>Heart Stamp</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => navigation.navigate('Report')}
-        >
-          <MaterialCommunityIcons name="poll" size={22} color="#4B5563" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('Report')}
+          >
+            <MaterialCommunityIcons name="poll" size={22} color="#4B5563" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconButton, styles.iconButtonLast]}
+            onPress={() => navigation.navigate('Settings')}
+          >
+            <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -189,6 +318,8 @@ export const DiaryListScreen: React.FC = () => {
         <MoodStatsBar
           moodStats={currentMonthMoodStats}
           summaryText={moodSummaryText}
+          stampCount={stampCount}
+          onStampPress={handleStampPress}
         />
 
         <CalendarSection
@@ -206,9 +337,11 @@ export const DiaryListScreen: React.FC = () => {
           today={today}
           selectedDiary={selectedDiary}
           onWriteDiary={handleWriteDiary}
-          onDiaryPress={() =>
-            navigation.navigate('DiaryDetail', { entryId: selectedDiary!._id })
-          }
+          onDiaryPress={() => {
+            if (selectedDiary) {
+              navigation.navigate('DiaryDetail', { entryId: selectedDiary._id });
+            }
+          }}
         />
       </ScrollView>
 
@@ -217,8 +350,9 @@ export const DiaryListScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.floatingButton}
           onPress={() => navigation.navigate('DiaryWrite', { date: new Date() })}
+          activeOpacity={0.8}
         >
-          <Ionicons name="create" size={28} color="#fff" />
+          <Ionicons name="pencil" size={28} color="#fff" />
         </TouchableOpacity>
       )}
 
@@ -246,14 +380,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   iconButton: {
     padding: 0,
     position: 'relative',
+  },
+  iconButtonLast: {
+    marginLeft: 0,
   },
   scrollView: {
     flex: 1,
@@ -262,10 +403,10 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
     right: 20,
-    bottom: 30,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: COLORS.buttonSecondaryBackground,
     justifyContent: 'center',
     alignItems: 'center',
@@ -274,8 +415,8 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 8,
   },
 });

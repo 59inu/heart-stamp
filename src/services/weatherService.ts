@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { logger } from '../utils/logger';
 import axios from 'axios';
 import { WeatherType } from '../models/DiaryEntry';
 
@@ -16,7 +17,7 @@ export class WeatherService {
       // 1. 위치 권한 요청
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('위치 권한이 거부되었습니다.');
+        logger.log('위치 권한이 거부되었습니다.');
         return null;
       }
 
@@ -29,7 +30,7 @@ export class WeatherService {
 
       // 3. OpenWeatherMap API 호출
       if (OPENWEATHER_API_KEY === 'demo') {
-        console.log('⚠️ OPENWEATHER_API_KEY가 설정되지 않았습니다. 데모 모드로 랜덤 날씨를 반환합니다.');
+        logger.log('⚠️ OPENWEATHER_API_KEY가 설정되지 않았습니다. 데모 모드로 랜덤 날씨를 반환합니다.');
         return this.getRandomWeather();
       }
 
@@ -45,7 +46,7 @@ export class WeatherService {
       const weatherCode = response.data.weather[0].id;
       return this.mapWeatherCodeToType(weatherCode);
     } catch (error) {
-      console.error('날씨 정보를 가져오는데 실패했습니다:', error);
+      logger.error('날씨 정보를 가져오는데 실패했습니다:', error);
       return null;
     }
   }

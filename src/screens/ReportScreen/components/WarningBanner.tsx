@@ -25,13 +25,13 @@ export const WarningBanner: React.FC<WarningBannerProps> = ({ diaryCount }) => {
 const styles = StyleSheet.create({
   warningBanner: {
     flexDirection: 'row',
-    backgroundColor: '#fff9e6',
+    backgroundColor: '#FAF7F2', // 하트 베이지 (도장 카운터와 동일)
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.emotionNeutral,
+    borderLeftColor: '#7A6F5D', // 진한 베이지
     alignItems: 'flex-start',
   },
   warningIcon: {
@@ -45,11 +45,11 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.emotionNeutral,
+    color: '#7A6F5D', // 진한 베이지
     marginBottom: 4,
   },
   warningSubtext: {
     fontSize: 13,
-    color: COLORS.emotionNeutral,
+    color: '#7A6F5D', // 진한 베이지
   },
 });

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DiaryEntry } from '../models/DiaryEntry';
 import { apiService } from './apiService';
+import { logger } from '../utils/logger';
 
 const STORAGE_KEY = '@stamp_diary:entries';
 
@@ -12,7 +13,7 @@ export class DiaryStorage {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error('Error loading diaries:', error);
+      logger.error('Error loading diaries:', error);
       return [];
     }
   }
@@ -21,7 +22,7 @@ export class DiaryStorage {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     } catch (error) {
-      console.error('Error saving diaries:', error);
+      logger.error('Error saving diaries:', error);
       throw error;
     }
   }
@@ -44,7 +45,7 @@ export class DiaryStorage {
     // 같은 날짜의 일기가 이미 있는지 체크
     const existingEntry = await this.getByDate(entry.date);
     if (existingEntry) {
-      console.warn(`⚠️ 같은 날짜(${entry.date})의 일기가 이미 존재합니다. 기존 일기를 반환합니다.`);
+      logger.warn(`⚠️ 같은 날짜(${entry.date})의 일기가 이미 존재합니다. 기존 일기를 반환합니다.`);
       throw new Error('같은 날짜의 일기가 이미 존재합니다.');
     }
 
@@ -121,20 +122,28 @@ export class DiaryStorage {
   /**
    * 서버에서 AI 코멘트 업데이트 동기화
    * 중복 실행 방지 기능 포함
+   * @returns { success: boolean, error?: string }
    */
-  static async syncWithServer(): Promise<void> {
+  static async syncWithServer(): Promise<{ success: boolean; error?: string }> {
     // 이미 동기화 중이면 스킵
     if (this.isSyncing) {
-      console.log('⏭️ [DiaryStorage] Sync already in progress, skipping...');
-      return;
+      logger.log('⏭️ [DiaryStorage] Sync already in progress, skipping...');
+      return { success: false, error: '이미 동기화 중입니다' };
     }
 
     this.isSyncing = true;
-    console.log('🔄 [DiaryStorage] syncWithServer started...');
+    logger.log('🔄 [DiaryStorage] syncWithServer started...');
     try {
       // 서버에서 전체 일기 목록 가져오기 (한 번의 API 호출로 모든 데이터 획득)
-      const serverDiaries = await apiService.getAllDiaries();
-      console.log(`📥 [DiaryStorage] Server has ${serverDiaries.length} diaries`);
+      const result = await apiService.getAllDiaries();
+
+      if (!result.success) {
+        logger.error('❌ [DiaryStorage] Failed to fetch diaries:', result.error);
+        return { success: false, error: result.error };
+      }
+
+      const serverDiaries = result.data;
+      logger.log(`📥 [DiaryStorage] Server has ${serverDiaries.length} diaries`);
 
       // 서버 데이터를 Map으로 변환 (빠른 조회를 위해)
       const serverDiaryMap = new Map(
@@ -143,7 +152,7 @@ export class DiaryStorage {
 
       // 로컬 일기 목록 가져오기
       const entries = await this.getAllEntries();
-      console.log(`📚 [DiaryStorage] Total local entries: ${entries.length}`);
+      logger.log(`📚 [DiaryStorage] Total local entries: ${entries.length}`);
 
       let updatedCount = 0;
       let addedCount = 0;
@@ -180,7 +189,7 @@ export class DiaryStorage {
             };
             updatedCount++;
             hasUpdates = true;
-            console.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment`);
+            logger.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment`);
           }
         }
       }
@@ -191,15 +200,18 @@ export class DiaryStorage {
       }
 
       if (addedCount > 0 || updatedCount > 0) {
-        console.log(`🎉 [DiaryStorage] Sync complete: ${addedCount} added, ${updatedCount} updated`);
+        logger.log(`🎉 [DiaryStorage] Sync complete: ${addedCount} added, ${updatedCount} updated`);
       } else {
-        console.log('✅ [DiaryStorage] All diaries are up to date');
+        logger.log('✅ [DiaryStorage] All diaries are up to date');
       }
-    } catch (error) {
-      console.error('❌ [DiaryStorage] Error syncing with server:', error);
+
+      return { success: true };
+    } catch (error: any) {
+      logger.error('❌ [DiaryStorage] Error syncing with server:', error);
+      return { success: false, error: error.message || '동기화 중 오류 발생' };
     } finally {
       this.isSyncing = false;
-      console.log('🏁 [DiaryStorage] Sync completed, lock released');
+      logger.log('🏁 [DiaryStorage] Sync completed, lock released');
     }
   }
 
@@ -207,9 +219,9 @@ export class DiaryStorage {
   static async clearAll(): Promise<void> {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
-      console.log('✅ All local diary data cleared');
+      logger.log('✅ All local diary data cleared');
     } catch (error) {
-      console.error('Error clearing diary data:', error);
+      logger.error('Error clearing diary data:', error);
       throw error;
     }
   }

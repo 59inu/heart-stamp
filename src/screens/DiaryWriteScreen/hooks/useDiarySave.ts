@@ -7,6 +7,8 @@ import { apiService } from '../../../services/apiService';
 import { SurveyService } from '../../../services/surveyService';
 import { SURVEY_TRIGGER_COUNT } from '../../../constants/survey';
 import { logger } from '../../../utils/logger';
+import { AnalyticsService } from '../../../services/analyticsService';
+import { RetentionService } from '../../../services/retentionService';
 
 interface UseDiarySaveParams {
   existingEntry: DiaryEntry | null;
@@ -88,12 +90,24 @@ export const useDiarySave = ({
     }
 
     // Upload to server
-    const uploaded = await apiService.uploadDiary(savedEntry);
-    if (uploaded) {
+    const uploadResult = await apiService.uploadDiary(savedEntry);
+    if (uploadResult.success) {
       await DiaryStorage.update(savedEntry._id, {
         syncedWithServer: true,
       });
+    } else {
+      logger.error('일기 업로드 실패:', uploadResult.error);
+      // 로컬에는 저장되었지만 서버 업로드 실패를 표시
+      await DiaryStorage.update(savedEntry._id, {
+        syncedWithServer: false,
+      });
     }
+
+    // Analytics: 일기 저장 이벤트 (리텐션의 핵심 지표!)
+    await AnalyticsService.logDiarySave(savedEntry, !existingEntry);
+
+    // Retention: 리텐션 지표 업데이트 (연속 작성 일수 등)
+    await RetentionService.updateAfterDiarySave();
 
     // 모달 닫기
     setShowMoodModal(false);
@@ -109,17 +123,25 @@ export const useDiarySave = ({
       }
     }
 
-    // 과거 날짜인지 확인
+    // 과거 날짜인지 확인 (실제 저장된 일기의 날짜 기준)
     const today = format(new Date(), 'yyyy-MM-dd');
-    const diaryDate = format(selectedDate, 'yyyy-MM-dd');
+    const diaryDate = format(new Date(savedEntry.date), 'yyyy-MM-dd');
     const isPastDate = diaryDate < today;
 
-    const message = isPastDate
+    // 메시지 결정
+    let title = '저장 완료';
+    let message = isPastDate
       ? '일기가 저장되었습니다.\n분명 훗날 읽으며 웃고 울게 될거에요. 💚'
       : '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙';
 
+    // 서버 업로드 실패 시 메시지 추가
+    if (!uploadResult.success) {
+      title = '로컬 저장 완료';
+      message += `\n\n⚠️ 서버 업로드 실패: ${uploadResult.error}\n다음 동기화 시 자동으로 재시도됩니다.`;
+    }
+
     // 저장 완료 Alert 먼저 표시
-    Alert.alert('저장 완료', message, [
+    Alert.alert(title, message, [
       {
         text: '확인',
         onPress: () => onSaveComplete(shouldShowSurvey),

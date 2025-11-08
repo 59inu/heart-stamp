@@ -12,7 +12,10 @@ import { DiaryWriteScreen } from '../screens/DiaryWriteScreen';
 import { DiaryDetailScreen } from '../screens/DiaryDetailScreen';
 import { ReportScreen } from '../screens/ReportScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { StampCollectionScreen } from '../screens/StampCollectionScreen';
 import { COLORS } from '../constants/colors';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { logger } from '../utils/logger';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -21,15 +24,30 @@ export const AppNavigator: React.FC = () => {
   const [hasAgreed, setHasAgreed] = useState(false);
 
   useEffect(() => {
-    const checkAgreement = async () => {
+    const checkAgreement = async (retryCount = 0): Promise<void> => {
+      const MAX_RETRIES = 2;
+
       try {
         const agreement = await AsyncStorage.getItem('privacyAgreement');
         setHasAgreed(!!agreement);
-      } catch (error) {
-        console.error('약관 동의 확인 오류:', error);
+      } catch (error: any) {
+        logger.error(`약관 동의 확인 오류 (시도 ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+
+        // AsyncStorage 에러 시 재시도
+        if (retryCount < MAX_RETRIES) {
+          logger.log(`⏳ ${500 * (retryCount + 1)}ms 후 재시도...`);
+          await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+          return checkAgreement(retryCount + 1);
+        }
+
+        // 최대 재시도 후에도 실패하면 안전하게 온보딩으로
+        logger.warn('⚠️ AsyncStorage 접근 실패: 온보딩 화면으로 이동합니다.');
         setHasAgreed(false);
       } finally {
-        setIsLoading(false);
+        // 마지막 시도에서만 로딩 종료
+        if (retryCount === 0 || retryCount >= MAX_RETRIES) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -54,16 +72,59 @@ export const AppNavigator: React.FC = () => {
       >
         {!hasAgreed && (
           <>
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Onboarding">
+              {() => (
+                <ErrorBoundary level="screen">
+                  <OnboardingScreen />
+                </ErrorBoundary>
+              )}
+            </Stack.Screen>
             <Stack.Screen name="TermsDetail" component={TermsDetailScreen} />
             <Stack.Screen name="PrivacyDetail" component={PrivacyDetailScreen} />
           </>
         )}
-        <Stack.Screen name="DiaryList" component={DiaryListScreen} />
-        <Stack.Screen name="DiaryWrite" component={DiaryWriteScreen} />
-        <Stack.Screen name="DiaryDetail" component={DiaryDetailScreen} />
-        <Stack.Screen name="Report" component={ReportScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="DiaryList">
+          {() => (
+            <ErrorBoundary level="screen">
+              <DiaryListScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="DiaryWrite">
+          {() => (
+            <ErrorBoundary level="screen">
+              <DiaryWriteScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="DiaryDetail">
+          {() => (
+            <ErrorBoundary level="screen">
+              <DiaryDetailScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Report">
+          {() => (
+            <ErrorBoundary level="screen">
+              <ReportScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Settings">
+          {() => (
+            <ErrorBoundary level="screen">
+              <SettingsScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="StampCollection">
+          {() => (
+            <ErrorBoundary level="screen">
+              <StampCollectionScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
         {hasAgreed && (
           <>
             <Stack.Screen name="TermsDetail" component={TermsDetailScreen} />

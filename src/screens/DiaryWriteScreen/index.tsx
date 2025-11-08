@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,13 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { RootStackParamList } from '../../navigation/types';
+import { WeatherType } from '../../models/DiaryEntry';
 import { SurveyModal } from '../../components/SurveyModal';
 import { SurveyService } from '../../services/surveyService';
 import { logger } from '../../utils/logger';
@@ -36,17 +38,24 @@ export const DiaryWriteScreen: React.FC = () => {
 
   const [selectedDate] = useState(route.params?.date || new Date());
   const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [weather, setWeather] = useState<WeatherType | null>(null);
 
   const entryId = route.params?.entryId;
   const MAX_CHARS = 700;
+
+  // Weather hook을 먼저 선언
+  const weatherHook = useWeather(setWeather);
+
+  // fetchWeather를 useCallback으로 감싸서 참조 안정화
+  const fetchWeather = useCallback(async () => {
+    await weatherHook.fetchWeather();
+  }, [weatherHook.fetchWeather]);
 
   // Custom hooks
   const {
     content,
     setContent,
     existingEntry,
-    weather,
-    setWeather,
     selectedMood,
     setSelectedMood,
     selectedMoodTag,
@@ -57,12 +66,9 @@ export const DiaryWriteScreen: React.FC = () => {
   } = useLoadEntry({
     entryId,
     selectedDate,
-    fetchWeather: async () => {
-      await weatherHook.fetchWeather();
-    },
+    fetchWeather,
+    setWeather,
   });
-
-  const weatherHook = useWeather(setWeather);
 
   const {
     uploadingImage,
@@ -110,10 +116,6 @@ export const DiaryWriteScreen: React.FC = () => {
 
   const handleMoodSelect = (mood: 'red' | 'yellow' | 'green') => {
     setSelectedMood(mood);
-    // 최초 작성 시 기본값 설정 (긍정 = green)
-    if (!existingEntry && !selectedMood) {
-      setSelectedMood('green');
-    }
   };
 
   return (
@@ -170,7 +172,13 @@ export const DiaryWriteScreen: React.FC = () => {
               value={content}
               onChangeText={(text) => {
                 if (text.length > MAX_CHARS) {
-                  Alert.alert('글자수 제한', '700자까지 작성할 수 있습니다.');
+                  Toast.show({
+                    type: 'info',
+                    text1: '글자수 제한',
+                    text2: '700자까지 작성할 수 있습니다',
+                    position: 'bottom',
+                    visibilityTime: 2000,
+                  });
                   return;
                 }
                 setContent(text);

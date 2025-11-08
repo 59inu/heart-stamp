@@ -2,11 +2,16 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Validate environment variables immediately after loading
+import { validateEnvironment, printEnvironmentInfo } from './utils/envValidator';
+validateEnvironment();
+printEnvironmentInfo();
+
 import express, { Application } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
-import { requireAdminToken } from './middleware/auth';
+import { requireFirebaseAuth, requireAdminToken } from './middleware/auth';
 import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
 import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
@@ -14,22 +19,31 @@ import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
 import { PushNotificationService } from './services/pushNotificationService';
+import { initialize as initializeEncryption } from './services/encryptionService';
 
 const app: Application = express();
 const PORT: number = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 // CORS Configuration
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
   : ['*'];
+
+// Enforce stricter CORS in production
+if (IS_PRODUCTION && allowedOrigins.includes('*')) {
+  console.error('❌ CORS wildcard (*) is not allowed in production');
+  console.error('   Please set ALLOWED_ORIGINS environment variable');
+  throw new Error('CORS misconfiguration in production');
+}
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
 
-    // Allow all origins in development or if * is specified
-    if (allowedOrigins.includes('*')) {
+    // Allow all origins in development only
+    if (!IS_PRODUCTION && allowedOrigins.includes('*')) {
       return callback(null, true);
     }
 
@@ -39,6 +53,7 @@ const corsOptions = {
     }
 
     console.warn(`🚫 [CORS] Blocked request from origin: ${origin}`);
+    console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -69,6 +84,9 @@ app.use('/api', generalApiLimiter, diaryRoutes);
 app.use('/api', generalApiLimiter, reportRoutes);
 app.use('/api', generalApiLimiter, imageRoutes);
 
+// Initialize Encryption Service FIRST
+initializeEncryption();
+
 // Initialize Claude Service
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || 'mock-api-key-for-testing';
 
@@ -91,15 +109,18 @@ const backupJob = new BackupJob();
 backupJob.start();
 
 // 푸시 토큰 등록 API
-app.post('/api/push/register', async (req, res) => {
+app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
   try {
-    const { userId, token } = req.body;
-    if (!userId || !token) {
+    const { token } = req.body;
+    if (!token) {
       return res.status(400).json({
         success: false,
-        message: 'userId and token are required',
+        message: 'token is required',
       });
     }
+
+    // req.userId는 requireFirebaseAuth에서 설정됨
+    const userId = req.userId!;
 
     const { PushTokenDatabase } = require('./services/database');
     await PushTokenDatabase.upsert(userId, token);
@@ -113,6 +134,28 @@ app.post('/api/push/register', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to register push token',
+    });
+  }
+});
+
+// 푸시 토큰 삭제 API (알림 끄기)
+app.delete('/api/push/unregister', requireFirebaseAuth, async (req, res) => {
+  try {
+    // req.userId는 requireFirebaseAuth에서 설정됨
+    const userId = req.userId!;
+
+    const { PushTokenDatabase } = require('./services/database');
+    await PushTokenDatabase.delete(userId);
+
+    res.json({
+      success: true,
+      message: 'Push token unregistered successfully',
+    });
+  } catch (error) {
+    console.error('Error unregistering push token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to unregister push token',
     });
   }
 });

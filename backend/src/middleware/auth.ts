@@ -1,4 +1,64 @@
 import { Request, Response, NextFunction } from 'express';
+import admin from '../config/firebase';
+
+// userId를 Request에 추가하기 위한 타입 확장
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+    }
+  }
+}
+
+/**
+ * Firebase Auth 미들웨어
+ * Authorization: Bearer <token> 헤더를 검증하고 userId를 req에 추가
+ */
+export async function requireFirebaseAuth(req: Request, res: Response, next: NextFunction) {
+  const USE_FIREBASE_AUTH = process.env.USE_FIREBASE_AUTH === 'true';
+
+  // 개발 모드: x-user-id 헤더 허용
+  if (!USE_FIREBASE_AUTH) {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      console.warn(`🚫 [Dev Auth] Missing x-user-id header from ${req.ip}`);
+      return res.status(401).json({
+        success: false,
+        message: 'User ID required (dev mode)',
+      });
+    }
+    req.userId = userId;
+    return next();
+  }
+
+  // 프로덕션 모드: Firebase ID 토큰 검증
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn(`🚫 [Firebase Auth] Missing or invalid Authorization header from ${req.ip}`);
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized - Bearer token required',
+    });
+  }
+
+  const idToken = authHeader.substring(7); // "Bearer " 제거
+
+  try {
+    // Firebase ID 토큰 검증
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.userId = decodedToken.uid;
+
+    console.log(`✅ [Firebase Auth] Authenticated user: ${decodedToken.uid}`);
+    next();
+  } catch (error: any) {
+    console.error(`❌ [Firebase Auth] Token verification failed:`, error.message);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token',
+    });
+  }
+}
 
 /**
  * 관리자 토큰 검증 미들웨어

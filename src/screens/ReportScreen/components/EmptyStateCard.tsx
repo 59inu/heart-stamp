@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 type ReportPeriod = 'week' | 'month';
 
@@ -12,7 +13,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({ error, period })
   if (error === 'not_completed') {
     return (
       <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>⏰</Text>
+        <Ionicons name="time-outline" size={40} color="#999" style={styles.emptyIcon} />
         <Text style={styles.emptyMessage}>
           아직 리포트가 준비되지 않았어요
         </Text>
@@ -26,7 +27,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({ error, period })
   if (error && error.includes('not completed yet')) {
     return (
       <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>⏰</Text>
+        <Ionicons name="time-outline" size={40} color="#999" style={styles.emptyIcon} />
         <Text style={styles.emptyMessage}>
           아직 리포트가 준비되지 않았어요
         </Text>
@@ -56,12 +57,14 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({ error, period })
 
 const styles = StyleSheet.create({
   emptyCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     marginHorizontal: 16,
     marginTop: 40,
     padding: 40,
-    borderRadius: 12,
     alignItems: 'center',
+  },
+  emptyIcon: {
+    marginBottom: 16,
   },
   emptyText: {
     fontSize: 48,

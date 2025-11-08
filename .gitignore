@@ -38,6 +38,10 @@ backend/uploads/
 .env
 backend/.env
 
+# Firebase service account keys
+backend/firebase-service-account.json
+*-firebase-adminsdk-*.json
+
 # typescript
 *.tsbuildinfo
 

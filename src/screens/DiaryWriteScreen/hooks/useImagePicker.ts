@@ -29,14 +29,14 @@ export const useImagePicker = (
     }
 
     // 이미지 선택
-    const result = await ImagePicker.launchImageLibraryAsync({
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
       quality: 0.7, // 압축 품질
     });
 
-    if (!result.canceled && result.assets[0]) {
-      const selectedImage = result.assets[0];
+    if (!pickerResult.canceled && pickerResult.assets[0]) {
+      const selectedImage = pickerResult.assets[0];
 
       // 파일 크기 체크
       if (selectedImage.fileSize && selectedImage.fileSize > MAX_IMAGE_SIZE) {
@@ -49,13 +49,20 @@ export const useImagePicker = (
 
       // 서버에 이미지 업로드
       setUploadingImage(true);
-      const serverImageUrl = await apiService.uploadImage(selectedImage.uri);
+      const result = await apiService.uploadImage(selectedImage.uri);
       setUploadingImage(false);
 
-      if (serverImageUrl) {
-        setImageUri(serverImageUrl);
+      if (result.success) {
+        setImageUri(result.data);
       } else {
-        Alert.alert('업로드 실패', '이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+        Alert.alert(
+          '업로드 실패',
+          `이미지 업로드에 실패했습니다.\n\n${result.error}\n\n다시 시도해주세요.`,
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '재시도', onPress: pickImage }
+          ]
+        );
       }
     }
   };

@@ -62,8 +62,24 @@ export const useMoodStats = (diaries: DiaryEntry[], currentDate: Date) => {
     return getEmotionMessage(red, yellow, green, dayForPeriod);
   }, [currentMonthMoodStats, currentDate]);
 
+  // 이번 달 모은 도장 개수 (AI 코멘트가 있는 일기 = 도장을 받은 일기)
+  const stampCount = useMemo(() => {
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
+    return diaries.filter((diary) => {
+      const diaryDate = new Date(diary.date);
+      return (
+        diaryDate.getFullYear() === currentYear &&
+        diaryDate.getMonth() === currentMonth &&
+        diary.aiComment // AI 코멘트가 있는 일기 = 도장 받은 일기
+      );
+    }).length;
+  }, [diaries, currentDate]);
+
   return {
     currentMonthMoodStats,
     moodSummaryText,
+    stampCount,
   };
 };

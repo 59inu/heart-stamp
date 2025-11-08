@@ -9,6 +9,7 @@ interface UseLoadEntryParams {
   entryId?: string;
   selectedDate: Date;
   fetchWeather: () => Promise<void>;
+  setWeather: (weather: WeatherType | null) => void;
 }
 
 interface UseLoadEntryReturn {
@@ -16,8 +17,6 @@ interface UseLoadEntryReturn {
   setContent: (content: string) => void;
   existingEntry: DiaryEntry | null;
   setExistingEntry: (entry: DiaryEntry | null) => void;
-  weather: WeatherType | null;
-  setWeather: (weather: WeatherType | null) => void;
   selectedMood: MoodType | null;
   setSelectedMood: (mood: MoodType | null) => void;
   selectedMoodTag: string | null;
@@ -31,21 +30,27 @@ export const useLoadEntry = ({
   entryId,
   selectedDate,
   fetchWeather,
+  setWeather,
 }: UseLoadEntryParams): UseLoadEntryReturn => {
   const [content, setContent] = useState('');
   const [existingEntry, setExistingEntry] = useState<DiaryEntry | null>(null);
-  const [weather, setWeather] = useState<WeatherType | null>(null);
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loadingEntry, setLoadingEntry] = useState(false);
 
   useEffect(() => {
+    let cancelled = false; // 컴포넌트 언마운트 감지
+
     const loadEntry = async () => {
       if (entryId) {
-        setLoadingEntry(true);
+        if (!cancelled) setLoadingEntry(true);
+
         // entryId가 있으면 해당 일기 불러오기
         const entry = await DiaryStorage.getById(entryId);
+
+        if (cancelled) return; // 언마운트되었으면 setState 하지 않음
+
         if (entry) {
           setExistingEntry(entry);
           setContent(entry.content);
@@ -63,6 +68,9 @@ export const useLoadEntry = ({
         // entryId가 없으면 날짜로 기존 일기 확인
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
         const allEntries = await DiaryStorage.getAll();
+
+        if (cancelled) return; // 언마운트되었으면 setState 하지 않음
+
         const existingForDate = allEntries.find(
           (e) => format(new Date(e.date), 'yyyy-MM-dd') === dateStr
         );
@@ -85,16 +93,20 @@ export const useLoadEntry = ({
         }
       }
     };
+
     loadEntry();
-  }, [entryId]);
+
+    // Cleanup: 컴포넌트 언마운트 시 비동기 작업 취소
+    return () => {
+      cancelled = true;
+    };
+  }, [entryId, selectedDate, fetchWeather]);
 
   return {
     content,
     setContent,
     existingEntry,
     setExistingEntry,
-    weather,
-    setWeather,
     selectedMood,
     setSelectedMood,
     selectedMoodTag,

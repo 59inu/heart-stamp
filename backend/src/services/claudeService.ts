@@ -35,13 +35,16 @@ export class ClaudeService {
     console.log('✅ ClaudeService initialized with Circuit Breaker');
   }
 
-  async analyzeDiary(diaryContent: string, date: string): Promise<AIAnalysisResult> {
+  async analyzeDiary(
+    diaryContent: string, 
+    emotionTag: string, 
+    date: string): Promise<AIAnalysisResult> {
     try {
       // Circuit Breaker로 보호
       return await this.circuitBreaker.execute(async () => {
         // 재시도 로직 적용 (최대 3번, exponential backoff)
         return await retryWithCondition(
-          async () => await this.performAnalysis(diaryContent, date),
+          async () => await this.performAnalysis(diaryContent, emotionTag, date),
           (error) => {
             // Claude API 에러가 재시도 가능한지 확인
             if (error instanceof ClaudeAPIError) {
@@ -76,37 +79,65 @@ export class ClaudeService {
    */
   private async performAnalysis(
     diaryContent: string,
+    emotionTag: string,
     date: string
   ): Promise<AIAnalysisResult> {
     console.log('🤖 Claude API 호출 시작');
     console.log(`일기 날짜: ${date}`);
     console.log(`일기 내용: ${diaryContent.substring(0, 50)}...`);
 
+    // 일기 길이에 따라 max_tokens와 응답 길이 조절
+  const sentenceCount = diaryContent
+    .split(/[.!?。！？\n]+/)  // 줄바꿈도 문장 구분으로
+    .filter(s => s.trim().length > 5)  // 너무 짧은 건 제외
+    .length;    
+    
+    let maxTokens: number;
+    
+    let responseLength: string;
+
+    if (sentenceCount <= 2) {
+      // 1-2문장: 짧은 코멘트
+      maxTokens = 150;
+      responseLength = '1-2줄';
+    } else if (sentenceCount <= 5) {
+      // 3-5문장: 보통 코멘트
+      maxTokens = 200;
+      responseLength = '3-4줄';
+    } else {
+      // 6문장 이상: 긴 코멘트
+      maxTokens = 250;
+      responseLength = '4-5줄';
+    }
+
+    console.log(`일기 문장 수: ${sentenceCount}, max_tokens: ${maxTokens}, 응답 길이: ${responseLength}`);
+
     try {
       // 실제 Claude API 호출 (30초 타임아웃)
       const response = await withTimeout(
         this.client.messages.create({
           model: 'claude-haiku-4-5',
-          max_tokens: 500,
-          temperature: 0.7,
+          max_tokens: maxTokens,
+          temperature: 0.8,
           messages: [
             {
               role: 'user',
               content: `당신은 따뜻한 초등학교 담임 선생님입니다.
-학생의 일기를 읽고 3-4줄로 구체적이고 깊이 있게 반응해주세요.
+학생의 일기를 읽고 ${responseLength}로 구체적이고 깊이 있게 반응해주세요.
+학생이 선택한 감정: "${emotionTag}"
 
 규칙:
 - "그렇구나", "그러게", "응", "맞아", "그렇지" 등으로 시작해 학생의 말을 먼저 수용하되 늘 새로운 표현으로 시작하도록 노력
-- 반말(~겠네, ~구나, ~지, ~겠다)로 연상느낌으로 친근하게
-- 일기 속 구체적 단어나 표현을 인용하되, 비속어는 순화해서 (예: "개빡쳤다" → "짜증 났겠다")
-- 일기 속 구체적 사건 2개 이상 언급
+- 톤: 연상 느낌의 반말로 친근하게 (~겠네, ~구나, ~지, ~겠다)
+- 비속어: 순화 (예: "개빡쳤다" → "짜증 났겠다")
+- 일기 속 구체적 사건 2개 이상 언급하고 일기 속 단어나 표현을 인용
 - 학생의 감정을 자연스럽게 표현 ("힘들었겠다", "속상했지", "짜증 났겠다")
 - 자연스러운 일임을 확인 ("당연해", "다들 그래")
 - 조언보다는 학생의 생각이나 행동을 긍정적으로 관찰하고 칭찬 ("멋진 생각이야", "잘했어", "대단한데?")
 - 청유형은 가끔만, 주로 관찰과 지지로
 - 판단하지 말고 학생이 겪은 일 존중하며 지지
 - 이모지는 사용하지 마세요
-- 3-4줄 분량
+
 
 일기:
 ${diaryContent}`,

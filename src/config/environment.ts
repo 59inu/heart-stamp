@@ -6,6 +6,8 @@
  * - prd: Railway Prd 서버 (App Store/Play Store)
  */
 
+import { logger } from '../utils/logger';
+
 // 환경 타입
 export type Environment = 'local' | 'dev' | 'prd';
 
@@ -40,5 +42,5 @@ export const API_ENDPOINTS = {
 export const API_BASE_URL = API_ENDPOINTS[ENV];
 
 // 디버깅용
-console.log(`🌐 Environment: ${ENV}`);
-console.log(`🌐 API Base URL: ${API_BASE_URL}`);
+logger.log(`🌐 Environment: ${ENV}`);
+logger.log(`🌐 API Base URL: ${API_BASE_URL}`);

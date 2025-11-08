@@ -68,9 +68,17 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
             justifyContent: 'center',
           },
           text: {
-            marginTop: 6,
+            marginTop: 4,
             fontSize: 16,
             fontWeight: '400',
+          },
+        },
+        'stylesheet.calendar.main': {
+          week: {
+            marginTop: 2,
+            marginBottom: 2,
+            flexDirection: 'row',
+            justifyContent: 'space-around',
           },
         },
       }}

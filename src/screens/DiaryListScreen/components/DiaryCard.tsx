@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DiaryEntry } from '../../../models/DiaryEntry';
-import { getStampImage, getRandomStampPosition } from '../../../utils/stampUtils';
+import { getStampImage, getRandomStampPosition, getStampColor } from '../../../utils/stampUtils';
 import { COLORS } from '../../../constants/colors';
 
 interface DiaryCardProps {
@@ -37,6 +37,7 @@ export const DiaryCard: React.FC<DiaryCardProps> = ({ diary, onPress }) => {
         <View style={styles.aiCommentPreview}>
           {diary.stampType && (() => {
             const stampPos = getRandomStampPosition(diary._id);
+            const stampColor = getStampColor(diary._id);
             return (
               <Image
                 source={getStampImage(diary.stampType)}
@@ -48,6 +49,7 @@ export const DiaryCard: React.FC<DiaryCardProps> = ({ diary, onPress }) => {
                     transform: [{ rotate: stampPos.rotation }],
                   },
                 ]}
+                tintColor={stampColor}
                 resizeMode="contain"
               />
             );

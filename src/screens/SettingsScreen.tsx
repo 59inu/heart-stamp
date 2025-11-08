@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,8 +21,11 @@ import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
 import { NoticeModal } from '../components/NoticeModal';
 import { DiaryStorage } from '../services/diaryStorage';
+import { NotificationService } from '../services/notificationService';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
+import { logger } from '../utils/logger';
+import { AnalyticsService } from '../services/analyticsService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -51,6 +55,24 @@ export const SettingsScreen: React.FC = () => {
     loadDiaryCount();
   }, []);
 
+  // 알림 설정 불러오기
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadNotificationSettings = async () => {
+        try {
+          const dailyReminderSetting = await NotificationService.getDailyReminderEnabled();
+          setDailyReminderEnabled(dailyReminderSetting);
+
+          const teacherCommentSetting = await NotificationService.getTeacherCommentNotificationEnabled();
+          setNotificationEnabled(teacherCommentSetting);
+        } catch (error) {
+          logger.error('Failed to load notification settings:', error);
+        }
+      };
+      loadNotificationSettings();
+    }, [])
+  );
+
   const handleNotice = () => {
     setShowNoticeModal(true);
   };
@@ -71,16 +93,100 @@ export const SettingsScreen: React.FC = () => {
     setShowContactModal(true);
   };
 
-  const handleDataBackup = () => {
-    Alert.alert('데이터 백업', '데이터 백업 기능이 준비 중입니다.');
-  };
-
   const handleDataRestore = () => {
-    Alert.alert('데이터 복원', '데이터 복원 기능이 준비 중입니다.');
+    Toast.show({
+      type: 'info',
+      text1: '데이터 복원',
+      text2: '데이터 복원 기능이 준비 중입니다',
+      position: 'bottom',
+      visibilityTime: 2000,
+    });
   };
 
   const handleDataExport = () => {
-    Alert.alert('일기 내보내기', '일기 내보내기 기능이 준비 중입니다.');
+    Toast.show({
+      type: 'info',
+      text1: '일기 내보내기',
+      text2: '일기 내보내기 기능이 준비 중입니다',
+      position: 'bottom',
+      visibilityTime: 2000,
+    });
+  };
+
+  const handleTeacherCommentNotificationToggle = async (value: boolean) => {
+    const previousState = notificationEnabled;
+    try {
+      setNotificationEnabled(value);
+      await NotificationService.setTeacherCommentNotificationEnabled(value);
+
+      // Analytics: 알림 설정 토글 (이탈 위험 신호 감지)
+      await AnalyticsService.logNotificationToggle('teacher_comment', value, previousState);
+      await AnalyticsService.updateNotificationSettings(value, dailyReminderEnabled);
+
+      if (value) {
+        Toast.show({
+          type: 'success',
+          text1: '알림 설정 완료',
+          text2: '선생님 코멘트가 도착하면 오전에 알림을 받습니다',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
+      } else {
+        Toast.show({
+          type: 'info',
+          text1: '알림 끄기 완료',
+          text2: '선생님 코멘트 알림을 더 이상 받지 않습니다',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to toggle teacher comment notification:', error);
+      // 실패 시 원래 상태로 복구
+      setNotificationEnabled(!value);
+      Alert.alert(
+        '알림 설정 실패',
+        '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
+      );
+    }
+  };
+
+  const handleDailyReminderToggle = async (value: boolean) => {
+    const previousState = dailyReminderEnabled;
+    try {
+      setDailyReminderEnabled(value);
+      await NotificationService.setDailyReminderEnabled(value);
+
+      // Analytics: 알림 설정 토글
+      await AnalyticsService.logNotificationToggle('daily_reminder', value, previousState);
+      await AnalyticsService.updateNotificationSettings(notificationEnabled, value);
+
+      if (value) {
+        Toast.show({
+          type: 'success',
+          text1: '알림 설정 완료',
+          text2: '매일 저녁 9시에 일기 작성 알림을 받습니다',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
+      } else {
+        Toast.show({
+          type: 'info',
+          text1: '알림 끄기 완료',
+          text2: '일기 작성 알림을 더 이상 받지 않습니다',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to toggle daily reminder:', error);
+      // 실패 시 원래 상태로 복구
+      setDailyReminderEnabled(!value);
+      Alert.alert(
+        '알림 설정 실패',
+        '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
+      );
+    }
   };
 
   const handleSurvey = async () => {
@@ -112,7 +218,7 @@ export const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={notificationEnabled}
-              onValueChange={setNotificationEnabled}
+              onValueChange={handleTeacherCommentNotificationToggle}
               trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
               thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
             />
@@ -127,7 +233,7 @@ export const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={dailyReminderEnabled}
-              onValueChange={setDailyReminderEnabled}
+              onValueChange={handleDailyReminderToggle}
               trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
               thumbColor={dailyReminderEnabled ? '#fff' : '#f4f3f4'}
             />
@@ -137,15 +243,6 @@ export const SettingsScreen: React.FC = () => {
         {/* 데이터 관리 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>데이터 관리</Text>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleDataBackup}>
-            <Ionicons name="cloud-upload-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>데이터 백업</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>준비중</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataRestore}>
             <Ionicons name="cloud-download-outline" size={24} color={COLORS.settingsIconColor} />

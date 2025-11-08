@@ -77,6 +77,7 @@ export class AIAnalysisJob {
 
           const analysis = await this.claudeService.analyzeDiary(
             diary.content,
+            diary.moodTag || 'neutral',
             diary.date
           );
 

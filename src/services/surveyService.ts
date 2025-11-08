@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '../utils/logger';
 
 const SURVEY_SHOWN_KEY = 'survey_modal_shown';
 const DIARY_COUNT_KEY = 'diary_write_count';
@@ -10,7 +11,7 @@ export class SurveyService {
       const shown = await AsyncStorage.getItem(SURVEY_SHOWN_KEY);
       return shown === 'true';
     } catch (error) {
-      console.error('Error checking survey shown:', error);
+      logger.error('Error checking survey shown:', error);
       return false;
     }
   }
@@ -20,7 +21,7 @@ export class SurveyService {
     try {
       await AsyncStorage.setItem(SURVEY_SHOWN_KEY, 'true');
     } catch (error) {
-      console.error('Error marking survey shown:', error);
+      logger.error('Error marking survey shown:', error);
     }
   }
 
@@ -30,7 +31,7 @@ export class SurveyService {
       const count = await AsyncStorage.getItem(DIARY_COUNT_KEY);
       return count ? parseInt(count, 10) : 0;
     } catch (error) {
-      console.error('Error getting diary count:', error);
+      logger.error('Error getting diary count:', error);
       return 0;
     }
   }
@@ -43,7 +44,7 @@ export class SurveyService {
       await AsyncStorage.setItem(DIARY_COUNT_KEY, newCount.toString());
       return newCount;
     } catch (error) {
-      console.error('Error incrementing diary count:', error);
+      logger.error('Error incrementing diary count:', error);
       return 0;
     }
   }
@@ -54,7 +55,7 @@ export class SurveyService {
       const completed = await AsyncStorage.getItem('survey_completed');
       return completed === 'true';
     } catch (error) {
-      console.error('Error checking survey completion:', error);
+      logger.error('Error checking survey completion:', error);
       return false;
     }
   }
@@ -64,7 +65,7 @@ export class SurveyService {
     try {
       await AsyncStorage.setItem('survey_completed', 'true');
     } catch (error) {
-      console.error('Error marking survey completed:', error);
+      logger.error('Error marking survey completed:', error);
     }
   }
 
@@ -77,7 +78,7 @@ export class SurveyService {
         await AsyncStorage.setItem(DIARY_COUNT_KEY, actualCount.toString());
       }
     } catch (error) {
-      console.error('Error syncing diary count:', error);
+      logger.error('Error syncing diary count:', error);
     }
   }
 
@@ -89,9 +90,9 @@ export class SurveyService {
         DIARY_COUNT_KEY,
         'survey_completed'
       ]);
-      console.log('✅ SurveyService data cleared');
+      logger.log('✅ SurveyService data cleared');
     } catch (error) {
-      console.error('Error clearing survey data:', error);
+      logger.error('Error clearing survey data:', error);
     }
   }
 }

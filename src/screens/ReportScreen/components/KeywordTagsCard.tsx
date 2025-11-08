@@ -60,58 +60,58 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
-    padding: 20,
+    padding: 16,
     borderRadius: 12,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   tagsList: {
-    gap: 12,
+    gap: 8,
   },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   tagItemTop3: {
-    backgroundColor: '#fffaed',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    backgroundColor: '#FAF7F2', // 도장 카운터와 동일한 베이지
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderRadius: 8,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   tagRank: {
     width: 24,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: COLORS.emotionPositive,
     marginRight: 12,
   },
   tagRankTop3: {
-    fontSize: 18,
-    color: COLORS.emotionNeutral,
+    fontSize: 16,
+    color: '#7A6F5D', // 진한 베이지
   },
   tagText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: '#333',
   },
   tagTextTop3: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#333',
   },
   tagCount: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#999',
     marginLeft: 12,
   },
   tagCountTop3: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#999',
   },
 });

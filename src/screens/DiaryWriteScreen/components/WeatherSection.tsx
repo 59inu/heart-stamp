@@ -75,9 +75,9 @@ const styles = StyleSheet.create({
   },
   weatherButton: {
     alignItems: 'center',
-    padding: 8,
-    borderRadius: 12,
-    minWidth: 60,
+    padding: 6,
+    borderRadius: 10,
+    minWidth: 50,
     backgroundColor: '#fff',
     shadowColor: COLORS.buttonText,
     shadowOffset: {
@@ -100,11 +100,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   weatherEmoji: {
-    fontSize: 28,
-    marginBottom: 4,
+    fontSize: 24,
+    marginBottom: 2,
   },
   weatherText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
   },
   weatherTextSelected: {

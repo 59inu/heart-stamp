@@ -33,9 +33,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({ visible, period, onClose }
 
           <View style={styles.modalBody}>
             <View style={styles.modalItem}>
-              <Text style={styles.modalItemTitle}>📊 기분 밸런스</Text>
+              <Text style={styles.modalItemTitle}>📊 이 주의 대표 감정</Text>
               <Text style={styles.modalItemText}>
-                전{period === 'week' ? '주' : '월'} 대비 가장 상승한 감정 무드를 보여줍니다
+                이번 {period === 'week' ? '주' : '달'}에 가장 많이 느낀 감정을 보여줍니다. 동률이면 모두 표시됩니다.
               </Text>
             </View>
 

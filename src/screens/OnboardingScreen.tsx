@@ -15,6 +15,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
+import { logger } from '../utils/logger';
+import { AnalyticsService } from '../services/analyticsService';
 
 type OnboardingNavigationProp = StackNavigationProp<RootStackParamList, 'Onboarding'>;
 
@@ -97,26 +99,49 @@ export const OnboardingScreen: React.FC = () => {
     }));
   };
 
-  const handleStart = async () => {
+  const handleStart = async (retryCount = 0) => {
     if (!agreements.terms || !agreements.privacy) {
       Alert.alert('동의가 필요합니다', '모든 필수 항목에 동의해주세요');
       return;
     }
 
+    const MAX_RETRIES = 2;
+
     try {
+      const agreedAt = new Date().toISOString();
       await AsyncStorage.setItem('privacyAgreement', JSON.stringify({
-        agreedAt: new Date().toISOString(),
+        agreedAt,
         version: '1.0',
         terms: true,
         privacy: true,
         aiDataSharing: true,
       }));
 
+      // Analytics: 온보딩 완료 (첫 번째 전환 이벤트!)
+      // TODO: 정확한 시간 측정을 위해서는 화면 진입 시간을 저장해야 함
+      await AnalyticsService.logOnboardingComplete(0);
+
       // 메인 화면으로 이동
       navigation.replace('DiaryList');
-    } catch (error) {
-      console.error('동의 저장 오류:', error);
-      Alert.alert('오류', '동의 정보 저장에 실패했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      logger.error(`동의 저장 오류 (시도 ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+
+      // 자동 재시도
+      if (retryCount < MAX_RETRIES) {
+        logger.log(`⏳ ${500 * (retryCount + 1)}ms 후 자동 재시도...`);
+        await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+        return handleStart(retryCount + 1);
+      }
+
+      // 최대 재시도 후에도 실패하면 사용자에게 선택권 제공
+      Alert.alert(
+        '저장 실패',
+        `동의 정보 저장에 ${MAX_RETRIES + 1}번 실패했습니다.\n\n${error.message || '알 수 없는 오류'}\n\n다시 시도하시겠습니까?`,
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '재시도', onPress: () => handleStart(0) }
+        ]
+      );
     }
   };
 
@@ -182,7 +207,7 @@ export const OnboardingScreen: React.FC = () => {
             styles.startButton,
             (!agreements.terms || !agreements.privacy) && styles.startButtonDisabled
           ]}
-          onPress={handleStart}
+          onPress={() => handleStart()}
           disabled={!agreements.terms || !agreements.privacy}
         >
           <Text style={styles.startButtonText}>시작하기</Text>

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '../utils/logger';
 
 const ONBOARDING_COMPLETED_KEY = '@onboarding_completed';
 
@@ -9,7 +10,7 @@ export class OnboardingService {
       const value = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
       return value === 'true';
     } catch (error) {
-      console.error('Failed to check onboarding status:', error);
+      logger.error('Failed to check onboarding status:', error);
       return false;
     }
   }
@@ -19,7 +20,7 @@ export class OnboardingService {
     try {
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
     } catch (error) {
-      console.error('Failed to mark onboarding as completed:', error);
+      logger.error('Failed to mark onboarding as completed:', error);
     }
   }
 
@@ -28,7 +29,7 @@ export class OnboardingService {
     try {
       await AsyncStorage.removeItem(ONBOARDING_COMPLETED_KEY);
     } catch (error) {
-      console.error('Failed to reset onboarding:', error);
+      logger.error('Failed to reset onboarding:', error);
     }
   }
 }
