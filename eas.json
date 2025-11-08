@@ -15,7 +15,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://stamp-diary-backend-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://heart-stamp-dev.up.railway.app"
       }
     }
   },
