@@ -52,8 +52,8 @@ export default ({ config }) => {
       projectId: '46e61da8-364c-4ce8-b1b8-03883e7e6919',
       splash: {
         image: './assets/splash.png',
-        resizeMode: 'cover',
-        backgroundColor: '#ffffff',
+        resizeMode: "contain",
+        backgroundColor: "#F9F3EB"
       },
       ios: {
         supportsTablet: true,
@@ -63,8 +63,8 @@ export default ({ config }) => {
         },
         splash: {
           image: './assets/splash.png',
-          resizeMode: 'cover',
-          backgroundColor: '#ffffff',
+          resizeMode: "contain",
+          backgroundColor: "#F9F3EB"
         },
       },
       android: {
