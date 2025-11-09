@@ -2,16 +2,9 @@ export default ({ config }) => {
   // EAS Build가 자동으로 주입하는 환경 변수
   const buildProfile = process.env.EAS_BUILD_PROFILE || 'production';
 
-  // 빌드 프로파일에 따라 앱 이름 결정
+  // 모든 빌드에서 동일한 앱 이름 사용 (스킴 일관성 유지)
   const getAppName = () => {
-    switch (buildProfile) {
-      case 'development':
-        return 'Heart Stamp Dev';
-      case 'preview':
-        return 'Heart Stamp Preview';
-      default:
-        return 'Heart Stamp';
-    }
+    return 'Heart Stamp';
   };
 
   // 빌드 프로파일에 따라 Bundle Identifier 결정
