@@ -43,6 +43,7 @@ export default ({ config }) => {
     expo: {
       name: getAppName(),
       slug: 'heart-stamp',
+      scheme: 'heartstamp',
       version: '1.0.0',
       orientation: 'portrait',
       icon: './assets/icon.png',
