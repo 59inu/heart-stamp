@@ -67,6 +67,7 @@ const AgreementItem: React.FC<AgreementItemProps> = ({
 export const OnboardingScreen: React.FC = () => {
   const navigation = useNavigation<OnboardingNavigationProp>();
   const [agreements, setAgreements] = useState({
+    ageVerification: false,
     terms: false,
     privacy: false,
     all: false,
@@ -75,10 +76,20 @@ export const OnboardingScreen: React.FC = () => {
   const handleAllAgreement = () => {
     const newValue = !agreements.all;
     setAgreements({
+      ageVerification: newValue,
       terms: newValue,
       privacy: newValue,
       all: newValue,
     });
+  };
+
+  const handleAgeVerificationToggle = () => {
+    const newAge = !agreements.ageVerification;
+    setAgreements(prev => ({
+      ...prev,
+      ageVerification: newAge,
+      all: newAge && prev.terms && prev.privacy,
+    }));
   };
 
   const handleTermsToggle = () => {
@@ -86,7 +97,7 @@ export const OnboardingScreen: React.FC = () => {
     setAgreements(prev => ({
       ...prev,
       terms: newTerms,
-      all: newTerms && prev.privacy,
+      all: prev.ageVerification && newTerms && prev.privacy,
     }));
   };
 
@@ -95,12 +106,12 @@ export const OnboardingScreen: React.FC = () => {
     setAgreements(prev => ({
       ...prev,
       privacy: newPrivacy,
-      all: prev.terms && newPrivacy,
+      all: prev.ageVerification && prev.terms && newPrivacy,
     }));
   };
 
   const handleStart = async (retryCount = 0) => {
-    if (!agreements.terms || !agreements.privacy) {
+    if (!agreements.ageVerification || !agreements.terms || !agreements.privacy) {
       Alert.alert('동의가 필요합니다', '모든 필수 항목에 동의해주세요');
       return;
     }
@@ -112,6 +123,7 @@ export const OnboardingScreen: React.FC = () => {
       await AsyncStorage.setItem('privacyAgreement', JSON.stringify({
         agreedAt,
         version: '1.0',
+        ageVerification: true,
         terms: true,
         privacy: true,
         aiDataSharing: true,
@@ -174,6 +186,13 @@ export const OnboardingScreen: React.FC = () => {
           <View style={styles.divider} />
 
           <AgreementItem
+            checked={agreements.ageVerification}
+            onPress={handleAgeVerificationToggle}
+            required
+            title="만 14세 이상입니다"
+          />
+
+          <AgreementItem
             checked={agreements.terms}
             onPress={handleTermsToggle}
             required
@@ -205,10 +224,10 @@ export const OnboardingScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.startButton,
-            (!agreements.terms || !agreements.privacy) && styles.startButtonDisabled
+            (!agreements.ageVerification || !agreements.terms || !agreements.privacy) && styles.startButtonDisabled
           ]}
           onPress={() => handleStart()}
-          disabled={!agreements.terms || !agreements.privacy}
+          disabled={!agreements.ageVerification || !agreements.terms || !agreements.privacy}
         >
           <Text style={styles.startButtonText}>시작하기</Text>
         </TouchableOpacity>
