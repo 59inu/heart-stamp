@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,38 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS } from '../constants/colors';
+import { logger } from '../utils/logger';
 
 export const TermsDetailScreen: React.FC = () => {
   const navigation = useNavigation();
+  const [agreedDate, setAgreedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadAgreedDate = async () => {
+      try {
+        const agreement = await AsyncStorage.getItem('privacyAgreement');
+        if (agreement) {
+          const parsed = JSON.parse(agreement);
+          if (parsed.agreedAt) {
+            // ISO 날짜를 한국어 형식으로 변환 (시각 포함)
+            const date = new Date(parsed.agreedAt);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            setAgreedDate(`${year}년 ${month}월 ${day}일 ${hours}:${minutes}`);
+          }
+        }
+      } catch (error) {
+        logger.error('동의 날짜 불러오기 실패:', error);
+      }
+    };
+
+    loadAgreedDate();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,6 +53,11 @@ export const TermsDetailScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content}>
+        {agreedDate && (
+          <View style={styles.agreedDateContainer}>
+            <Text style={styles.agreedDateText}>사용자 동의 일시: {agreedDate}</Text>
+          </View>
+        )}
         <Text style={styles.updateDate}>시행일: 2025년 11월 2일</Text>
 
         <Text style={styles.sectionTitle}>제 1조 (목적)</Text>
@@ -150,6 +184,20 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  agreedDateContainer: {
+    backgroundColor: '#F0F6FF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.settingsIconColor,
+  },
+  agreedDateText: {
+    fontSize: 13,
+    color: COLORS.settingsIconColor,
+    fontWeight: '600',
   },
   updateDate: {
     fontSize: 13,
