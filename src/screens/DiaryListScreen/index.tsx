@@ -17,6 +17,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { RootStackParamList } from '../../navigation/types';
 import { OnboardingService } from '../../services/onboardingService';
 import { FirstVisitGuide } from '../../components/FirstVisitGuide';
+import { SyncStatusBar } from '../../components/SyncStatusBar';
 import { COLORS } from '../../constants/colors';
 import { diaryEvents, EVENTS } from '../../services/eventEmitter';
 import { logger } from '../../utils/logger';
@@ -314,6 +315,8 @@ export const DiaryListScreen: React.FC = () => {
           stampCount={stampCount}
           onStampPress={handleStampPress}
         />
+
+        <SyncStatusBar onSyncComplete={loadDiaries} />
 
         <CalendarSection
           currentDate={currentDate}

@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { NotificationService } from './src/services/notificationService';
 import { DiaryStorage } from './src/services/diaryStorage';
+import { SyncQueue } from './src/services/syncQueue';
 import { diaryEvents, EVENTS } from './src/services/eventEmitter';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { OfflineBanner } from './src/components/OfflineBanner';
@@ -40,6 +41,10 @@ export default function App() {
     };
 
     initAnalytics();
+
+    // SyncQueue 네트워크 모니터링 시작
+    SyncQueue.startWatching();
+    logger.log('✅ [App] SyncQueue network monitoring started');
 
     // 푸시 알림 등록 및 리스너 설정
     const initPushNotifications = async () => {
