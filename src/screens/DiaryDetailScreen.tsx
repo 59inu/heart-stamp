@@ -285,7 +285,6 @@ export const DiaryDetailScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>일기를 불러오는 중...</Text>
         </View>
       </SafeAreaView>
     );
