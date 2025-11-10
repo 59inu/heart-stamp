@@ -10,7 +10,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export const OfflineBanner: React.FC = () => {
   const { isConnected } = useNetworkStatus();
-  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const slideAnim = useRef(new Animated.Value(-50)).current;
 
   useEffect(() => {
     if (isConnected === false) {
@@ -24,7 +24,7 @@ export const OfflineBanner: React.FC = () => {
     } else if (isConnected === true) {
       // 온라인 상태: 배너 올리기
       Animated.timing(slideAnim, {
-        toValue: -100,
+        toValue: -50,
         duration: 300,
         useNativeDriver: true,
       }).start();
@@ -56,12 +56,11 @@ export const OfflineBanner: React.FC = () => {
 const styles = StyleSheet.create({
   banner: {
     position: 'absolute',
-    top: 0,
+    top: Platform.OS === 'ios' ? 88 : 56, // SafeAreaView 헤더 높이 아래
     left: 0,
     right: 0,
     backgroundColor: '#FF6B6B',
-    paddingTop: Platform.OS === 'ios' ? 48 : 8,
-    paddingBottom: 8,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     zIndex: 9999,
     elevation: 10,
