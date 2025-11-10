@@ -15,9 +15,9 @@ export class AIAnalysisJob {
   start() {
     console.log('Starting AI Analysis Job scheduler...');
 
-    // Run at 8:27 AM for testing - 어제 날짜 일기 분석 (원래 3:00 AM)
-    cron.schedule('27 8 * * *', async () => {
-      console.log('🧪 Running scheduled batch analysis at 8:27 AM (TEST)...');
+    // Run at 8:47 AM for testing - 어제 날짜 일기 분석 (원래 3:00 AM)
+    cron.schedule('47 8 * * *', async () => {
+      console.log('🧪 Running scheduled batch analysis at 8:47 AM (TEST)...');
       await this.runBatchAnalysis();
     });
 
