@@ -70,7 +70,7 @@ export default function ScreenshotCarousel({ screenshots }: ScreenshotCarouselPr
             {screenshots.map((screenshot, index) => (
               <div
                 key={index}
-                className="flex-[0_0_280px] md:flex-[0_0_300px] pl-8 first:pl-8"
+                className="flex-[0_0_280px] md:flex-[0_0_300px] px-4"
               >
                 <div className="w-full h-[500px] md:h-[560px] bg-gradient-to-br from-[#E8DED5] to-[#F7F6F9] rounded-3xl shadow-lg flex items-center justify-center overflow-hidden">
                   {screenshot.src ? (

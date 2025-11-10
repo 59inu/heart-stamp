@@ -98,16 +98,16 @@ export class ClaudeService {
 
     if (sentenceCount <= 2) {
       // 1-2문장: 짧은 코멘트
-      maxTokens = 150;
+      maxTokens = 200;
       responseLength = '1-2줄';
     } else if (sentenceCount <= 5) {
       // 3-5문장: 보통 코멘트
-      maxTokens = 200;
-      responseLength = '3-4줄';
+      maxTokens = 300;
+      responseLength = '2-3줄';
     } else {
       // 6문장 이상: 긴 코멘트
-      maxTokens = 250;
-      responseLength = '4-5줄';
+      maxTokens = 400;
+      responseLength = '3-4줄';
     }
 
     console.log(`일기 문장 수: ${sentenceCount}, max_tokens: ${maxTokens}, 응답 길이: ${responseLength}`);
@@ -128,7 +128,7 @@ export class ClaudeService {
 
 규칙:
 - "그렇구나", "그러게", "응", "맞아", "그렇지" 등으로 시작해 학생의 말을 먼저 수용하되 늘 새로운 표현으로 시작하도록 노력
-- 톤: 연상 느낌의 반말로 친근하게 (~겠네, ~구나, ~지, ~겠다)
+- 톤: 선생님 느낌의 다정한 반말로 친근하게 (~겠네, ~구나, ~지, ~겠어)
 - 비속어: 순화 (예: "개빡쳤다" → "짜증 났겠다")
 - 일기 속 구체적 사건 2개 이상 언급하고 일기 속 단어나 표현을 인용
 - 학생의 감정을 자연스럽게 표현 ("힘들었겠다", "속상했지", "짜증 났겠다")
@@ -137,7 +137,7 @@ export class ClaudeService {
 - 청유형은 가끔만, 주로 관찰과 지지로
 - 판단하지 말고 학생이 겪은 일 존중하며 지지
 - 이모지는 사용하지 마세요
-
+- 부정적 감정의 짧은 일기는 안쓰럽고 귀여워하는 유머톤 ('아이구, 일기라도 쓴 게 기특하다)
 
 일기:
 ${diaryContent}`,
@@ -151,7 +151,14 @@ ${diaryContent}`,
       const content = response.content[0];
       if (content.type === 'text') {
         const comment = content.text.trim();
-        console.log(`✅ Claude API 응답 성공`);
+
+        // stop_reason 체크 - max_tokens에 도달하면 경고
+        if (response.stop_reason === 'max_tokens') {
+          console.warn(`⚠️ Claude API 응답이 max_tokens(${maxTokens})에 도달하여 잘렸을 수 있습니다.`);
+          console.warn(`응답 길이: ${comment.length}자`);
+        }
+
+        console.log(`✅ Claude API 응답 성공 (stop_reason: ${response.stop_reason})`);
 
         // 도장은 항상 'nice' 고정
         return {

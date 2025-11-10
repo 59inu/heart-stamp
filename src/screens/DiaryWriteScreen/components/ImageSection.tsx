@@ -42,7 +42,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
     <TouchableOpacity
       style={[
         styles.imageContainer,
-        { height: imageUri ? IMAGE_HEIGHT : PLACEHOLDER_HEIGHT }
+        { height: (imageUri && imageUri.trim() !== '') ? IMAGE_HEIGHT : PLACEHOLDER_HEIGHT }
       ]}
       onPress={onImagePick}
       activeOpacity={0.7}
@@ -52,7 +52,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
         </View>
-      ) : imageUri ? (
+      ) : imageUri && imageUri.trim() !== '' ? (
         <>
           <Image
             source={{ uri: imageUri }}
@@ -81,12 +81,12 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
           <Text style={styles.uploadingText}>업로드 중...</Text>
         </View>
       )}
-      {!imageUri && !uploadingImage && (
+      {(!imageUri || imageUri.trim() === '') && !uploadingImage && (
         <View style={styles.imagePlaceholderOverlay}>
           <Text style={styles.imagePlaceholderText}>탭하여 사진 추가</Text>
         </View>
       )}
-      {imageUri && !uploadingImage && (
+      {imageUri && imageUri.trim() !== '' && !uploadingImage && (
         <TouchableOpacity
           style={styles.imageDeleteButton}
           onPress={onImageRemove}

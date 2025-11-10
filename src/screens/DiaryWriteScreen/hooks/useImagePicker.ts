@@ -30,13 +30,27 @@ export const useImagePicker = (
 
     // 이미지 선택
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: false,
       quality: 0.7, // 압축 품질
     });
 
     if (!pickerResult.canceled && pickerResult.assets[0]) {
       const selectedImage = pickerResult.assets[0];
+
+      console.log('📸 [useImagePicker] Selected image:', {
+        uri: selectedImage.uri,
+        width: selectedImage.width,
+        height: selectedImage.height,
+        fileSize: selectedImage.fileSize,
+        type: selectedImage.type,
+      });
+
+      // URI 유효성 체크
+      if (!selectedImage.uri || selectedImage.uri.trim() === '') {
+        Alert.alert('오류', '이미지 URI가 유효하지 않습니다.');
+        return;
+      }
 
       // 파일 크기 체크
       if (selectedImage.fileSize && selectedImage.fileSize > MAX_IMAGE_SIZE) {
@@ -48,13 +62,17 @@ export const useImagePicker = (
       }
 
       // 서버에 이미지 업로드
+      console.log('📤 [useImagePicker] Uploading image to server...');
       setUploadingImage(true);
       const result = await apiService.uploadImage(selectedImage.uri);
       setUploadingImage(false);
+      console.log('📥 [useImagePicker] Upload result:', result);
 
       if (result.success) {
+        console.log('✅ [useImagePicker] Setting imageUri:', result.data);
         setImageUri(result.data);
       } else {
+        console.error('❌ [useImagePicker] Upload failed:', result.error);
         Alert.alert(
           '업로드 실패',
           `이미지 업로드에 실패했습니다.\n\n${result.error}\n\n다시 시도해주세요.`,

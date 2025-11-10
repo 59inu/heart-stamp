@@ -436,8 +436,10 @@ export class ApiService {
       });
 
       if (response.data.success) {
-        // 서버 URL과 결합하여 전체 URL 반환
-        const imageUrl = `${this.baseURL.replace('/api', '')}${response.data.imageUrl}`;
+        // S3 사용 시: 전체 URL 반환, 로컬 사용 시: baseURL과 결합
+        const imageUrl = response.data.imageUrl.startsWith('http')
+          ? response.data.imageUrl // S3 URL (이미 전체 URL)
+          : `${this.baseURL.replace('/api', '')}${response.data.imageUrl}`; // 로컬 경로
         return { success: true, data: imageUrl };
       }
       return { success: false, error: '이미지 업로드 응답 실패' };
