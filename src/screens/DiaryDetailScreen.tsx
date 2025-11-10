@@ -128,11 +128,11 @@ export const DiaryDetailScreen: React.FC = () => {
 
         diary = await DiaryStorage.getById(route.params.entryId);
       } else if (!result.success) {
-        logger.debug('서버 동기화 실패:', result.error);
-        // 네트워크 에러가 아닌 경우에만 로그 (네트워크 에러는 흔하므로)
-        if (result.errorType && result.errorType !== 'NETWORK_ERROR') {
-          logger.warn('AI 코멘트 동기화 실패:', result.error);
+        // 404 에러는 조용히 처리 (AI 코멘트가 아직 생성되지 않은 정상 상태)
+        if (result.errorType === 'NETWORK_ERROR') {
+          logger.debug('네트워크 에러로 AI 코멘트 조회 실패');
         }
+        // 다른 에러는 무시 (서버에 일기가 없거나 AI 코멘트가 없는 상태)
       }
     }
 
