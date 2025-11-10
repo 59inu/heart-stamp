@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   Text,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';

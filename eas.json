@@ -6,16 +6,23 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "APP_ENV": "development",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
       "ios": {
         "simulator": true
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "APP_ENV": "development"
+      }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://heart-stamp-dev.up.railway.app"
+        "APP_ENV": "production"
       }
     }
   },

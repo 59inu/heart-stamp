@@ -6,9 +6,10 @@
 
 import * as Sentry from '@sentry/react-native';
 import { logger } from '../utils/logger';
+import { ENV } from './environment';
 
-// Sentry 활성화 여부
-const SENTRY_ENABLED = !__DEV__;
+// Sentry 활성화 여부 (production 환경에서만)
+const SENTRY_ENABLED = ENV === 'production';
 
 // Sentry DSN (환경 변수로 관리 - 나중에 설정)
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN || '';
@@ -32,7 +33,7 @@ export const initSentry = () => {
       dsn: SENTRY_DSN,
 
       // 환경 설정
-      environment: __DEV__ ? 'development' : 'production',
+      environment: ENV,
 
       // 릴리즈 버전 (앱 버전과 동일하게)
       release: 'heart-stamp@1.0.0',
@@ -40,8 +41,8 @@ export const initSentry = () => {
       // 샘플링 비율 (100% = 모든 에러 수집)
       tracesSampleRate: 1.0,
 
-      // 디버그 모드 (개발 중에만)
-      debug: __DEV__,
+      // 디버그 모드 (production이 아닐 때만)
+      debug: ENV !== 'production',
 
       // 에러 전송 전 필터링/수정
       beforeSend(event, hint) {

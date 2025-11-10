@@ -1,20 +1,18 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   RefreshControl,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { DateData } from 'react-native-calendars';
 import { format } from 'date-fns';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { RootStackParamList } from '../../navigation/types';
 import { OnboardingService } from '../../services/onboardingService';
@@ -70,11 +68,6 @@ export const DiaryListScreen: React.FC = () => {
       return diaryDate === selectedDate;
     });
   }, [diaries, selectedDate]);
-
-  // 도장 위치 (매 렌더링마다 새 객체 생성 방지)
-  const stampPosition = useMemo(() => {
-    return selectedDiary?.stamp ? { diaryId: selectedDiary._id } : null;
-  }, [selectedDiary?._id]);
 
   // 오늘 일기 작성 여부
   const hasTodayDiary = useMemo(() => {

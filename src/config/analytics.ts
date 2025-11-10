@@ -1,16 +1,19 @@
 /**
  * Analytics 설정
  *
- * 개발 모드와 프로덕션 모드에서의 Analytics 동작을 제어합니다.
+ * 환경별 Analytics 동작을 제어합니다.
  */
+
+import { ENV } from './environment';
 
 export const ANALYTICS_CONFIG = {
   /**
    * Analytics 추적 활성화 여부
-   * - 개발 모드(__DEV__ = true): Firebase로 전송하지 않음
-   * - 프로덕션 모드(__DEV__ = false): Firebase로 전송
+   * - local: Firebase로 전송하지 않음
+   * - development: Firebase로 전송하지 않음
+   * - production: Firebase로 전송
    */
-  enableTracking: !__DEV__,
+  enableTracking: ENV === 'production',
 
   /**
    * 콘솔 로그 출력 여부
