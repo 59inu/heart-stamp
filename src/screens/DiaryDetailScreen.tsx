@@ -108,9 +108,11 @@ export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     let diary = await DiaryStorage.getById(route.params.entryId);
 
     // 서버에서 AI 코멘트 동기화
@@ -143,6 +145,8 @@ export const DiaryDetailScreen: React.FC = () => {
         AnalyticsService.logAICommentViewed(diary, 'other');
       }
     }
+
+    setLoading(false);
   }, [route.params.entryId]);
 
   // Pull-to-Refresh 핸들러
@@ -275,10 +279,22 @@ export const DiaryDetailScreen: React.FC = () => {
     );
   }, [entry, navigation]);
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>일기를 불러오는 중...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!entry) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>일기를 찾을 수 없습니다.</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>일기를 찾을 수 없습니다.</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -406,6 +422,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#fff',
