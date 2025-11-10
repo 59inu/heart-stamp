@@ -10,6 +10,7 @@ import {
   Dimensions,
   RefreshControl,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -283,6 +284,7 @@ export const DiaryDetailScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>일기를 불러오는 중...</Text>
         </View>
       </SafeAreaView>
@@ -427,10 +429,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
   },
   loadingText: {
     fontSize: 16,
     color: '#666',
+    marginTop: 8,
   },
   header: {
     backgroundColor: '#fff',
