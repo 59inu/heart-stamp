@@ -46,12 +46,9 @@ export const OfflineBanner: React.FC = () => {
       ]}
     >
       <View style={styles.content}>
-        <Ionicons name="cloud-offline" size={20} color="#fff" />
-        <Text style={styles.text}>오프라인 상태예요</Text>
+        <Ionicons name="cloud-offline" size={16} color="#fff" />
+        <Text style={styles.text}>오프라인 - 일기는 기기에 저장됩니다</Text>
       </View>
-      <Text style={styles.subText}>
-        인터넷 연결을 확인해주세요
-      </Text>
     </Animated.View>
   );
 };
@@ -63,8 +60,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FF6B6B',
-    paddingTop: Platform.OS === 'ios' ? 50 : 10,
-    paddingBottom: 10,
+    paddingTop: Platform.OS === 'ios' ? 48 : 8,
+    paddingBottom: 8,
     paddingHorizontal: 16,
     zIndex: 9999,
     elevation: 10,
@@ -77,16 +74,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    justifyContent: 'center',
   },
   text: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-  },
-  subText: {
-    color: '#fff',
-    fontSize: 13,
-    marginTop: 4,
-    opacity: 0.9,
   },
 });
