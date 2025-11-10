@@ -89,8 +89,8 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
 
 const styles = StyleSheet.create({
   calendar: {
-    marginTop: 14,
-    paddingBottom: 16,
+    marginTop: 24,
+    paddingBottom: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },

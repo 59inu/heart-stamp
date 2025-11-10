@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   selectedDateSection: {
     backgroundColor: '#fff',
     padding: 16,
-    marginTop: 14,
+    marginTop: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 16,
     minHeight: 40,
   },
   dateWithWeather: {
