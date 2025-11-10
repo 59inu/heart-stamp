@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageCache } from '../../../services/imageCache';
 import { logger } from '../../../utils/logger';
@@ -80,17 +81,27 @@ export const useImagePicker = (
         setImageUri(localUri);
 
         setUploadingImage(false);
+
+        // 성공 토스트
+        Toast.show({
+          type: 'success',
+          text1: '이미지 추가 완료',
+          text2: '일기에 사진이 추가되었어요',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
       } catch (error: any) {
         setUploadingImage(false);
         logger.error('❌ [useImagePicker] Error saving image:', error);
-        Alert.alert(
-          '이미지 저장 실패',
-          `이미지를 저장하는데 실패했습니다.\n\n${error.message}\n\n다시 시도해주세요.`,
-          [
-            { text: '취소', style: 'cancel' },
-            { text: '재시도', onPress: pickImage }
-          ]
-        );
+
+        // 에러 토스트
+        Toast.show({
+          type: 'error',
+          text1: '이미지 저장 실패',
+          text2: '다시 시도해주세요',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
       }
     }
   };
