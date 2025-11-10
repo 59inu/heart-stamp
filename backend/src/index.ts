@@ -60,6 +60,9 @@ const corsOptions = {
 };
 
 // Middleware
+// Trust proxy for Railway (리버스 프록시 환경)
+app.set('trust proxy', 1);
+
 app.use(cors(corsOptions));
 app.use(express.json());
 
