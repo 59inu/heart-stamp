@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { apiService } from './apiService';
 import { SyncQueue } from './syncQueue';
 import { logger } from '../utils/logger';
