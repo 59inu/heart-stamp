@@ -13,6 +13,7 @@ import { DiaryDetailScreen } from '../screens/DiaryDetailScreen';
 import { ReportScreen } from '../screens/ReportScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { StampCollectionScreen } from '../screens/StampCollectionScreen';
+import { YearlyEmotionFlowScreen } from '../screens/YearlyEmotionFlowScreen';
 import { COLORS } from '../constants/colors';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { logger } from '../utils/logger';
@@ -122,6 +123,13 @@ export const AppNavigator: React.FC = () => {
           {() => (
             <ErrorBoundary level="screen">
               <StampCollectionScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="YearlyEmotionFlow">
+          {() => (
+            <ErrorBoundary level="screen">
+              <YearlyEmotionFlowScreen />
             </ErrorBoundary>
           )}
         </Stack.Screen>
