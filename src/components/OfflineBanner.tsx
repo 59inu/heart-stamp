@@ -10,7 +10,8 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export const OfflineBanner: React.FC = () => {
   const { isConnected } = useNetworkStatus();
-  const slideAnim = useRef(new Animated.Value(-50)).current;
+  // 배너 높이보다 큰 값으로 초기화하여 완전히 숨김
+  const slideAnim = useRef(new Animated.Value(-200)).current;
 
   useEffect(() => {
     if (isConnected === false) {
@@ -22,9 +23,9 @@ export const OfflineBanner: React.FC = () => {
         friction: 7,
       }).start();
     } else if (isConnected === true) {
-      // 온라인 상태: 배너 올리기
+      // 온라인 상태: 배너 완전히 숨기기
       Animated.timing(slideAnim, {
-        toValue: -50,
+        toValue: -200,
         duration: 300,
         useNativeDriver: true,
       }).start();
