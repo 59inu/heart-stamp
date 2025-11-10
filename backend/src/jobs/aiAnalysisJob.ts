@@ -15,15 +15,15 @@ export class AIAnalysisJob {
   start() {
     console.log('Starting AI Analysis Job scheduler...');
 
-    // Run at 3:00 AM every day - 어제 날짜 일기 분석
-    cron.schedule('0 3 * * *', async () => {
-      console.log('Running scheduled batch analysis at 3:00 AM...');
+    // Run at 8:27 AM for testing - 어제 날짜 일기 분석 (원래 3:00 AM)
+    cron.schedule('27 8 * * *', async () => {
+      console.log('🧪 Running scheduled batch analysis at 8:27 AM (TEST)...');
       await this.runBatchAnalysis();
     });
 
-    // 아침 8시 30분 일괄 푸시 알림 전송 (어제 일기 작성한 사용자만)
-    cron.schedule('30 8 * * *', async () => {
-      console.log('📬 아침 8:30 - 푸시 알림 전송 시작...');
+    // 아침 8시 25분 일괄 푸시 알림 전송 (어제 일기 작성한 사용자만) - 테스트용
+    cron.schedule('25 8 * * *', async () => {
+      console.log('📬 아침 8:25 (테스트) - 푸시 알림 전송 시작...');
 
       // 어제 날짜 일기 중 AI 코멘트를 받은 사용자 목록 조회
       const userIds = DiaryDatabase.getUsersWithAICommentYesterday();
@@ -40,7 +40,7 @@ export class AIAnalysisJob {
         '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
         { type: 'ai_comment_complete' }
       );
-      console.log(`✅ 아침 8:30 - ${userIds.length}명에게 푸시 알림 전송 완료`);
+      console.log(`✅ 아침 8:25 (테스트) - ${userIds.length}명에게 푸시 알림 전송 완료`);
     });
 
     // 15분마다 Push Notification Receipt 확인
