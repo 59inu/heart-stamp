@@ -33,18 +33,19 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
       });
     }
 
-    // 주의 시작일과 종료일 계산 (ISO 8601)
-    const jan4 = new Date(year, 0, 4);
-    const jan4Day = (jan4.getDay() + 6) % 7; // 월요일=0
+    // 주의 시작일과 종료일 계산 (ISO 8601) - UTC 기준
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Day = (jan4.getUTCDay() + 6) % 7; // 월요일=0
     const firstMonday = new Date(jan4);
-    firstMonday.setDate(jan4.getDate() - jan4Day);
+    firstMonday.setUTCDate(jan4.getUTCDate() - jan4Day);
 
     const targetMonday = new Date(firstMonday);
-    targetMonday.setDate(firstMonday.getDate() + (week - 1) * 7);
+    targetMonday.setUTCDate(firstMonday.getUTCDate() + (week - 1) * 7);
 
     const startDate = targetMonday;
     const endDate = new Date(targetMonday);
-    endDate.setDate(targetMonday.getDate() + 6);
+    endDate.setUTCDate(targetMonday.getUTCDate() + 6);
+    endDate.setUTCHours(23, 59, 59, 999); // 해당 일의 끝까지 포함
 
     // 현재 날짜와 비교
     const now = new Date();
@@ -112,18 +113,19 @@ router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) =
       });
     }
 
-    // 주의 시작일과 종료일 계산
-    const jan4 = new Date(year, 0, 4);
-    const jan4Day = (jan4.getDay() + 6) % 7;
+    // 주의 시작일과 종료일 계산 (ISO 8601) - UTC 기준
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Day = (jan4.getUTCDay() + 6) % 7;
     const firstMonday = new Date(jan4);
-    firstMonday.setDate(jan4.getDate() - jan4Day);
+    firstMonday.setUTCDate(jan4.getUTCDate() - jan4Day);
 
     const targetMonday = new Date(firstMonday);
-    targetMonday.setDate(firstMonday.getDate() + (week - 1) * 7);
+    targetMonday.setUTCDate(firstMonday.getUTCDate() + (week - 1) * 7);
 
     const startDate = targetMonday;
     const endDate = new Date(targetMonday);
-    endDate.setDate(targetMonday.getDate() + 6);
+    endDate.setUTCDate(targetMonday.getUTCDate() + 6);
+    endDate.setUTCHours(23, 59, 59, 999); // 해당 일의 끝까지 포함
 
     // 현재 날짜와 비교
     const now = new Date();
