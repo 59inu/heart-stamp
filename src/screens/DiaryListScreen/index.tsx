@@ -77,6 +77,12 @@ export const DiaryListScreen: React.FC = () => {
     });
   }, [diaries, today]);
 
+  // loadDiaries 함수의 최신 참조를 유지하기 위한 ref (이벤트 리스너 메모리 누수 방지)
+  const loadDiariesRef = useRef(loadDiaries);
+  useEffect(() => {
+    loadDiariesRef.current = loadDiaries;
+  }, [loadDiaries]);
+
   useFocusEffect(
     useCallback(() => {
       loadDiaries();
@@ -98,7 +104,7 @@ export const DiaryListScreen: React.FC = () => {
       logger.log('📖 [DiaryListScreen] AI comment received event - reloading local data...');
       // App.tsx가 이미 DiaryStorage.syncWithServer()로 동기화 완료
       // 여기서는 로컬 데이터만 다시 로드
-      await loadDiaries();
+      await loadDiariesRef.current();
       logger.log('✅ [DiaryListScreen] Local data reloaded');
     };
 
@@ -107,7 +113,7 @@ export const DiaryListScreen: React.FC = () => {
     return () => {
       diaryEvents.off(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
     };
-  }, [loadDiaries]);
+  }, []); // 빈 의존성 배열 - 한 번만 등록
 
   const handleOnboardingComplete = useCallback(async () => {
     await OnboardingService.markOnboardingCompleted();
