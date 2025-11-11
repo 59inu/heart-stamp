@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { DiaryEntry, WeatherType, MoodType } from '../../../models/DiaryEntry';
 import { DiaryStorage } from '../../../services/diaryStorage';
 import { apiService } from '../../../services/apiService';
+import { SyncQueue } from '../../../services/syncQueue';
 import { SurveyService } from '../../../services/surveyService';
 import { SURVEY_TRIGGER_COUNT } from '../../../constants/survey';
 import { logger } from '../../../utils/logger';
@@ -101,6 +102,10 @@ export const useDiarySave = ({
       await DiaryStorage.update(savedEntry._id, {
         syncedWithServer: false,
       });
+
+      // 오프라인 큐에 추가하여 나중에 자동 재시도
+      await SyncQueue.add('upload_diary', savedEntry);
+      logger.log('📥 [useDiarySave] Added to sync queue for retry');
     }
 
     // Analytics: 일기 저장 이벤트 (리텐션의 핵심 지표!)
@@ -129,15 +134,24 @@ export const useDiarySave = ({
     const isPastDate = diaryDate < today;
 
     // 메시지 결정
-    let title = '저장 완료';
-    let message = isPastDate
-      ? '일기가 저장되었습니다.\n분명 훗날 읽으며 웃고 울게 될거에요. 💚'
-      : '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙';
+    let title: string;
+    let message: string;
 
-    // 서버 업로드 실패 시 메시지 추가
-    if (!uploadResult.success) {
-      title = '로컬 저장 완료';
-      message += `\n\n⚠️ 서버 업로드 실패: ${uploadResult.error}\n다음 동기화 시 자동으로 재시도됩니다.`;
+    if (uploadResult.success) {
+      // 서버 업로드 성공
+      title = '저장 완료';
+      message = isPastDate
+        ? '일기가 안전하게 저장되었습니다.\n분명 훗날 읽으며 웃고 울게 될거에요. 💚'
+        : '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙';
+    } else {
+      // 오프라인 또는 서버 업로드 실패
+      title = '일기 저장 완료';
+
+      if (isPastDate) {
+        message = '일기가 안전하게 기기에 저장되었습니다.\n네트워크 연결 시 자동으로 백업됩니다. 💚';
+      } else {
+        message = '일기가 기기에 저장되었습니다.\n네트워크 연결되면 선생님이 코멘트를 달아줄 거예요! 🌙\n\n(네트워크 복구 시 자동으로 백업됩니다)';
+      }
     }
 
     // 저장 완료 Alert 먼저 표시

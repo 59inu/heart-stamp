@@ -10,7 +10,8 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export const OfflineBanner: React.FC = () => {
   const { isConnected } = useNetworkStatus();
-  const slideAnim = useRef(new Animated.Value(-100)).current;
+  // 배너 높이보다 큰 값으로 초기화하여 완전히 숨김
+  const slideAnim = useRef(new Animated.Value(-200)).current;
 
   useEffect(() => {
     if (isConnected === false) {
@@ -22,9 +23,9 @@ export const OfflineBanner: React.FC = () => {
         friction: 7,
       }).start();
     } else if (isConnected === true) {
-      // 온라인 상태: 배너 올리기
+      // 온라인 상태: 배너 완전히 숨기기
       Animated.timing(slideAnim, {
-        toValue: -100,
+        toValue: -200,
         duration: 300,
         useNativeDriver: true,
       }).start();
@@ -46,12 +47,9 @@ export const OfflineBanner: React.FC = () => {
       ]}
     >
       <View style={styles.content}>
-        <Ionicons name="cloud-offline" size={20} color="#fff" />
-        <Text style={styles.text}>오프라인 상태예요</Text>
+        <Ionicons name="cloud-offline" size={16} color="#fff" />
+        <Text style={styles.text}>오프라인 - 일기는 기기에 저장됩니다</Text>
       </View>
-      <Text style={styles.subText}>
-        인터넷 연결을 확인해주세요
-      </Text>
     </Animated.View>
   );
 };
@@ -59,12 +57,11 @@ export const OfflineBanner: React.FC = () => {
 const styles = StyleSheet.create({
   banner: {
     position: 'absolute',
-    top: 0,
+    top: Platform.OS === 'ios' ? 88 : 56, // SafeAreaView 헤더 높이 아래
     left: 0,
     right: 0,
     backgroundColor: '#FF6B6B',
-    paddingTop: Platform.OS === 'ios' ? 50 : 10,
-    paddingBottom: 10,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     zIndex: 9999,
     elevation: 10,
@@ -77,16 +74,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    justifyContent: 'center',
   },
   text: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-  },
-  subText: {
-    color: '#fff',
-    fontSize: 13,
-    marginTop: 4,
-    opacity: 0.9,
   },
 });

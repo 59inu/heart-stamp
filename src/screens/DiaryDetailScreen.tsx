@@ -10,6 +10,7 @@ import {
   Dimensions,
   RefreshControl,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -108,10 +109,12 @@ export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [imageLoadStatus, setImageLoadStatus] = useState<string>('pending');
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     setImageLoadStatus('pending'); // 리셋
     let diary = await DiaryStorage.getById(route.params.entryId);
 
@@ -127,11 +130,11 @@ export const DiaryDetailScreen: React.FC = () => {
 
         diary = await DiaryStorage.getById(route.params.entryId);
       } else if (!result.success) {
-        logger.debug('서버 동기화 실패:', result.error);
-        // 네트워크 에러가 아닌 경우에만 로그 (네트워크 에러는 흔하므로)
-        if (result.errorType && result.errorType !== 'NETWORK_ERROR') {
-          logger.warn('AI 코멘트 동기화 실패:', result.error);
+        // 404 에러는 조용히 처리 (AI 코멘트가 아직 생성되지 않은 정상 상태)
+        if (result.errorType === 'NETWORK_ERROR') {
+          logger.debug('네트워크 에러로 AI 코멘트 조회 실패');
         }
+        // 다른 에러는 무시 (서버에 일기가 없거나 AI 코멘트가 없는 상태)
       }
     }
 
@@ -145,6 +148,8 @@ export const DiaryDetailScreen: React.FC = () => {
         AnalyticsService.logAICommentViewed(diary, 'other');
       }
     }
+
+    setLoading(false);
   }, [route.params.entryId]);
 
   // Pull-to-Refresh 핸들러
@@ -277,10 +282,22 @@ export const DiaryDetailScreen: React.FC = () => {
     );
   }, [entry, navigation]);
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!entry) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>일기를 찾을 수 없습니다.</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>일기를 찾을 수 없습니다.</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -424,6 +441,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 8,
   },
   header: {
     backgroundColor: '#fff',

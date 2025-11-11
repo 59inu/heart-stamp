@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
-import { apiService } from '../../../services/apiService';
+import { ImageCache } from '../../../services/imageCache';
+import { logger } from '../../../utils/logger';
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
@@ -38,6 +40,19 @@ export const useImagePicker = (
     if (!pickerResult.canceled && pickerResult.assets[0]) {
       const selectedImage = pickerResult.assets[0];
 
+      logger.log('📸 [useImagePicker] Selected image:', {
+        uri: selectedImage.uri,
+        width: selectedImage.width,
+        height: selectedImage.height,
+        fileSize: selectedImage.fileSize,
+      });
+
+      // URI 유효성 체크
+      if (!selectedImage.uri || selectedImage.uri.trim() === '') {
+        Alert.alert('오류', '이미지 URI가 유효하지 않습니다.');
+        return;
+      }
+
       // 파일 크기 체크
       if (selectedImage.fileSize && selectedImage.fileSize > MAX_IMAGE_SIZE) {
         Alert.alert(
@@ -47,22 +62,46 @@ export const useImagePicker = (
         return;
       }
 
-      // 서버에 이미지 업로드
-      setUploadingImage(true);
-      const result = await apiService.uploadImage(selectedImage.uri);
-      setUploadingImage(false);
+      try {
+        setUploadingImage(true);
 
-      if (result.success) {
-        setImageUri(result.data);
-      } else {
-        Alert.alert(
-          '업로드 실패',
-          `이미지 업로드에 실패했습니다.\n\n${result.error}\n\n다시 시도해주세요.`,
-          [
-            { text: '취소', style: 'cancel' },
-            { text: '재시도', onPress: pickImage }
-          ]
+        // 1. 먼저 로컬에 저장 (항상 성공, 즉시 반환)
+        logger.log('💾 [useImagePicker] Saving image locally...');
+        const localUri = await ImageCache.saveAndUpload(
+          selectedImage.uri,
+          (serverUrl) => {
+            // 2. 백그라운드에서 S3 업로드 성공 시 URL 업데이트
+            logger.log('✅ [useImagePicker] Server upload complete, updating URI');
+            setImageUri(serverUrl);
+          }
         );
+
+        // 3. 로컬 경로를 즉시 설정 (일기 저장 시 사용)
+        logger.log('✅ [useImagePicker] Image saved locally:', localUri);
+        setImageUri(localUri);
+
+        setUploadingImage(false);
+
+        // 성공 토스트
+        Toast.show({
+          type: 'success',
+          text1: '이미지 추가 완료',
+          text2: '일기에 사진이 추가되었어요',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
+      } catch (error: any) {
+        setUploadingImage(false);
+        logger.error('❌ [useImagePicker] Error saving image:', error);
+
+        // 에러 토스트
+        Toast.show({
+          type: 'error',
+          text1: '이미지 저장 실패',
+          text2: '다시 시도해주세요',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
       }
     }
   };
