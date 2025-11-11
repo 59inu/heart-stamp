@@ -535,13 +535,16 @@ export class DiaryDatabase {
     // Haiku 평균 중요도
     const haikuAvgScore = (sonnetAvgStmt.get('haiku') as any).avg;
 
+    // 모델 정보가 있는 코멘트 수 (unknown 제외)
+    const totalWithModel = sonnetCount + haikuCount;
+
     const stats = {
       totalComments: total,
       sonnetCount: sonnetCount,
       haikuCount: haikuCount,
       unknownCount: unknownCount,
-      sonnetPercentage: total > 0 ? Math.round((sonnetCount / total) * 100) : 0,
-      haikuPercentage: total > 0 ? Math.round((haikuCount / total) * 100) : 0,
+      sonnetPercentage: totalWithModel > 0 ? Math.round((sonnetCount / totalWithModel) * 100) : 0,
+      haikuPercentage: totalWithModel > 0 ? Math.round((haikuCount / totalWithModel) * 100) : 0,
       averageImportanceScore: avgScore ? Math.round(avgScore * 10) / 10 : null,
       sonnetAverageScore: sonnetAvgScore ? Math.round(sonnetAvgScore * 10) / 10 : null,
       haikuAverageScore: haikuAvgScore ? Math.round(haikuAvgScore * 10) / 10 : null,
