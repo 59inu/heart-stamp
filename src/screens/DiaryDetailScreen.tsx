@@ -114,7 +114,7 @@ export const DiaryDetailScreen: React.FC = () => {
     let diary = await DiaryStorage.getById(route.params.entryId);
 
     // 서버에서 AI 코멘트 동기화
-    if (diary && !diary.aiComment) {
+    if (diary && (!diary.aiComment || !diary.stampType)) {
       const result = await apiService.syncDiaryFromServer(diary._id);
 
       if (result.success && result.data.aiComment) {
