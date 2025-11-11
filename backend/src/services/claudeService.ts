@@ -102,8 +102,8 @@ export class ClaudeService {
       responseLength = '1-2문장 (약 50-80자)';
     } else if (sentenceCount <= 5) {
       // 3-5문장: 보통 코멘트
-      maxTokens = 600;
-      responseLength = '2-3문장 (약 120-180자)';
+      maxTokens = 800;
+      responseLength = '3-4문장 (약 150-200자)';
     } else {
       // 6문장 이상: 긴 코멘트
       maxTokens = 1000;
