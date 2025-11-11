@@ -14,17 +14,30 @@ jobs:
         run: |
           echo "🤖 Waking up server at $(date) for AI analysis at 3:00 AM KST"
 
+          # 브랜치에 따라 환경 선택
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            RAILWAY_URL="${{ secrets.RAILWAY_PROD_URL }}"
+            ENV_NAME="Production"
+          else
+            RAILWAY_URL="${{ secrets.RAILWAY_DEV_URL }}"
+            ENV_NAME="Development"
+          fi
+
+          echo "Environment: $ENV_NAME"
+          echo "Branch: ${{ github.ref_name }}"
+
           # RAILWAY_URL 검증
-          if [ -z "${{ secrets.RAILWAY_URL }}" ]; then
-            echo "❌ Error: RAILWAY_URL secret is not set"
+          if [ -z "$RAILWAY_URL" ]; then
+            echo "❌ Error: RAILWAY_URL secret is not set for $ENV_NAME"
+            echo "Please set RAILWAY_PROD_URL or RAILWAY_DEV_URL in GitHub Secrets"
             exit 1
           fi
 
           # curl 실패 시 바로 종료
           set -e
 
-          response=$(curl -s -w "\n%{http_code}" ${{ secrets.RAILWAY_URL }}/health || {
-            echo "❌ Error: Failed to connect to Railway server"
+          response=$(curl -s -w "\n%{http_code}" "$RAILWAY_URL/health" || {
+            echo "❌ Error: Failed to connect to Railway server ($ENV_NAME)"
             exit 3
           })
 
@@ -35,9 +48,9 @@ jobs:
           echo "HTTP Status: $http_code"
 
           if [ "$http_code" -eq 200 ]; then
-            echo "✅ Server is awake and ready for AI analysis cron job"
+            echo "✅ Server is awake and ready for AI analysis cron job ($ENV_NAME)"
             exit 0
           else
-            echo "❌ Error: Server responded with status $http_code"
+            echo "❌ Error: Server responded with status $http_code ($ENV_NAME)"
             exit 1
           fi
