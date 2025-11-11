@@ -72,8 +72,18 @@ export const useDiarySave = ({
       logger.debug('업데이트된 엔트리:', updated);
       savedEntry = updated!;
     } else {
+      // 날짜를 사용자 로컬 날짜 기준 자정 UTC로 정규화
+      // 예: 2025-11-09 23:00 KST → 2025-11-09 00:00:00.000Z
+      const normalizedDate = new Date(
+        Date.UTC(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate()
+        )
+      );
+
       const createData = {
-        date: selectedDate.toISOString(),
+        date: normalizedDate.toISOString(),
         content,
         weather: weather || undefined,
         mood: selectedMood || undefined,
