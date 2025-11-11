@@ -97,16 +97,16 @@ export class ClaudeService {
     let responseLength: string;
 
     if (sentenceCount <= 2) {
-      // 1-2문장: 짧은 코멘트
-      maxTokens = 300;
+      // 1-2문장: 짧은 코멘트 (여유있게 설정)
+      maxTokens = 500;
       responseLength = '1-2문장 (약 50-80자)';
     } else if (sentenceCount <= 5) {
-      // 3-5문장: 보통 코멘트
-      maxTokens = 800;
+      // 3-5문장: 보통 코멘트 (여유있게 설정)
+      maxTokens = 1200;
       responseLength = '3-4문장 (약 150-200자)';
     } else {
-      // 6문장 이상: 긴 코멘트
-      maxTokens = 1000;
+      // 6문장 이상: 긴 코멘트 (여유있게 설정)
+      maxTokens = 1500;
       responseLength = '4-5문장 (약 200-300자)';
     }
 
