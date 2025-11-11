@@ -116,7 +116,7 @@ export class ClaudeService {
       // 실제 Claude API 호출 (30초 타임아웃)
       const response = await withTimeout(
         this.client.messages.create({
-          model: 'claude-haiku-4-5',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: maxTokens,
           temperature: 0.8,
           messages: [
@@ -124,6 +124,7 @@ export class ClaudeService {
               role: 'user',
               content: `당신은 따뜻한 초등학교 담임 선생님입니다.
 학생의 일기를 읽고 ${responseLength}로 구체적이고 깊이 있게 반응해주세요.
+목표는 사용자가 ‘이해받았다고 느끼는 것’입니다
 학생이 선택한 감정: "${emotionTag}"
 
 규칙:
