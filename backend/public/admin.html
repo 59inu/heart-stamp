@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heart Stamp Admin Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 32px;
+    }
+
+    .token-section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .token-section input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .token-section button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .token-section button:hover {
+      background: #5568d3;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .stat-value {
+      color: #333;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-danger {
+      background: #f56565;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #e53e3e;
+    }
+
+    .btn-success {
+      background: #48bb78;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #38a169;
+    }
+
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 100px;
+      font-family: inherit;
+    }
+
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f7fafc;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 13px;
+      color: #2d3748;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+
+    .error {
+      color: #f56565;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 0.3s;
+    }
+
+    .comments-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .comment-item {
+      padding: 12px;
+      margin: 8px 0;
+      background: #f7fafc;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .comment-item .date {
+      color: #667eea;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .comment-item .content {
+      color: #666;
+      margin: 5px 0;
+      line-height: 1.4;
+    }
+
+    .comment-item .ai-comment {
+      color: #333;
+      margin-top: 5px;
+      padding-top: 5px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Heart Stamp Admin Dashboard</h1>
+
+    <!-- Admin Token Section -->
+    <div class="token-section">
+      <h2>Admin Token</h2>
+      <input type="password" id="adminToken" placeholder="Admin token을 입력하세요">
+      <button onclick="saveToken()">토큰 저장</button>
+      <div id="tokenStatus" class="error"></div>
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="grid">
+      <!-- Model Stats -->
+      <div class="card">
+        <h2>AI 모델 사용 통계</h2>
+        <div id="modelStats">
+          <div class="loading">로딩 중...</div>
+        </div>
+        <button class="btn btn-primary" onclick="loadModelStats()">새로고침</button>
+      </div>
+
+      <!-- DB Stats -->
+      <div class="card">
+        <h2>데이터베이스 통계</h2>
+        <div id="dbStats">
+          <div class="loading">로딩 중...</div>
+        </div>
+        <button class="btn btn-primary" onclick="loadDbStats()">새로고침</button>
+      </div>
+
+      <!-- Admin Actions -->
+      <div class="card">
+        <h2>관리 작업</h2>
+        <button class="btn btn-success" onclick="triggerAnalysis()">배치 분석 실행</button>
+        <button class="btn btn-danger" onclick="resetYesterdayComments()">어제 코멘트 초기화</button>
+        <div id="actionResult" class="result"></div>
+      </div>
+    </div>
+
+    <!-- Recent Comments -->
+    <div class="card" style="margin-bottom: 20px;">
+      <h2>최근 AI 코멘트</h2>
+      <button class="btn btn-primary" onclick="loadRecentComments()">최근 코멘트 조회 (10개)</button>
+      <div id="recentComments"></div>
+    </div>
+
+    <!-- Importance Test -->
+    <div class="card">
+      <h2>일기 중요도 테스트</h2>
+      <textarea id="testContent" placeholder="일기 내용을 입력하세요..."></textarea>
+      <button class="btn btn-success" onclick="testImportance()" style="margin-top: 10px;">중요도 분석</button>
+      <div id="importanceResult" class="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    // Load token from localStorage
+    window.onload = () => {
+      const token = localStorage.getItem('adminToken');
+      if (token) {
+        document.getElementById('adminToken').value = token;
+        document.getElementById('tokenStatus').textContent = '토큰이 저장되어 있습니다';
+        document.getElementById('tokenStatus').style.color = '#48bb78';
+
+        // Auto-load stats
+        loadModelStats();
+        loadDbStats();
+      }
+    };
+
+    function saveToken() {
+      const token = document.getElementById('adminToken').value.trim();
+      if (!token) {
+        document.getElementById('tokenStatus').textContent = '토큰을 입력하세요';
+        document.getElementById('tokenStatus').style.color = '#f56565';
+        return;
+      }
+      localStorage.setItem('adminToken', token);
+      document.getElementById('tokenStatus').textContent = '토큰이 저장되었습니다';
+      document.getElementById('tokenStatus').style.color = '#48bb78';
+
+      // Auto-load stats
+      loadModelStats();
+      loadDbStats();
+    }
+
+    function getToken() {
+      return localStorage.getItem('adminToken') || document.getElementById('adminToken').value.trim();
+    }
+
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const token = getToken();
+      if (!token) {
+        alert('Admin token을 입력하세요');
+        return null;
+      }
+
+      const options = {
+        method,
+        headers: {
+          'x-admin-token': token,
+          'Content-Type': 'application/json',
+        },
+      };
+
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}${endpoint}`, options);
+
+        // Check if response is ok before parsing
+        if (!response.ok) {
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // JSON 파싱 실패시 그냥 HTTP 에러 사용
+          }
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        // Fetch 자체가 실패한 경우 (네트워크 에러, CORS 등)
+        if (error instanceof TypeError) {
+          throw new Error('네트워크 에러: 서버에 연결할 수 없습니다');
+        }
+        throw error;
+      }
+    }
+
+    async function loadModelStats() {
+      const container = document.getElementById('modelStats');
+      container.innerHTML = '<div class="loading">로딩 중...</div>';
+
+      try {
+        const result = await apiCall('/api/admin/model-stats');
+        const stats = result.data;
+
+        const total = stats.sonnetCount + stats.haikuCount;
+        const sonnetPercent = total > 0 ? Math.round((stats.sonnetCount / total) * 100) : 0;
+        const haikuPercent = total > 0 ? Math.round((stats.haikuCount / total) * 100) : 0;
+
+        container.innerHTML = `
+          <div class="stat-item">
+            <span class="stat-label">총 AI 코멘트</span>
+            <span class="stat-value">${stats.totalComments}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Sonnet 사용</span>
+            <span class="stat-value">${stats.sonnetCount}개 (${stats.sonnetPercentage}%)</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Haiku 사용</span>
+            <span class="stat-value">${stats.haikuCount}개 (${stats.haikuPercentage}%)</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">모델 정보 없음</span>
+            <span class="stat-value">${stats.unknownCount}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">평균 중요도</span>
+            <span class="stat-value">${stats.averageImportanceScore || 'N/A'}/40</span>
+          </div>
+          ${stats.sonnetAverageScore ? `
+          <div class="stat-item">
+            <span class="stat-label">Sonnet 평균 점수</span>
+            <span class="stat-value">${stats.sonnetAverageScore}/40</span>
+          </div>
+          ` : ''}
+        `;
+      } catch (error) {
+        container.innerHTML = `<div class="error">에러: ${error.message}</div>`;
+      }
+    }
+
+    async function loadDbStats() {
+      const container = document.getElementById('dbStats');
+      container.innerHTML = '<div class="loading">로딩 중...</div>';
+
+      try {
+        const result = await apiCall('/api/admin/db-stats');
+        const stats = result.data;
+
+        container.innerHTML = `
+          <div class="stat-item">
+            <span class="stat-label">총 일기</span>
+            <span class="stat-value">${stats.totalDiaries}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">AI 코멘트 있음</span>
+            <span class="stat-value">${stats.diariesWithAIComment}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">AI 코멘트 대기</span>
+            <span class="stat-value">${stats.diariesWithoutAIComment}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">삭제된 일기</span>
+            <span class="stat-value">${stats.deletedDiaries}개</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">사용자 수</span>
+            <span class="stat-value">${stats.uniqueUsers}명</span>
+          </div>
+        `;
+      } catch (error) {
+        container.innerHTML = `<div class="error">에러: ${error.message}</div>`;
+      }
+    }
+
+    async function triggerAnalysis() {
+      const resultDiv = document.getElementById('actionResult');
+      resultDiv.innerHTML = '<div class="loading">배치 분석 실행 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall('/api/jobs/trigger-analysis', 'POST');
+        resultDiv.innerHTML = `<pre>✅ ${result.message}</pre>`;
+
+        // Reload stats after 2 seconds
+        setTimeout(() => {
+          loadModelStats();
+          loadDbStats();
+        }, 2000);
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function resetYesterdayComments() {
+      if (!confirm('정말로 어제 일기의 AI 코멘트를 초기화하시겠습니까?')) {
+        return;
+      }
+
+      const resultDiv = document.getElementById('actionResult');
+      resultDiv.innerHTML = '<div class="loading">초기화 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall('/api/admin/reset-yesterday-comments', 'POST');
+        resultDiv.innerHTML = `<pre>✅ ${result.message}\n초기화된 일기: ${result.count}개</pre>`;
+
+        // Reload stats
+        setTimeout(() => {
+          loadModelStats();
+          loadDbStats();
+        }, 1000);
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function loadRecentComments() {
+      const container = document.getElementById('recentComments');
+      container.innerHTML = '<div class="loading">로딩 중...</div>';
+
+      try {
+        const result = await apiCall('/api/admin/recent-comments?limit=10');
+        const comments = result.data;
+
+        if (comments.length === 0) {
+          container.innerHTML = '<div class="loading">코멘트가 없습니다</div>';
+          return;
+        }
+
+        container.innerHTML = '<div class="comments-list">' + comments.map(comment => {
+          const date = new Date(comment.date).toLocaleString('ko-KR');
+          const content = comment.content.substring(0, 100) + (comment.content.length > 100 ? '...' : '');
+          const aiComment = comment.aiComment.substring(0, 150) + (comment.aiComment.length > 150 ? '...' : '');
+          const model = comment.model ? ` [${comment.model.toUpperCase()}]` : '';
+          const score = comment.importanceScore ? ` (${comment.importanceScore}점)` : '';
+
+          return `
+            <div class="comment-item">
+              <div class="date">${date}${model}${score}</div>
+              <div class="content">${content}</div>
+              <div class="ai-comment">💬 ${aiComment}</div>
+            </div>
+          `;
+        }).join('') + '</div>';
+      } catch (error) {
+        container.innerHTML = `<div class="error">에러: ${error.message}</div>`;
+      }
+    }
+
+    async function testImportance() {
+      const content = document.getElementById('testContent').value.trim();
+      const resultDiv = document.getElementById('importanceResult');
+
+      if (!content) {
+        alert('일기 내용을 입력하세요');
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">분석 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall('/api/admin/test-importance', 'POST', { content });
+        const data = result.data;
+
+        resultDiv.innerHTML = `
+          <pre><strong>중요도 분석 결과</strong>
+
+감정적 강도: ${data.emotional_intensity}/10
+의미있는 사건: ${data.significant_event}/10
+성찰의 깊이: ${data.depth_of_reflection}/10
+변화의 신호: ${data.change_signal}/10
+
+<strong>총점: ${data.total}/40</strong>
+임계값: ${data.threshold}점
+<strong>선택 모델: ${data.selected_model.toUpperCase()}</strong>
+
+<strong>판단 이유:</strong>
+${data.reason}</pre>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>

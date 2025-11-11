@@ -84,6 +84,22 @@ try {
   // 컬럼이 이미 존재하면 무시
 }
 
+// 마이그레이션: model 컬럼 추가 (AI 모델 추적용)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN model TEXT`);
+  console.log('✅ Added model column to diaries table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
+// 마이그레이션: importanceScore 컬럼 추가 (중요도 점수 추적용)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN importanceScore INTEGER`);
+  console.log('✅ Added importanceScore column to diaries table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
 // userId 인덱스 생성 (성능 향상)
 try {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries(userId)`);
@@ -206,8 +222,8 @@ export class DiaryDatabase {
         const encrypted = encryptFields(diary);
 
         const stmt = db.prepare(`
-          INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer, version)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, model, importanceScore, createdAt, updatedAt, syncedWithServer, version)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(
@@ -220,6 +236,8 @@ export class DiaryDatabase {
           encrypted.moodTag || null,
           encrypted.aiComment || null,
           encrypted.stampType || null,
+          encrypted.model || null,
+          encrypted.importanceScore || null,
           encrypted.createdAt,
           encrypted.updatedAt,
           encrypted.syncedWithServer ? 1 : 0,
@@ -266,6 +284,14 @@ export class DiaryDatabase {
         if (encrypted.stampType !== undefined) {
           fields.push('stampType = ?');
           values.push(encrypted.stampType);
+        }
+        if (encrypted.model !== undefined) {
+          fields.push('model = ?');
+          values.push(encrypted.model);
+        }
+        if (encrypted.importanceScore !== undefined) {
+          fields.push('importanceScore = ?');
+          values.push(encrypted.importanceScore);
         }
         if (encrypted.syncedWithServer !== undefined) {
           fields.push('syncedWithServer = ?');
@@ -475,6 +501,53 @@ export class DiaryDatabase {
     };
 
     console.log(`✅ [DiaryDatabase] 통계:`, stats);
+
+    return stats;
+  }
+
+  // 모델 사용 통계 조회 (관리자용)
+  static getModelStats(): any {
+    console.log(`📊 [DiaryDatabase] 모델 사용 통계 조회`);
+
+    // 전체 AI 코멘트 수
+    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND deletedAt IS NULL');
+    const total = (totalStmt.get() as any).count;
+
+    // Sonnet 사용 횟수
+    const sonnetStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE model = ? AND deletedAt IS NULL');
+    const sonnetCount = (sonnetStmt.get('sonnet') as any).count;
+
+    // Haiku 사용 횟수
+    const haikuCount = (sonnetStmt.get('haiku') as any).count;
+
+    // 모델 정보 없는 코멘트 (마이그레이션 전 데이터)
+    const unknownStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND model IS NULL AND deletedAt IS NULL');
+    const unknownCount = (unknownStmt.get() as any).count;
+
+    // 평균 중요도 점수
+    const avgScoreStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE importanceScore IS NOT NULL AND deletedAt IS NULL');
+    const avgScore = (avgScoreStmt.get() as any).avg;
+
+    // Sonnet 평균 중요도
+    const sonnetAvgStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE model = ? AND deletedAt IS NULL');
+    const sonnetAvgScore = (sonnetAvgStmt.get('sonnet') as any).avg;
+
+    // Haiku 평균 중요도
+    const haikuAvgScore = (sonnetAvgStmt.get('haiku') as any).avg;
+
+    const stats = {
+      totalComments: total,
+      sonnetCount: sonnetCount,
+      haikuCount: haikuCount,
+      unknownCount: unknownCount,
+      sonnetPercentage: total > 0 ? Math.round((sonnetCount / total) * 100) : 0,
+      haikuPercentage: total > 0 ? Math.round((haikuCount / total) * 100) : 0,
+      averageImportanceScore: avgScore ? Math.round(avgScore * 10) / 10 : null,
+      sonnetAverageScore: sonnetAvgScore ? Math.round(sonnetAvgScore * 10) / 10 : null,
+      haikuAverageScore: haikuAvgScore ? Math.round(haikuAvgScore * 10) / 10 : null,
+    };
+
+    console.log(`✅ [DiaryDatabase] 모델 통계:`, stats);
 
     return stats;
   }

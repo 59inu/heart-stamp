@@ -13,6 +13,8 @@ export interface DiaryEntry {
   imageUri?: string;
   aiComment?: string;
   stampType?: StampType;
+  model?: 'haiku' | 'sonnet'; // AI 모델 종류 (통계용)
+  importanceScore?: number; // 중요도 점수 0-40 (통계용)
   createdAt: string;
   updatedAt: string;
   syncedWithServer: boolean;

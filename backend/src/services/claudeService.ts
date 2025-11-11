@@ -200,6 +200,7 @@ ${diaryContent}`,
    * Sonnet을 사용할지 Haiku를 사용할지 결정하기 위한 1차 필터링
    */
   private async analyzeImportance(diaryContent: string): Promise<ImportanceScore> {
+    console.log('\n🔊🔊🔊 [IMPORTANCE] 중요도 분석 시작! 🔊🔊🔊');
     console.log('📊 [IMPORTANCE] Analyzing diary importance with Haiku...');
 
     try {
@@ -256,7 +257,11 @@ ${diaryContent}`,
 
       const content = response.content[0];
       if (content.type === 'text') {
-        const jsonText = content.text.trim();
+        let jsonText = content.text.trim();
+
+        // Markdown 코드 블록 제거 (```json ... ``` 또는 ``` ... ```)
+        jsonText = jsonText.replace(/^```json?\s*/i, '').replace(/\s*```$/, '');
+
         const score: ImportanceScore = JSON.parse(jsonText);
 
         console.log(`📊 [IMPORTANCE] Score: ${score.total}/40 - ${score.reason}`);
@@ -265,7 +270,10 @@ ${diaryContent}`,
 
       throw new Error('Invalid response format from Haiku');
     } catch (error: any) {
-      console.error('❌ [IMPORTANCE] Analysis failed, defaulting to low score:', error.message);
+      console.error('\n🔥🔥🔥 [IMPORTANCE] 에러 발생! 🔥🔥🔥');
+      console.error('❌ [IMPORTANCE] Analysis failed:', error);
+      console.error('❌ [IMPORTANCE] Error message:', error.message);
+      console.error('❌ [IMPORTANCE] Error stack:', error.stack);
       // 에러 시 낮은 점수 반환 (Haiku 사용)
       return {
         emotional_intensity: 3,

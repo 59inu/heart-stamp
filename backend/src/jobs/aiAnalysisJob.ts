@@ -77,6 +77,9 @@ export class AIAnalysisJob {
     const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
     const BATCH_LOG_INTERVAL = parseInt(process.env.BATCH_LOG_INTERVAL || '10', 10);
 
+    console.log('\n' + '🔊'.repeat(40));
+    console.log('🔊🔊🔊 [BATCH] 배치 작업 시작!!! 🔊🔊🔊');
+    console.log('🔊'.repeat(40));
     console.log('\n' + '='.repeat(80));
     console.log('🤖 [BATCH] AI COMMENT GENERATION STARTED');
     console.log('='.repeat(80));
@@ -85,6 +88,7 @@ export class AIAnalysisJob {
 
     try {
       // Get all diaries without AI comments
+      console.log('🔍 [BATCH] Getting pending diaries from database...');
       const pendingDiaries = DiaryDatabase.getPending();
       const total = pendingDiaries.length;
 
@@ -120,6 +124,8 @@ export class AIAnalysisJob {
           await DiaryDatabase.update(diary._id, {
             aiComment: analysis.comment,
             stampType: analysis.stampType,
+            model: analysis.model,
+            importanceScore: analysis.importanceScore,
             syncedWithServer: true,
           });
 
