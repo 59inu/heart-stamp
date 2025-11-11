@@ -109,8 +109,10 @@ export const DiaryDetailScreen: React.FC = () => {
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [imageLoadStatus, setImageLoadStatus] = useState<string>('pending');
 
   const fetchData = useCallback(async () => {
+    setImageLoadStatus('pending'); // 리셋
     let diary = await DiaryStorage.getById(route.params.entryId);
 
     // 서버에서 AI 코멘트 동기화
@@ -362,12 +364,28 @@ export const DiaryDetailScreen: React.FC = () => {
               <Text style={styles.aiTitle}>선생님 코멘트</Text>
               {entry.stampType && (
                 <View style={styles.stampContainer}>
-                  <Image
-                    source={getStampImage(entry.stampType)}
-                    style={styles.stampImageSmall}
-                    tintColor={getStampColor(entry._id)}
-                    resizeMode="contain"
-                  />
+                  {imageLoadStatus === 'error' && __DEV__ ? (
+                    // Expo Go 오프라인 제약: 이미지 로딩 실패 시 텍스트 대체
+                    <View style={{ justifyContent: 'center', alignItems: 'center', width: 72, height: 72 }}>
+                      <Text style={{ fontSize: 40 }}>🏆</Text>
+                      <Text style={{ fontSize: 8, color: '#999', marginTop: 2 }}>
+                        (개발 모드{'\n'}오프라인 제약)
+                      </Text>
+                    </View>
+                  ) : (
+                    <Image
+                      source={getStampImage(entry.stampType)}
+                      style={styles.stampImageSmall}
+                      tintColor={getStampColor(entry._id)}
+                      resizeMode="contain"
+                      onError={(e) => {
+                        setImageLoadStatus('error');
+                      }}
+                      onLoad={() => {
+                        setImageLoadStatus('loaded');
+                      }}
+                    />
+                  )}
                 </View>
               )}
             </View>

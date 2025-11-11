@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DiaryEntry } from '../../../models/DiaryEntry';
@@ -11,6 +11,7 @@ interface DiaryCardProps {
 }
 
 export const DiaryCard: React.FC<DiaryCardProps> = ({ diary, onPress }) => {
+  const [imageLoadError, setImageLoadError] = useState(false);
   return (
     <TouchableOpacity style={styles.selectedDiaryCard} onPress={onPress}>
       <View style={styles.cardContent}>
@@ -38,6 +39,24 @@ export const DiaryCard: React.FC<DiaryCardProps> = ({ diary, onPress }) => {
           {diary.stampType && (() => {
             const stampPos = getRandomStampPosition(diary._id);
             const stampColor = getStampColor(diary._id);
+
+            if (imageLoadError && __DEV__) {
+              // Expo Go 오프라인 제약: 이미지 로딩 실패 시 텍스트 대체
+              return (
+                <View style={[
+                  styles.stampImageLarge,
+                  {
+                    top: stampPos.top,
+                    right: stampPos.right,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  },
+                ]}>
+                  <Text style={{ fontSize: 60 }}>🏆</Text>
+                </View>
+              );
+            }
+
             return (
               <Image
                 source={getStampImage(diary.stampType)}
@@ -51,6 +70,7 @@ export const DiaryCard: React.FC<DiaryCardProps> = ({ diary, onPress }) => {
                 ]}
                 tintColor={stampColor}
                 resizeMode="contain"
+                onError={() => setImageLoadError(true)}
               />
             );
           })()}
