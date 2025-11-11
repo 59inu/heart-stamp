@@ -97,16 +97,16 @@ export class ClaudeService {
     let responseLength: string;
 
     if (sentenceCount <= 2) {
-      // 1-2문장: 짧은 코멘트
-      maxTokens = 150;
+      // 1-2문장: 짧은 코멘트 (약 50-80자)
+      maxTokens = 300;
       responseLength = '1-2줄';
     } else if (sentenceCount <= 5) {
-      // 3-5문장: 보통 코멘트
-      maxTokens = 200;
+      // 3-5문장: 보통 코멘트 (약 120-180자)
+      maxTokens = 600;
       responseLength = '3-4줄';
     } else {
-      // 6문장 이상: 긴 코멘트
-      maxTokens = 250;
+      // 6문장 이상: 긴 코멘트 (약 200-300자)
+      maxTokens = 1000;
       responseLength = '4-5줄';
     }
 
@@ -137,6 +137,7 @@ export class ClaudeService {
 - 청유형은 가끔만, 주로 관찰과 지지로
 - 판단하지 말고 학생이 겪은 일 존중하며 지지
 - 이모지는 사용하지 마세요
+- **중요: 반드시 문장을 완성해서 끝내세요. 중간에 끊기지 않도록 주의하세요.**
 
 
 일기:
