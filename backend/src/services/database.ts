@@ -410,6 +410,42 @@ export class DiaryDatabase {
 
     return userIds;
   }
+
+  // 최근 AI 코멘트 조회 (관리자용)
+  static getRecentAIComments(limit: number = 10): any[] {
+    console.log(`📋 [DiaryDatabase] 최근 AI 코멘트 ${limit}개 조회`);
+
+    // AI 코멘트가 있는 최근 일기 조회 (updatedAt 기준 정렬)
+    const stmt = db.prepare(`
+      SELECT
+        _id,
+        userId,
+        date,
+        content,
+        moodTag,
+        aiComment,
+        stampType,
+        createdAt,
+        updatedAt
+      FROM diaries
+      WHERE aiComment IS NOT NULL
+        AND deletedAt IS NULL
+      ORDER BY updatedAt DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(limit) as any[];
+
+    console.log(`✅ [DiaryDatabase] ${rows.length}개의 AI 코멘트 조회 완료`);
+
+    return rows.map(row => {
+      const entry = {
+        ...row,
+        syncedWithServer: row.syncedWithServer === 1,
+      };
+      // 복호화: content, moodTag, aiComment
+      return decryptFields(entry);
+    });
+  }
 }
 
 export class PushTokenDatabase {

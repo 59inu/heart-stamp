@@ -215,6 +215,29 @@ app.get('/api/jobs/backups', adminLimiter, requireAdminToken, (req, res) => {
   }
 });
 
+// 최근 AI 코멘트 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/admin/recent-comments', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // 최근 AI 코멘트가 생성된 일기 조회
+    const recentComments = DiaryDatabase.getRecentAIComments(limit);
+
+    res.json({
+      success: true,
+      count: recentComments.length,
+      data: recentComments,
+    });
+  } catch (error) {
+    console.error('Error fetching recent comments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recent comments',
+    });
+  }
+});
+
 // 일반 Push 테스트 엔드포인트 (관리 리미터 + 토큰 인증)
 app.post('/api/push/test-regular', adminLimiter, requireAdminToken, async (req, res) => {
   try {
