@@ -23,4 +23,15 @@ export interface DiaryEntry {
 export interface AIAnalysisResult {
   comment: string;
   stampType: StampType;
+  model?: 'haiku' | 'sonnet'; // 사용된 모델
+  importanceScore?: number; // 중요도 점수 (0-40)
+}
+
+export interface ImportanceScore {
+  emotional_intensity: number; // 0-10
+  significant_event: number; // 0-10
+  depth_of_reflection: number; // 0-10
+  change_signal: number; // 0-10
+  total: number; // 합계
+  reason: string; // 간단한 이유
 }

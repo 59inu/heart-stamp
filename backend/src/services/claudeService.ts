@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { AIAnalysisResult, StampType } from '../types/diary';
+import { AIAnalysisResult, StampType, ImportanceScore } from '../types/diary';
 import { CircuitBreaker } from '../utils/circuitBreaker';
 import { retryWithCondition, withTimeout, isRetryableError } from '../utils/retry';
 
@@ -86,14 +86,24 @@ export class ClaudeService {
     console.log(`일기 날짜: ${date}`);
     console.log(`일기 내용: ${diaryContent.substring(0, 50)}...`);
 
+    // 🔍 [1단계] Haiku로 일기 중요도 분석
+    const importanceScore = await this.analyzeImportance(diaryContent);
+
+    // 📊 중요도에 따라 모델 선택 (임계값: 20점)
+    const IMPORTANCE_THRESHOLD = 20;
+    const useSonnet = importanceScore.total >= IMPORTANCE_THRESHOLD;
+    const selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
+
+    console.log(`🎯 [MODEL SELECTION] ${useSonnet ? 'Sonnet' : 'Haiku'} selected (score: ${importanceScore.total}/40)`);
+
     // 일기 길이에 따라 max_tokens와 응답 길이 조절
   const sentenceCount = diaryContent
     .split(/[.!?。！？\n]+/)  // 줄바꿈도 문장 구분으로
     .filter(s => s.trim().length > 5)  // 너무 짧은 건 제외
-    .length;    
-    
+    .length;
+
     let maxTokens: number;
-    
+
     let responseLength: string;
 
     if (sentenceCount <= 2) {
@@ -113,10 +123,10 @@ export class ClaudeService {
     console.log(`일기 문장 수: ${sentenceCount}, max_tokens: ${maxTokens}, 응답 길이: ${responseLength}`);
 
     try {
-      // 실제 Claude API 호출 (30초 타임아웃)
+      // 🎨 [2단계] 선택된 모델로 코멘트 생성 (30초 타임아웃)
       const response = await withTimeout(
         this.client.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: selectedModel,
           max_tokens: maxTokens,
           temperature: 0.8,
           messages: [
@@ -154,12 +164,14 @@ ${diaryContent}`,
       const content = response.content[0];
       if (content.type === 'text') {
         const comment = content.text.trim();
-        console.log(`✅ Claude API 응답 성공`);
+        console.log(`✅ Claude API 응답 성공 (${useSonnet ? 'Sonnet' : 'Haiku'})`);
 
         // 도장은 항상 'nice' 고정
         return {
           comment,
           stampType: 'nice',
+          model: useSonnet ? 'sonnet' : 'haiku',
+          importanceScore: importanceScore.total,
         };
       }
 
@@ -180,6 +192,89 @@ ${diaryContent}`,
           error
         );
       }
+    }
+  }
+
+  /**
+   * 일기의 중요도 분석 (Haiku 사용)
+   * Sonnet을 사용할지 Haiku를 사용할지 결정하기 위한 1차 필터링
+   */
+  private async analyzeImportance(diaryContent: string): Promise<ImportanceScore> {
+    console.log('📊 [IMPORTANCE] Analyzing diary importance with Haiku...');
+
+    try {
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: 'claude-haiku-4-5',
+          max_tokens: 300,
+          temperature: 0.3, // 낮은 temperature로 일관성 확보
+          messages: [
+            {
+              role: 'user',
+              content: `당신은 일기 분석 전문가입니다.
+아래 일기를 읽고, AI 코멘트 생성 시 더 뛰어난 모델(Sonnet)이 필요한지 판단해주세요.
+
+다음 4가지 기준으로 각각 0-10점을 매겨주세요:
+
+1. **감정적 강도** (0-10점)
+   - 감정 변화의 폭과 깊이
+   - 복잡한 감정이나 양가감정의 존재
+   - 감정 표현의 생생함
+
+2. **의미있는 사건** (0-10점)
+   - 관계적 전환점이나 중요한 상호작용
+   - 개인적 성취나 도전
+   - 건강/치료 관련 진전
+
+3. **성찰의 깊이** (0-10점)
+   - 자기 자신에 대한 새로운 발견
+   - 삶의 패턴이나 의미에 대한 통찰
+   - 미래에 대한 구체적 계획이나 결심
+
+4. **변화의 신호** (0-10점)
+   - 새로운 시도나 첫 경험
+   - 증상, 상태, 습관의 변화
+   - 관점이나 태도의 전환
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요:
+{
+  "emotional_intensity": 5,
+  "significant_event": 3,
+  "depth_of_reflection": 2,
+  "change_signal": 4,
+  "total": 14,
+  "reason": "일상적인 하루에 대한 담담한 기록. 특별한 감정 변화나 의미있는 사건 없음."
+}
+
+일기:
+${diaryContent}`,
+            },
+          ],
+        }),
+        15000 // 15초 타임아웃
+      );
+
+      const content = response.content[0];
+      if (content.type === 'text') {
+        const jsonText = content.text.trim();
+        const score: ImportanceScore = JSON.parse(jsonText);
+
+        console.log(`📊 [IMPORTANCE] Score: ${score.total}/40 - ${score.reason}`);
+        return score;
+      }
+
+      throw new Error('Invalid response format from Haiku');
+    } catch (error: any) {
+      console.error('❌ [IMPORTANCE] Analysis failed, defaulting to low score:', error.message);
+      // 에러 시 낮은 점수 반환 (Haiku 사용)
+      return {
+        emotional_intensity: 3,
+        significant_event: 3,
+        depth_of_reflection: 3,
+        change_signal: 3,
+        total: 12,
+        reason: 'Analysis failed, using conservative score',
+      };
     }
   }
 
