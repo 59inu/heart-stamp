@@ -238,6 +238,25 @@ app.get('/api/admin/recent-comments', adminLimiter, requireAdminToken, (req, res
   }
 });
 
+// DB 통계 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/admin/db-stats', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const stats = DiaryDatabase.getStats();
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Error fetching DB stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch DB stats',
+    });
+  }
+});
+
 // 일반 Push 테스트 엔드포인트 (관리 리미터 + 토큰 인증)
 app.post('/api/push/test-regular', adminLimiter, requireAdminToken, async (req, res) => {
   try {

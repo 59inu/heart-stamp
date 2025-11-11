@@ -446,6 +446,38 @@ export class DiaryDatabase {
       return decryptFields(entry);
     });
   }
+
+  // DB 통계 조회 (관리자용)
+  static getStats(): any {
+    console.log(`📊 [DiaryDatabase] DB 통계 조회`);
+
+    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE deletedAt IS NULL');
+    const total = (totalStmt.get() as any).count;
+
+    const withCommentStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND deletedAt IS NULL');
+    const withComment = (withCommentStmt.get() as any).count;
+
+    const withoutCommentStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NULL AND deletedAt IS NULL');
+    const withoutComment = (withoutCommentStmt.get() as any).count;
+
+    const deletedStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE deletedAt IS NOT NULL');
+    const deleted = (deletedStmt.get() as any).count;
+
+    const usersStmt = db.prepare('SELECT COUNT(DISTINCT userId) as count FROM diaries WHERE deletedAt IS NULL');
+    const uniqueUsers = (usersStmt.get() as any).count;
+
+    const stats = {
+      totalDiaries: total,
+      diariesWithAIComment: withComment,
+      diariesWithoutAIComment: withoutComment,
+      deletedDiaries: deleted,
+      uniqueUsers: uniqueUsers,
+    };
+
+    console.log(`✅ [DiaryDatabase] 통계:`, stats);
+
+    return stats;
+  }
 }
 
 export class PushTokenDatabase {
