@@ -23,13 +23,19 @@ export class AIAnalysisJob {
 
     // 아침 8시 25분 일괄 푸시 알림 전송 (어제 일기 작성한 사용자만) - 테스트용
     cron.schedule('25 8 * * *', async () => {
-      console.log('📬 아침 8:25 (테스트) - 푸시 알림 전송 시작...');
+      console.log('\n' + '📱'.repeat(40));
+      console.log('📬 PUSH NOTIFICATION DELIVERY STARTED');
+      console.log('📱'.repeat(40));
+      console.log(`⏰ Time: ${new Date().toISOString()}`);
 
       // 어제 날짜 일기 중 AI 코멘트를 받은 사용자 목록 조회
       const userIds = DiaryDatabase.getUsersWithAICommentYesterday();
 
+      console.log(`👥 Target users: ${userIds.length}`);
+
       if (userIds.length === 0) {
-        console.log('ℹ️ 어제 일기를 작성한 사용자가 없어 알림을 보내지 않습니다.');
+        console.log('ℹ️  No users wrote diary yesterday');
+        console.log('📱'.repeat(40) + '\n');
         return;
       }
 
@@ -40,7 +46,10 @@ export class AIAnalysisJob {
         '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
         { type: 'ai_comment_complete' }
       );
-      console.log(`✅ 아침 8:25 (테스트) - ${userIds.length}명에게 푸시 알림 전송 완료`);
+
+      console.log('📱'.repeat(40));
+      console.log(`✅ PUSH NOTIFICATION SENT to ${userIds.length} users`);
+      console.log('📱'.repeat(40) + '\n');
     });
 
     // 15분마다 Push Notification Receipt 확인
@@ -58,22 +67,39 @@ export class AIAnalysisJob {
 
   async runBatchAnalysis() {
     if (this.isRunning) {
-      console.log('Batch analysis already running, skipping...');
+      console.log('⏭️  Batch analysis already running, skipping...');
       return;
     }
 
     this.isRunning = true;
-    console.log('Starting batch AI analysis...');
+
+    console.log('\n' + '='.repeat(80));
+    console.log('🤖 AI BATCH ANALYSIS STARTED');
+    console.log('='.repeat(80));
+    console.log(`⏰ Started at: ${new Date().toISOString()}`);
+    console.log(`🌏 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
 
     try {
       // Get all diaries without AI comments
       const pendingDiaries = DiaryDatabase.getPending();
 
-      console.log(`Found ${pendingDiaries.length} diaries to analyze`);
+      console.log(`\n📊 Found ${pendingDiaries.length} diaries to analyze`);
+
+      if (pendingDiaries.length === 0) {
+        console.log('ℹ️  No diaries to process');
+        console.log('='.repeat(80) + '\n');
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
 
       for (const diary of pendingDiaries) {
         try {
-          console.log(`Analyzing diary ${diary._id}...`);
+          console.log(`\n📝 [${successCount + failCount + 1}/${pendingDiaries.length}] Analyzing diary ${diary._id}...`);
+          console.log(`   Date: ${diary.date}`);
+          console.log(`   Mood: ${diary.moodTag || 'neutral'}`);
+          console.log(`   Content preview: ${diary.content.substring(0, 50)}...`);
 
           const analysis = await this.claudeService.analyzeDiary(
             diary.content,
@@ -87,20 +113,32 @@ export class AIAnalysisJob {
             syncedWithServer: true,
           });
 
-          console.log(`Successfully analyzed diary ${diary._id}`);
+          successCount++;
+          console.log(`   ✅ SUCCESS - Comment: "${analysis.comment.substring(0, 50)}..."`);
+          console.log(`   🏆 Stamp: ${analysis.stampType}`);
 
           // Add a small delay to avoid rate limiting
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } catch (error) {
-          console.error(`Error analyzing diary ${diary._id}:`, error);
+          failCount++;
+          console.error(`   ❌ FAILED - Error:`, error);
           // Continue with next diary even if one fails
         }
       }
 
-      console.log('Batch AI analysis completed');
-      console.log(`📋 Processed ${pendingDiaries.length} diaries - regular push will be sent at 8:30 AM`);
+      console.log('\n' + '='.repeat(80));
+      console.log('🎉 AI BATCH ANALYSIS COMPLETED');
+      console.log('='.repeat(80));
+      console.log(`✅ Successful: ${successCount} diaries`);
+      console.log(`❌ Failed: ${failCount} diaries`);
+      console.log(`📊 Total processed: ${pendingDiaries.length} diaries`);
+      console.log(`⏰ Finished at: ${new Date().toISOString()}`);
+      console.log(`📱 Regular push notification will be sent at 8:30 AM`);
+      console.log('='.repeat(80) + '\n');
     } catch (error) {
-      console.error('Error in batch analysis:', error);
+      console.error('\n' + '❌'.repeat(40));
+      console.error('💥 CRITICAL ERROR in batch analysis:', error);
+      console.error('❌'.repeat(40) + '\n');
     } finally {
       this.isRunning = false;
     }
