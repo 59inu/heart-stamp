@@ -180,6 +180,26 @@ app.post('/api/jobs/trigger-analysis', adminLimiter, requireAdminToken, async (r
   }
 });
 
+// 어제 일기의 AI 코멘트 초기화 (재생성용 - 관리 리미터 + 토큰 인증)
+app.post('/api/admin/reset-yesterday-comments', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const count = DiaryDatabase.resetYesterdayComments();
+
+    res.json({
+      success: true,
+      message: `Reset ${count} diary comments`,
+      count: count,
+    });
+  } catch (error) {
+    console.error('Error resetting comments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset comments',
+    });
+  }
+});
+
 // Manual backup trigger endpoint (관리 리미터 + 토큰 인증)
 app.post('/api/jobs/trigger-backup', adminLimiter, requireAdminToken, async (req, res) => {
   try {

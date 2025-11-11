@@ -478,6 +478,31 @@ export class DiaryDatabase {
 
     return stats;
   }
+
+  // 어제 일기의 AI 코멘트 초기화 (관리자용 - 재생성용)
+  static resetYesterdayComments(): number {
+    // 어제 날짜 계산
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const day = String(yesterday.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`;
+
+    console.log(`🔄 [DiaryDatabase] ${yesterdayStr} 날짜 일기의 AI 코멘트 초기화`);
+
+    // 어제 날짜 일기의 aiComment와 stampType을 NULL로 설정
+    const stmt = db.prepare(`
+      UPDATE diaries
+      SET aiComment = NULL, stampType = NULL, syncedWithServer = 0
+      WHERE date LIKE ? AND deletedAt IS NULL
+    `);
+    const result = stmt.run(`${yesterdayStr}%`);
+
+    console.log(`✅ [DiaryDatabase] ${result.changes}개 일기의 AI 코멘트 초기화 완료`);
+
+    return result.changes;
+  }
 }
 
 export class PushTokenDatabase {
