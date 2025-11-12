@@ -257,6 +257,9 @@
       <div id="tokenStatus" class="error"></div>
     </div>
 
+    <!-- Main Content (hidden until token verified) -->
+    <div id="mainContent" style="display: none;">
+
     <!-- Statistics Grid -->
     <div class="grid">
       <!-- Model Stats -->
@@ -300,26 +303,67 @@
       <button class="btn btn-success" onclick="testImportance()" style="margin-top: 10px;">중요도 분석</button>
       <div id="importanceResult" class="result"></div>
     </div>
+
+    <!-- Generate/Delete Comment for Specific Date -->
+    <div class="card">
+      <h2>특정 날짜 코멘트 생성/삭제</h2>
+      <input type="text" id="generateUserId" placeholder="사용자 ID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+      <input type="date" id="generateDate" placeholder="YYYY-MM-DD" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-success" onclick="generateCommentForDate()" style="flex: 1;">코멘트 생성</button>
+        <button class="btn btn-danger" onclick="deleteCommentForDate()" style="flex: 1; background: #f56565;">코멘트 삭제</button>
+      </div>
+      <div id="generateCommentResult" class="result"></div>
+    </div>
+
+    </div><!-- End of mainContent -->
   </div>
 
   <script>
     const API_BASE = window.location.origin;
 
     // Load token from localStorage
-    window.onload = () => {
+    window.onload = async () => {
       const token = localStorage.getItem('adminToken');
       if (token) {
         document.getElementById('adminToken').value = token;
-        document.getElementById('tokenStatus').textContent = '토큰이 저장되어 있습니다';
-        document.getElementById('tokenStatus').style.color = '#48bb78';
-
-        // Auto-load stats
-        loadModelStats();
-        loadDbStats();
+        await verifyAndShowContent();
       }
     };
 
-    function saveToken() {
+    async function verifyAndShowContent() {
+      const token = getToken();
+      if (!token) return;
+
+      // Verify token by calling an API
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/db-stats`, {
+          headers: { 'x-admin-token': token }
+        });
+
+        if (response.ok) {
+          // Token valid
+          document.getElementById('tokenStatus').textContent = '✅ 토큰 검증 성공';
+          document.getElementById('tokenStatus').style.color = '#48bb78';
+          document.getElementById('mainContent').style.display = 'block';
+
+          // Auto-load stats
+          loadModelStats();
+          loadDbStats();
+        } else {
+          // Token invalid
+          document.getElementById('tokenStatus').textContent = '❌ 토큰이 유효하지 않습니다';
+          document.getElementById('tokenStatus').style.color = '#f56565';
+          document.getElementById('mainContent').style.display = 'none';
+          localStorage.removeItem('adminToken');
+        }
+      } catch (error) {
+        document.getElementById('tokenStatus').textContent = '❌ 서버 연결 실패';
+        document.getElementById('tokenStatus').style.color = '#f56565';
+      }
+    }
+
+    async function saveToken() {
       const token = document.getElementById('adminToken').value.trim();
       if (!token) {
         document.getElementById('tokenStatus').textContent = '토큰을 입력하세요';
@@ -327,12 +371,7 @@
         return;
       }
       localStorage.setItem('adminToken', token);
-      document.getElementById('tokenStatus').textContent = '토큰이 저장되었습니다';
-      document.getElementById('tokenStatus').style.color = '#48bb78';
-
-      // Auto-load stats
-      loadModelStats();
-      loadDbStats();
+      await verifyAndShowContent();
     }
 
     function getToken() {
@@ -569,6 +608,127 @@
 
 <strong>판단 이유:</strong>
 ${data.reason}</pre>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function generateCommentForDate() {
+      const userId = document.getElementById('generateUserId').value.trim();
+      const date = document.getElementById('generateDate').value.trim();
+      const resultDiv = document.getElementById('generateCommentResult');
+
+      if (!userId) {
+        alert('사용자 ID를 입력하세요');
+        return;
+      }
+
+      if (!date) {
+        alert('날짜를 선택하세요');
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">AI 코멘트 생성 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall('/api/admin/generate-comment', 'POST', { userId, date });
+        const data = result.data;
+
+        const formattedDate = new Date(data.date).toLocaleString('ko-KR');
+        const modelBadge = data.model === 'sonnet' ?
+          '<span style="background: #9f7aea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">SONNET</span>' :
+          '<span style="background: #48bb78; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">HAIKU</span>';
+        const stampEmoji = data.stampType === 'nice' ? '😊' :
+                          data.stampType === 'great' ? '🌟' :
+                          data.stampType === 'best' ? '🏆' : '✨';
+
+        resultDiv.innerHTML = `
+          <div style="background: #f7fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #48bb78;">
+            <div style="margin-bottom: 12px;">
+              <strong style="font-size: 16px;">✅ 코멘트 생성 완료</strong>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>일기 ID:</strong> <code>${data.diaryId}</code>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>날짜:</strong> ${formattedDate}
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>사용 모델:</strong> ${modelBadge}
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>중요도 점수:</strong> <span style="font-weight: bold; color: ${data.importanceScore >= 20 ? '#9f7aea' : '#48bb78'};">${data.importanceScore}/40</span>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>도장:</strong> ${stampEmoji} ${data.stampType}
+            </div>
+
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+              <strong>AI 코멘트:</strong>
+              <div style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; line-height: 1.6;">
+                💬 ${data.aiComment}
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function deleteCommentForDate() {
+      const userId = document.getElementById('generateUserId').value.trim();
+      const date = document.getElementById('generateDate').value.trim();
+      const resultDiv = document.getElementById('generateCommentResult');
+
+      if (!userId) {
+        alert('사용자 ID를 입력하세요');
+        return;
+      }
+
+      if (!date) {
+        alert('날짜를 선택하세요');
+        return;
+      }
+
+      if (!confirm(`${date} 날짜의 AI 코멘트를 삭제하시겠습니까?`)) {
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">AI 코멘트 삭제 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall('/api/admin/delete-comment', 'DELETE', { userId, date });
+        const data = result.data;
+
+        const formattedDate = new Date(data.date).toLocaleString('ko-KR');
+
+        resultDiv.innerHTML = `
+          <div style="background: #fff5f5; padding: 16px; border-radius: 8px; border-left: 4px solid #f56565;">
+            <div style="margin-bottom: 12px;">
+              <strong style="font-size: 16px;">🗑️ 코멘트 삭제 완료</strong>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>일기 ID:</strong> <code>${data.diaryId}</code>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <strong>날짜:</strong> ${formattedDate}
+            </div>
+
+            <div style="margin-top: 12px; color: #718096;">
+              AI 코멘트, 모델 정보, 중요도 점수, 도장이 모두 삭제되었습니다.
+            </div>
+          </div>
         `;
       } catch (error) {
         resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;

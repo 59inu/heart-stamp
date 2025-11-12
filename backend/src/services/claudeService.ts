@@ -35,16 +35,18 @@ export class ClaudeService {
     console.log('✅ ClaudeService initialized with Circuit Breaker');
   }
 
-  async analyzeDiary(
-    diaryContent: string, 
-    emotionTag: string, 
-    date: string): Promise<AIAnalysisResult> {
+  async generateComment(
+    diaryContent: string,
+    emotionTag: string,
+    date: string,
+    options?: { forceModel?: 'sonnet' | 'haiku' }
+  ): Promise<AIAnalysisResult> {
     try {
       // Circuit Breaker로 보호
       return await this.circuitBreaker.execute(async () => {
         // 재시도 로직 적용 (최대 3번, exponential backoff)
         return await retryWithCondition(
-          async () => await this.performAnalysis(diaryContent, emotionTag, date),
+          async () => await this.performAnalysis(diaryContent, emotionTag, date, options?.forceModel),
           (error) => {
             // Claude API 에러가 재시도 가능한지 확인
             if (error instanceof ClaudeAPIError) {
@@ -80,21 +82,34 @@ export class ClaudeService {
   private async performAnalysis(
     diaryContent: string,
     emotionTag: string,
-    date: string
+    date: string,
+    forceModel?: 'sonnet' | 'haiku'
   ): Promise<AIAnalysisResult> {
     console.log('🤖 Claude API 호출 시작');
     console.log(`일기 날짜: ${date}`);
     console.log(`일기 내용: ${diaryContent.substring(0, 50)}...`);
 
-    // 🔍 [1단계] Haiku로 일기 중요도 분석
-    const importanceScore = await this.analyzeImportance(diaryContent);
+    let importanceScore: any;
+    let useSonnet: boolean;
+    let selectedModel: string;
 
-    // 📊 중요도에 따라 모델 선택 (임계값: 20점)
-    const IMPORTANCE_THRESHOLD = 20;
-    const useSonnet = importanceScore.total >= IMPORTANCE_THRESHOLD;
-    const selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
+    if (forceModel) {
+      // 강제 모델 지정 (Admin API용)
+      useSonnet = forceModel === 'sonnet';
+      selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
+      importanceScore = { total: useSonnet ? 40 : 0 }; // 더미 점수
+      console.log(`🎯 [MODEL SELECTION] ${forceModel.toUpperCase()} forced (Admin mode)`);
+    } else {
+      // 🔍 [1단계] Haiku로 일기 중요도 분석
+      importanceScore = await this.analyzeImportance(diaryContent);
 
-    console.log(`🎯 [MODEL SELECTION] ${useSonnet ? 'Sonnet' : 'Haiku'} selected (score: ${importanceScore.total}/40)`);
+      // 📊 중요도에 따라 모델 선택 (임계값: 20점)
+      const IMPORTANCE_THRESHOLD = 25;
+      useSonnet = importanceScore.total >= IMPORTANCE_THRESHOLD;
+      selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
+
+      console.log(`🎯 [MODEL SELECTION] ${useSonnet ? 'Sonnet' : 'Haiku'} selected (score: ${importanceScore.total}/40)`);
+    }
 
     // 일기 길이에 따라 max_tokens와 응답 길이 조절
   const sentenceCount = diaryContent
@@ -134,7 +149,6 @@ export class ClaudeService {
               role: 'user',
               content: `당신은 따뜻한 초등학교 담임 선생님입니다.
 학생의 일기를 읽고 ${responseLength}로 구체적이고 깊이 있게 반응해주세요.
-목표는 사용자가 ‘이해받았다고 느끼는 것’입니다
 학생이 선택한 감정: "${emotionTag}"
 
 규칙:

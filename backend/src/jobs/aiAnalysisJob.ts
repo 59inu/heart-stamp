@@ -115,7 +115,7 @@ export class AIAnalysisJob {
             console.log(`   Content: ${diary.content.substring(0, 50)}...`);
           }
 
-          const analysis = await this.claudeService.analyzeDiary(
+          const analysis = await this.claudeService.generateComment(
             diary.content,
             diary.moodTag || 'neutral',
             diary.date

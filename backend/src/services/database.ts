@@ -261,39 +261,40 @@ export class DiaryDatabase {
         const fields: string[] = [];
         const values: any[] = [];
 
-        if (encrypted.content !== undefined) {
+        // updates 객체의 키를 확인 (encrypted는 undefined 값이 사라질 수 있음)
+        if ('content' in updates) {
           fields.push('content = ?');
-          values.push(encrypted.content);
+          values.push(encrypted.content ?? null);
         }
-        if (encrypted.weather !== undefined) {
+        if ('weather' in updates) {
           fields.push('weather = ?');
-          values.push(encrypted.weather);
+          values.push(encrypted.weather ?? null);
         }
-        if (encrypted.mood !== undefined) {
+        if ('mood' in updates) {
           fields.push('mood = ?');
-          values.push(encrypted.mood);
+          values.push(encrypted.mood ?? null);
         }
-        if (encrypted.moodTag !== undefined) {
+        if ('moodTag' in updates) {
           fields.push('moodTag = ?');
-          values.push(encrypted.moodTag);
+          values.push(encrypted.moodTag ?? null);
         }
-        if (encrypted.aiComment !== undefined) {
+        if ('aiComment' in updates) {
           fields.push('aiComment = ?');
-          values.push(encrypted.aiComment);
+          values.push(encrypted.aiComment ?? null);
         }
-        if (encrypted.stampType !== undefined) {
+        if ('stampType' in updates) {
           fields.push('stampType = ?');
-          values.push(encrypted.stampType);
+          values.push(encrypted.stampType ?? null);
         }
-        if (encrypted.model !== undefined) {
+        if ('model' in updates) {
           fields.push('model = ?');
-          values.push(encrypted.model);
+          values.push(encrypted.model ?? null);
         }
-        if (encrypted.importanceScore !== undefined) {
+        if ('importanceScore' in updates) {
           fields.push('importanceScore = ?');
-          values.push(encrypted.importanceScore);
+          values.push(encrypted.importanceScore ?? null);
         }
-        if (encrypted.syncedWithServer !== undefined) {
+        if ('syncedWithServer' in updates) {
           fields.push('syncedWithServer = ?');
           values.push(encrypted.syncedWithServer ? 1 : 0);
         }
