@@ -18,14 +18,16 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "APP_ENV": "development"
+        "APP_ENV": "development",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
       "node": "22.11.0",
       "autoIncrement": true,
       "env": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
