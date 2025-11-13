@@ -38,7 +38,7 @@ export default ({ config }) => {
         },
       },
       android: {
-        package: buildProfile === 'development' ? 'com.59inu.heartstamp.dev' : 'com.59inu.heartstamp',
+        package: buildProfile === 'development' ? 'com.team59inu.heartstamp.dev' : 'com.team59inu.heartstamp',
         adaptiveIcon: {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',
