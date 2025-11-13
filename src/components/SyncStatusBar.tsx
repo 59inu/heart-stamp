@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DiaryStorage } from '../services/diaryStorage';
@@ -61,9 +62,22 @@ export const SyncStatusBar: React.FC<SyncStatusBarProps> = ({ onSyncComplete }) 
         onSyncComplete?.();
       } else {
         logger.error('❌ [SyncStatusBar] Sync failed:', result.error);
+        Alert.alert(
+          '동기화 실패',
+          result.error || '서버와 연결할 수 없습니다. 인터넷 연결을 확인해주세요.',
+          [{ text: '확인' }]
+        );
+        // 실패해도 카운트 갱신 (실패한 항목 확인)
+        await loadUnsyncedCount();
       }
     } catch (error) {
       logger.error('❌ [SyncStatusBar] Sync error:', error);
+      Alert.alert(
+        '동기화 오류',
+        '일기 동기화 중 오류가 발생했습니다. 나중에 다시 시도해주세요.',
+        [{ text: '확인' }]
+      );
+      await loadUnsyncedCount();
     } finally {
       setIsSyncing(false);
     }
