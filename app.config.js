@@ -23,7 +23,7 @@ export default ({ config }) => {
       },
       ios: {
         supportsTablet: true,
-        bundleIdentifier: buildProfile === 'development' ? 'com.59inu.heartstamp.dev' : 'com.59inu.heartstamp',
+        bundleIdentifier: buildProfile === 'production' ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.dev',
         associatedDomains: [
           'applinks:heartstamp.kr',
           'applinks:www.heartstamp.kr'
@@ -38,7 +38,7 @@ export default ({ config }) => {
         },
       },
       android: {
-        package: buildProfile === 'development' ? 'com.team59inu.heartstamp.dev' : 'com.team59inu.heartstamp',
+        package: buildProfile === 'production' ? 'com.team59inu.heartstamp' : 'com.team59inu.heartstamp.dev',
         adaptiveIcon: {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',
