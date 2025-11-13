@@ -21,18 +21,22 @@ export default ({ config }) => {
 
   // 빌드 프로파일에 따라 Android Package 결정
   const getAndroidPackage = () => {
-    switch (buildProfile) {
-      case 'development':
-        return 'com.59inu.heartstamp.dev';
-      case 'preview':
-        return 'com.59inu.heartstamp'; // preview도 production과 동일한 Package 사용
-      default:
-        return 'com.59inu.heartstamp';
-    }
+    const pkg = (() => {
+      switch (buildProfile) {
+        case 'development':
+          return 'com.59inu.heartstamp.dev';
+        case 'preview':
+          return 'com.59inu.heartstamp'; // preview도 production과 동일한 Package 사용
+        default:
+          return 'com.59inu.heartstamp';
+      }
+    })();
+    console.log('🔍 [app.config.js] buildProfile:', buildProfile);
+    console.log('🔍 [app.config.js] Android package:', pkg);
+    return pkg;
   };
 
   return {
-    ...config,
     expo: {
       name: getAppName(),
       slug: 'heart-stamp',

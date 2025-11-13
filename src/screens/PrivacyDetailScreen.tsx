@@ -76,7 +76,8 @@ export const PrivacyDetailScreen: React.FC = () => {
           • 감정 정보 (기분, 감정 태그){'\n'}
           • 날씨 정보{'\n'}
           • 사진 (선택사항){'\n'}
-          • 기기 정보 (디바이스 ID, OS 버전, 앱 버전){'\n'}
+          • 앱 내부 익명 사용자 ID (UUID - 앱 설치 시 자동 생성){'\n'}
+          • 기기 정보 (OS 버전, 앱 버전){'\n'}
           • 푸시 알림 토큰 (알림 수신 동의 시)
         </Text>
 
@@ -140,16 +141,17 @@ export const PrivacyDetailScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>5. 개인정보의 파기 절차 및 방법</Text>
         <Text style={styles.text}>
           • 앱 삭제 시 모든 로컬 데이터가 즉시 삭제됩니다{'\n'}
-          • 서버에 저장된 데이터는 이용자의 요청 시 즉시 삭제 가능합니다{'\n'}
-          • 삭제 요청: 설정 &gt; 문의하기를 통해 연락해주세요{'\n'}
+          • 서버에 저장된 데이터는 이용자의 요청 시 삭제 가능합니다{'\n'}
+          • 삭제 요청 방법: 설정 &gt; 문의하기를 통해 연락해주세요{'\n'}
+          • 삭제 처리 시간: 요청 접수 후 7일 이내{'\n'}
           • 파기 방법: 복구 불가능한 방법으로 영구 삭제
         </Text>
 
         <Text style={styles.sectionTitle}>6. 개인정보의 암호화</Text>
         <Text style={styles.text}>
-          • 일기 원문은 암호화되어 저장됩니다{'\n'}
-          • 서버 관리자를 포함한 어떤 운영자도 암호화된 일기를 열람할 수 없습니다{'\n'}
-          • 통신 구간은 HTTPS로 암호화됩니다
+          • 일기 원문, 감정 태그, AI 코멘트는 AES-256-GCM 암호화로 저장됩니다{'\n'}
+          • 서버 관리자를 포함한 어떤 운영자도 암호화된 데이터를 열람할 수 없습니다{'\n'}
+          • 통신 구간은 HTTPS(TLS 1.2 이상)로 암호화됩니다
         </Text>
 
         <Text style={styles.sectionTitle}>7. 이용자의 권리</Text>
@@ -159,7 +161,7 @@ export const PrivacyDetailScreen: React.FC = () => {
           • 개인정보 정정 요구{'\n'}
           • 개인정보 삭제 요구{'\n'}
           • 개인정보 처리 정지 요구{'\n\n'}
-          권리 행사 방법: 설정 &gt; 문의하기 또는 아래 연락처로 문의
+          권리 행사 방법: 설정 &gt; 문의하기를 통해 연락해주세요
         </Text>
 
         <Text style={styles.sectionTitle}>8. 개인정보 보호책임자</Text>
