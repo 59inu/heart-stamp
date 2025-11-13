@@ -13,7 +13,7 @@ export default ({ config }) => {
       case 'development':
         return 'com.59inu.heartstamp.dev';
       case 'preview':
-        return 'com.59inu.heartstamp.preview';
+        return 'com.59inu.heartstamp'; // preview도 production과 동일한 Bundle ID 사용
       default:
         return 'com.59inu.heartstamp';
     }
@@ -25,7 +25,7 @@ export default ({ config }) => {
       case 'development':
         return 'com.59inu.heartstamp.dev';
       case 'preview':
-        return 'com.59inu.heartstamp.preview';
+        return 'com.59inu.heartstamp'; // preview도 production과 동일한 Package 사용
       default:
         return 'com.59inu.heartstamp';
     }
