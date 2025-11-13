@@ -4,18 +4,6 @@ export default ({ config }) => {
 
   console.log('🔍 [app.config.js] buildProfile:', buildProfile);
 
-  // 빌드 프로파일에 따라 Bundle Identifier 결정
-  let bundleIdentifier = 'com.59inu.heartstamp';
-  let androidPackage = 'com.59inu.heartstamp';
-
-  if (buildProfile === 'development') {
-    bundleIdentifier = 'com.59inu.heartstamp.dev';
-    androidPackage = 'com.59inu.heartstamp.dev';
-  }
-
-  console.log('🔍 [app.config.js] iOS bundleIdentifier:', bundleIdentifier);
-  console.log('🔍 [app.config.js] Android package:', androidPackage);
-
   return {
     expo: {
       name: 'Heart Stamp',
@@ -35,7 +23,7 @@ export default ({ config }) => {
       },
       ios: {
         supportsTablet: true,
-        bundleIdentifier: bundleIdentifier,
+        bundleIdentifier: buildProfile === 'development' ? 'com.59inu.heartstamp.dev' : 'com.59inu.heartstamp',
         associatedDomains: [
           'applinks:heartstamp.kr',
           'applinks:www.heartstamp.kr'
@@ -50,7 +38,7 @@ export default ({ config }) => {
         },
       },
       android: {
-        package: androidPackage,
+        package: buildProfile === 'development' ? 'com.59inu.heartstamp.dev' : 'com.59inu.heartstamp',
         adaptiveIcon: {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',
