@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DiaryStorage } from '../services/diaryStorage';
+import { SyncQueue } from '../services/syncQueue';
 import { diaryEvents, EVENTS } from '../services/eventEmitter';
 import { logger } from '../utils/logger';
 
@@ -54,6 +55,12 @@ export const SyncStatusBar: React.FC<SyncStatusBarProps> = ({ onSyncComplete }) 
     logger.log('🔄 [SyncStatusBar] Manual sync triggered');
 
     try {
+      // 1단계: 로컬 일기를 서버에 업로드 (SyncQueue 처리)
+      logger.log('📤 [SyncStatusBar] Uploading unsynced diaries...');
+      await SyncQueue.processQueue();
+
+      // 2단계: 서버에서 최신 데이터 가져오기
+      logger.log('📥 [SyncStatusBar] Fetching from server...');
       const result = await DiaryStorage.syncWithServer();
 
       if (result.success) {
