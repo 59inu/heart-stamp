@@ -23,7 +23,7 @@ export default ({ config }) => {
       },
       ios: {
         supportsTablet: true,
-        bundleIdentifier: buildProfile === 'production' ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.dev',
+        bundleIdentifier: buildProfile === 'production' ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.preview',
         associatedDomains: [
           'applinks:heartstamp.kr',
           'applinks:www.heartstamp.kr'
