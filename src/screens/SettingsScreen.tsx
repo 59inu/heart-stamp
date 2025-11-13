@@ -7,6 +7,8 @@ import {
   ScrollView,
   Switch,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -33,6 +35,7 @@ export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(true);
+  const [hasPushPermission, setHasPushPermission] = useState(true);
   const [diaryCount, setDiaryCount] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
@@ -60,6 +63,10 @@ export const SettingsScreen: React.FC = () => {
     React.useCallback(() => {
       const loadNotificationSettings = async () => {
         try {
+          // 푸시 권한 체크
+          const pushPermission = await NotificationService.checkPushPermission();
+          setHasPushPermission(pushPermission);
+
           const dailyReminderSetting = await NotificationService.getDailyReminderEnabled();
           setDailyReminderEnabled(dailyReminderSetting);
 
@@ -193,6 +200,29 @@ export const SettingsScreen: React.FC = () => {
     await WebBrowser.openBrowserAsync(SURVEY_URL);
   };
 
+  const handleOpenSettings = () => {
+    Alert.alert(
+      '알림 권한 필요',
+      '알림을 받으려면 설정에서 알림 권한을 허용해주세요.',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '설정으로 이동',
+          onPress: () => {
+            if (Platform.OS === 'ios') {
+              Linking.openURL('app-settings:');
+            } else {
+              Linking.openSettings();
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* 헤더 */}
@@ -219,10 +249,26 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={notificationEnabled}
               onValueChange={handleTeacherCommentNotificationToggle}
+              disabled={!hasPushPermission}
               trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
               thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
             />
           </View>
+
+          {/* 권한 없을 때 안내 문구 */}
+          {!hasPushPermission && (
+            <TouchableOpacity
+              style={styles.permissionWarning}
+              onPress={handleOpenSettings}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="alert-circle" size={18} color="#FF9800" />
+              <Text style={styles.permissionWarningText}>
+                알림 권한이 필요합니다. 탭하여 설정으로 이동
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color="#FF9800" />
+            </TouchableOpacity>
+          )}
 
           <View style={styles.settingItem}>
             <View style={styles.settingTextContainer}>
@@ -511,5 +557,22 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  permissionWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: -1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  permissionWarningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#F57C00',
+    marginLeft: 8,
+    fontWeight: '500',
   },
 });

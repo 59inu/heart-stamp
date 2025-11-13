@@ -299,16 +299,43 @@ export class NotificationService {
   }
 
   /**
+   * 푸시 알림 권한 상태 확인
+   * @returns true if granted, false otherwise
+   */
+  static async checkPushPermission(): Promise<boolean> {
+    try {
+      if (!Device.isDevice) {
+        return false; // 시뮬레이터에서는 권한 없음
+      }
+
+      const { status } = await Notifications.getPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      logger.error('❌ Failed to check push permission:', error);
+      return false;
+    }
+  }
+
+  /**
    * 선생님 코멘트 알림 설정 상태 불러오기
+   * 권한이 없으면 자동으로 false 반환
    */
   static async getTeacherCommentNotificationEnabled(): Promise<boolean> {
     try {
+      // 권한 체크
+      const hasPermission = await this.checkPushPermission();
+      if (!hasPermission) {
+        // 권한 없으면 설정도 false로 동기화
+        await AsyncStorage.setItem(TEACHER_COMMENT_NOTIFICATION_KEY, 'false');
+        return false;
+      }
+
       const value = await AsyncStorage.getItem(TEACHER_COMMENT_NOTIFICATION_KEY);
       // 기본값은 true (처음 설치 시 알림 활성화)
       return value === null ? true : value === 'true';
     } catch (error) {
       logger.error('❌ Failed to get teacher comment notification setting:', error);
-      return true; // 오류 시 기본값 반환
+      return false; // 오류 시 false 반환
     }
   }
 
