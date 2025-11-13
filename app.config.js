@@ -11,11 +11,11 @@ export default ({ config }) => {
   const getBundleIdentifier = () => {
     switch (buildProfile) {
       case 'development':
-        return 'com.heartstamp.app.dev';
+        return 'com.59inu.heartstamp.dev';
       case 'preview':
-        return 'com.heartstamp.app.preview';
+        return 'com.59inu.heartstamp.preview';
       default:
-        return 'com.heartstamp.app';
+        return 'com.59inu.heartstamp';
     }
   };
 
@@ -23,11 +23,11 @@ export default ({ config }) => {
   const getAndroidPackage = () => {
     switch (buildProfile) {
       case 'development':
-        return 'com.heartstamp.app.dev';
+        return 'com.59inu.heartstamp.dev';
       case 'preview':
-        return 'com.heartstamp.app.preview';
+        return 'com.59inu.heartstamp.preview';
       default:
-        return 'com.heartstamp.app';
+        return 'com.59inu.heartstamp';
     }
   };
 
@@ -52,6 +52,10 @@ export default ({ config }) => {
       ios: {
         supportsTablet: true,
         bundleIdentifier: getBundleIdentifier(),
+        associatedDomains: [
+          'applinks:heartstamp.kr',
+          'applinks:www.heartstamp.kr'
+        ],
         config: {
           usesNonExemptEncryption: false,
         },
