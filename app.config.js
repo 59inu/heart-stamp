@@ -1,8 +1,10 @@
 export default ({ config }) => {
-  // EAS Build가 자동으로 주입하는 환경 변수
-  const buildProfile = process.env.EAS_BUILD_PROFILE || 'production';
+  // APP_VARIANT 환경 변수로 판단 (eas.json에서 주입)
+  const appVariant = process.env.APP_VARIANT;
+  const isProduction = process.env.APP_ENV === 'production';
 
-  console.log('🔍 [app.config.js] buildProfile:', buildProfile);
+  console.log('🔍 [app.config.js] APP_VARIANT:', appVariant);
+  console.log('🔍 [app.config.js] APP_ENV:', process.env.APP_ENV);
 
   return {
     expo: {
@@ -23,7 +25,7 @@ export default ({ config }) => {
       },
       ios: {
         supportsTablet: true,
-        bundleIdentifier: buildProfile === 'production' ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.preview',
+        bundleIdentifier: isProduction ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.preview',
         associatedDomains: [
           'applinks:heartstamp.kr',
           'applinks:www.heartstamp.kr'
@@ -38,7 +40,7 @@ export default ({ config }) => {
         },
       },
       android: {
-        package: buildProfile === 'production' ? 'com.team59inu.heartstamp' : 'com.team59inu.heartstamp.dev',
+        package: isProduction ? 'com.team59inu.heartstamp' : 'com.team59inu.heartstamp.dev',
         adaptiveIcon: {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',

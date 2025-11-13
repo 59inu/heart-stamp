@@ -20,6 +20,7 @@
       "channel": "preview",
       "env": {
         "APP_ENV": "development",
+        "APP_VARIANT": "preview",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
