@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { AppState, AppStateStatus, Alert } from 'react-native';
+import { AppState, AppStateStatus, Alert, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import * as Updates from 'expo-updates';
+import * as SplashScreen from 'expo-splash-screen';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { NotificationService } from './src/services/notificationService';
 import { DiaryStorage } from './src/services/diaryStorage';
@@ -18,12 +19,39 @@ import { initSentry, setUser } from './src/config/sentry';
 // Sentry 초기화 (앱 시작 전)
 initSentry();
 
+// 스플래시 화면 자동 숨김 방지
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
   const appState = useRef(AppState.currentState);
   const lastSyncTime = useRef(0);
   const SYNC_DEBOUNCE_MS = 30000; // 30초 디바운스
+  const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
+    async function prepare() {
+      try {
+        // 스플래시 화면을 2초간 보여주기
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (e) {
+        logger.error('Splash screen preparation error:', e);
+      } finally {
+        setAppIsReady(true);
+      }
+    }
+
+    prepare();
+  }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (appIsReady) {
+      // 스플래시 화면 숨기기
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  useEffect(() => {
+    if (!appIsReady) return;
     // EAS Updates 체크 (프로덕션/프리뷰 빌드에서만)
     const checkForUpdates = async () => {
       if (__DEV__) {
@@ -209,14 +237,20 @@ export default function App() {
       NotificationService.removeNotificationListeners();
       subscription.remove();
     };
-  }, []);
+  }, [appIsReady]);
+
+  if (!appIsReady) {
+    return null;
+  }
 
   return (
-    <ErrorBoundary level="app">
-      <AppNavigator />
-      <StatusBar style="auto" />
-      <Toast />
-      <OfflineBanner />
-    </ErrorBoundary>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <ErrorBoundary level="app">
+        <AppNavigator />
+        <StatusBar style="auto" />
+        <Toast />
+        <OfflineBanner />
+      </ErrorBoundary>
+    </View>
   );
 }
