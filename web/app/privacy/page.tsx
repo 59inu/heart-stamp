@@ -5,17 +5,25 @@ export const metadata = {
   description: 'Heart Stamp 개인정보 처리방침',
 };
 
-export default function PrivacyPolicy() {
+export default function PrivacyPolicy({
+  searchParams,
+}: {
+  searchParams: { embedded?: string };
+}) {
+  const isEmbedded = searchParams.embedded === 'true';
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-100">
-        <div className="container mx-auto px-6 py-4">
-          <Link href="/" className="text-[#87A6D1] hover:text-[#6B8AB8] transition-colors">
-            ← 홈으로
-          </Link>
-        </div>
-      </header>
+      {/* Header - 웹뷰에서는 숨김 */}
+      {!isEmbedded && (
+        <header className="border-b border-gray-100">
+          <div className="container mx-auto px-6 py-4">
+            <Link href="/" className="text-[#87A6D1] hover:text-[#6B8AB8] transition-colors">
+              ← 홈으로
+            </Link>
+          </div>
+        </header>
+      )}
 
       {/* Content */}
       <main className="container mx-auto px-6 py-12 max-w-4xl">

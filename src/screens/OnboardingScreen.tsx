@@ -198,7 +198,7 @@ export const OnboardingScreen: React.FC = () => {
             onPress={handleTermsToggle}
             required
             title="서비스 이용약관"
-            onDetail={() => WebBrowser.openBrowserAsync('https://heartstamp.kr/terms')}
+            onDetail={() => WebBrowser.openBrowserAsync('https://heartstamp.kr/terms?embedded=true')}
           />
 
           <AgreementItem
@@ -207,7 +207,7 @@ export const OnboardingScreen: React.FC = () => {
             required
             title="개인정보 처리방침"
             description="일기 내용이 미국 Anthropic으로 전송됩니다 (30일 후 자동 삭제)"
-            onDetail={() => WebBrowser.openBrowserAsync('https://heartstamp.kr/privacy')}
+            onDetail={() => WebBrowser.openBrowserAsync('https://heartstamp.kr/privacy?embedded=true')}
           />
         </View>
 

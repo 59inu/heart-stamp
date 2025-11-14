@@ -85,11 +85,11 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleTerms = async () => {
-    await WebBrowser.openBrowserAsync('https://heartstamp.kr/terms');
+    await WebBrowser.openBrowserAsync('https://heartstamp.kr/terms?embedded=true');
   };
 
   const handlePrivacyPolicy = async () => {
-    await WebBrowser.openBrowserAsync('https://heartstamp.kr/privacy');
+    await WebBrowser.openBrowserAsync('https://heartstamp.kr/privacy?embedded=true');
   };
 
   const handleUserGuide = () => {
