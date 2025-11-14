@@ -67,7 +67,6 @@ export default ({ config }) => {
           {
             icon: './assets/icon.png',
             color: '#ffffff',
-            sounds: ['./assets/notification.wav'],
           },
         ],
       ],
