@@ -436,10 +436,13 @@ export class ApiService {
       });
 
       if (response.data.success) {
-        // S3 사용 시: 전체 URL 반환, 로컬 사용 시: baseURL과 결합
-        const imageUrl = response.data.imageUrl.startsWith('http')
-          ? response.data.imageUrl // S3 URL (이미 전체 URL)
-          : `${this.baseURL.replace('/api', '')}${response.data.imageUrl}`; // 로컬 경로
+        let imageUrl = response.data.imageUrl;
+
+        // S3 URL(전체 URL)이 아닌 경우에만 baseURL과 결합
+        if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+          imageUrl = `${this.baseURL.replace('/api', '')}${imageUrl}`;
+        }
+
         return { success: true, data: imageUrl };
       }
       return { success: false, error: '이미지 업로드 응답 실패' };

@@ -2,9 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { AppState, AppStateStatus, Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
+import * as Updates from 'expo-updates';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { NotificationService } from './src/services/notificationService';
 import { DiaryStorage } from './src/services/diaryStorage';
+import { SyncQueue } from './src/services/syncQueue';
 import { diaryEvents, EVENTS } from './src/services/eventEmitter';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { OfflineBanner } from './src/components/OfflineBanner';
@@ -22,6 +24,40 @@ export default function App() {
   const SYNC_DEBOUNCE_MS = 30000; // 30초 디바운스
 
   useEffect(() => {
+    // EAS Updates 체크 (프로덕션/프리뷰 빌드에서만)
+    const checkForUpdates = async () => {
+      if (__DEV__) {
+        logger.log('ℹ️ [App] Skipping update check in development mode');
+        return;
+      }
+
+      try {
+        const update = await Updates.checkForUpdateAsync();
+
+        if (update.isAvailable) {
+          logger.log('🔄 [App] Update available, downloading...');
+          await Updates.fetchUpdateAsync();
+          logger.log('✅ [App] Update downloaded, will apply on next restart');
+
+          // 사용자에게 알림 (선택적)
+          Alert.alert(
+            '업데이트 완료',
+            '새로운 버전을 다운로드했습니다. 앱을 재시작하면 적용됩니다.',
+            [
+              { text: '나중에', style: 'cancel' },
+              { text: '재시작', onPress: () => Updates.reloadAsync() }
+            ]
+          );
+        } else {
+          logger.log('✅ [App] App is up to date');
+        }
+      } catch (e) {
+        logger.error('❌ [App] Error checking for updates:', e);
+      }
+    };
+
+    checkForUpdates();
+
     // Analytics 및 리텐션 추적 초기화
     const initAnalytics = async () => {
       await AnalyticsService.initialize();
@@ -40,6 +76,10 @@ export default function App() {
     };
 
     initAnalytics();
+
+    // SyncQueue 네트워크 모니터링 시작
+    SyncQueue.startWatching();
+    logger.log('✅ [App] SyncQueue network monitoring started');
 
     // 푸시 알림 등록 및 리스너 설정
     const initPushNotifications = async () => {

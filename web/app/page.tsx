@@ -85,7 +85,7 @@ export default function Home() {
               </svg>
             </div>
             <h3 className="text-lg font-medium text-[#2F2B4C] mb-2">
-              주간 심리 리포트
+              주간 감정 리포트
             </h3>
             <p className="text-[#2F2B4C]/60 text-sm leading-relaxed">
               일주일의 마음을<br />되돌아볼 수 있어요
@@ -255,6 +255,29 @@ export default function Home() {
             </div>
             <p className="text-sm">Heart Stamp</p>
           </div>
+
+          {/* Policy Links */}
+          <div className="flex justify-center gap-6 mb-6">
+            <a
+              href="/terms"
+              className="text-xs hover:text-white transition-colors underline underline-offset-2"
+            >
+              서비스 이용약관
+            </a>
+            <a
+              href="/privacy"
+              className="text-xs hover:text-white transition-colors underline underline-offset-2"
+            >
+              개인정보 처리방침
+            </a>
+            <a
+              href="mailto:heartstampdiary@gmail.com"
+              className="text-xs hover:text-white transition-colors underline underline-offset-2"
+            >
+              문의하기
+            </a>
+          </div>
+
           <p className="text-xs">
             © 2025 Heart Stamp. All rights reserved.
           </p>

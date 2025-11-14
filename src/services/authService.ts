@@ -1,10 +1,10 @@
 import {
-import { logger } from '../utils/logger';
   signInAnonymously,
   onAuthStateChanged,
   User,
   signOut as firebaseSignOut
 } from 'firebase/auth';
+import { logger } from '../utils/logger';
 import { auth } from '../config/firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

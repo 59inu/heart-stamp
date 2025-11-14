@@ -5,12 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Alert,
   Dimensions,
   RefreshControl,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
@@ -108,13 +109,17 @@ export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<DiaryDetailRouteProp>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [imageLoadStatus, setImageLoadStatus] = useState<string>('pending');
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
+    setImageLoadStatus('pending'); // 리셋
     let diary = await DiaryStorage.getById(route.params.entryId);
 
     // 서버에서 AI 코멘트 동기화
-    if (diary && !diary.aiComment) {
+    if (diary && (!diary.aiComment || !diary.stampType)) {
       const result = await apiService.syncDiaryFromServer(diary._id);
 
       if (result.success && result.data.aiComment) {
@@ -125,11 +130,11 @@ export const DiaryDetailScreen: React.FC = () => {
 
         diary = await DiaryStorage.getById(route.params.entryId);
       } else if (!result.success) {
-        logger.debug('서버 동기화 실패:', result.error);
-        // 네트워크 에러가 아닌 경우에만 로그 (네트워크 에러는 흔하므로)
-        if (result.errorType && result.errorType !== 'NETWORK_ERROR') {
-          logger.warn('AI 코멘트 동기화 실패:', result.error);
+        // 404 에러는 조용히 처리 (AI 코멘트가 아직 생성되지 않은 정상 상태)
+        if (result.errorType === 'NETWORK_ERROR') {
+          logger.debug('네트워크 에러로 AI 코멘트 조회 실패');
         }
+        // 다른 에러는 무시 (서버에 일기가 없거나 AI 코멘트가 없는 상태)
       }
     }
 
@@ -143,6 +148,8 @@ export const DiaryDetailScreen: React.FC = () => {
         AnalyticsService.logAICommentViewed(diary, 'other');
       }
     }
+
+    setLoading(false);
   }, [route.params.entryId]);
 
   // Pull-to-Refresh 핸들러
@@ -275,10 +282,22 @@ export const DiaryDetailScreen: React.FC = () => {
     );
   }, [entry, navigation]);
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!entry) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>일기를 찾을 수 없습니다.</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>일기를 찾을 수 없습니다.</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -344,7 +363,12 @@ export const DiaryDetailScreen: React.FC = () => {
             <Image
               source={{ uri: entry.imageUri }}
               style={styles.diaryImage}
-              resizeMode="contain"
+              contentFit="contain"
+              transition={200}
+              placeholder={require('../../assets/image-placeholder.png')}
+              placeholderContentFit="contain"
+              cachePolicy="memory-disk"
+              priority="high"
             />
           </View>
         )}
@@ -362,16 +386,33 @@ export const DiaryDetailScreen: React.FC = () => {
               <Text style={styles.aiTitle}>선생님 코멘트</Text>
               {entry.stampType && (
                 <View style={styles.stampContainer}>
-                  <Image
-                    source={getStampImage(entry.stampType)}
-                    style={styles.stampImageSmall}
-                    tintColor={getStampColor(entry._id)}
-                    resizeMode="contain"
-                  />
+                  {imageLoadStatus === 'error' && __DEV__ ? (
+                    // Expo Go 오프라인 제약: 이미지 로딩 실패 시 텍스트 대체
+                    <View style={{ justifyContent: 'center', alignItems: 'center', width: 72, height: 72 }}>
+                      <Text style={{ fontSize: 40 }}>🏆</Text>
+                      <Text style={{ fontSize: 8, color: '#999', marginTop: 2 }}>
+                        (개발 모드{'\n'}오프라인 제약)
+                      </Text>
+                    </View>
+                  ) : (
+                    <Image
+                      source={getStampImage(entry.stampType)}
+                      style={styles.stampImageSmall}
+                      tintColor={getStampColor(entry._id)}
+                      resizeMode="contain"
+                      onError={(e) => {
+                        setImageLoadStatus('error');
+                      }}
+                      onLoad={() => {
+                        setImageLoadStatus('loaded');
+                      }}
+                    />
+                  )}
                 </View>
               )}
             </View>
             <Text style={styles.aiCommentText}>{entry.aiComment}</Text>
+            <Text style={styles.aiDisclaimer}>AI가 자동 생성한 코멘트입니다</Text>
           </View>
         )}
 
@@ -406,6 +447,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 8,
   },
   header: {
     backgroundColor: '#fff',
@@ -609,5 +661,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  aiDisclaimer: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

@@ -162,7 +162,7 @@ router.post('/diaries/:id/analyze',
         });
       }
 
-      const analysis = await claudeService.analyzeDiary(
+      const analysis = await claudeService.generateComment(
         diary.content,
         diary.moodTag || 'neutral',
         diary.date
@@ -266,5 +266,147 @@ router.delete('/diaries/:id', requireFirebaseAuth, async (req: Request, res: Res
     });
   }
 });
+
+// [Admin] Generate AI comment for specific diary by date
+router.post('/admin/generate-comment',
+  requireAdminToken,
+  body('userId').isString().trim().notEmpty(),
+  body('date').isISO8601().withMessage('Invalid date format (YYYY-MM-DD)'),
+  aiAnalysisLimiter,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { userId, date } = req.body;
+
+      // Find diary by userId and date
+      const allDiaries = DiaryDatabase.getAllByUserId(userId);
+      const diary = allDiaries.find(d => d.date.startsWith(date));
+
+      if (!diary) {
+        return res.status(404).json({
+          success: false,
+          message: `Diary not found for user ${userId} on ${date}`,
+        });
+      }
+
+      if (diary.aiComment) {
+        return res.status(400).json({
+          success: false,
+          message: 'Diary already has AI comment. Delete it first if you want to regenerate.',
+          data: { aiComment: diary.aiComment },
+        });
+      }
+
+      // Generate AI comment (Admin용: 항상 Sonnet 사용)
+      console.log(`🤖 [Admin] Generating AI comment for diary ${diary._id} (${date}) - SONNET FORCED`);
+      const result = await claudeService.generateComment(
+        diary.content,
+        diary.moodTag || '',
+        diary.date,
+        { forceModel: 'sonnet' }
+      );
+
+      // Update diary with AI comment
+      await DiaryDatabase.update(diary._id, {
+        aiComment: result.comment,
+        model: result.model,
+        importanceScore: result.importanceScore,
+        stampType: result.stampType,
+      });
+
+      res.json({
+        success: true,
+        message: 'AI comment generated successfully',
+        data: {
+          diaryId: diary._id,
+          date: diary.date,
+          aiComment: result.comment,
+          model: result.model,
+          importanceScore: result.importanceScore,
+          stampType: result.stampType,
+        },
+      });
+    } catch (error) {
+      console.error('Error generating AI comment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate AI comment',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+// [Admin] Delete AI comment for specific diary by date
+router.delete('/admin/delete-comment',
+  requireAdminToken,
+  body('userId').isString().trim().notEmpty(),
+  body('date').isISO8601().withMessage('Invalid date format (YYYY-MM-DD)'),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { userId, date } = req.body;
+
+      // Find diary by userId and date
+      const allDiaries = DiaryDatabase.getAllByUserId(userId);
+      const diary = allDiaries.find(d => d.date.startsWith(date));
+
+      if (!diary) {
+        return res.status(404).json({
+          success: false,
+          message: `Diary not found for user ${userId} on ${date}`,
+        });
+      }
+
+      if (!diary.aiComment) {
+        return res.status(400).json({
+          success: false,
+          message: 'Diary has no AI comment to delete.',
+        });
+      }
+
+      // Delete AI comment by setting fields to undefined
+      console.log(`🗑️ [Admin] Deleting AI comment for diary ${diary._id} (${date})`);
+      await DiaryDatabase.update(diary._id, {
+        aiComment: undefined,
+        model: undefined,
+        importanceScore: undefined,
+        stampType: undefined,
+      });
+
+      res.json({
+        success: true,
+        message: 'AI comment deleted successfully',
+        data: {
+          diaryId: diary._id,
+          date: diary.date,
+        },
+      });
+    } catch (error) {
+      console.error('Error deleting AI comment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete AI comment',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
 
 export default router;

@@ -99,10 +99,10 @@ export class ReportDatabase {
     return report;
   }
 
-  // 주간 리포트 조회
+  // 주간 리포트 조회 (최신 리포트 반환)
   static getWeeklyReport(userId: string, year: number, week: number): Report | null {
     const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND week = ? AND deletedAt IS NULL'
+      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND week = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1'
     );
     const row = stmt.get(userId, 'weekly', year, week) as any;
 
@@ -115,10 +115,10 @@ export class ReportDatabase {
     };
   }
 
-  // 월간 리포트 조회
+  // 월간 리포트 조회 (최신 리포트 반환)
   static getMonthlyReport(userId: string, year: number, month: number): Report | null {
     const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND month = ? AND deletedAt IS NULL'
+      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND month = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1'
     );
     const row = stmt.get(userId, 'monthly', year, month) as any;
 

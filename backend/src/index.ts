@@ -60,6 +60,9 @@ const corsOptions = {
 };
 
 // Middleware
+// Trust proxy for Railway (리버스 프록시 환경)
+app.set('trust proxy', 1);
+
 app.use(cors(corsOptions));
 app.use(express.json());
 
@@ -74,9 +77,17 @@ app.use((req, res, next) => {
 // 정적 파일 서빙: /uploads 폴더의 이미지 파일 제공
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// 정적 파일 서빙: /public 폴더의 어드민 페이지 제공
+app.use('/public', express.static(path.join(__dirname, '../public')));
+
 // Health check endpoint (레이트리미트 없음)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Heart Stamp Backend is running' });
+});
+
+// Admin Dashboard (레이트리미트 없음 - 브라우저에서 접근)
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin.html'));
 });
 
 // API Routes (일반 레이트리미트 적용)
@@ -177,6 +188,26 @@ app.post('/api/jobs/trigger-analysis', adminLimiter, requireAdminToken, async (r
   }
 });
 
+// 어제 일기의 AI 코멘트 초기화 (재생성용 - 관리 리미터 + 토큰 인증)
+app.post('/api/admin/reset-yesterday-comments', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const count = DiaryDatabase.resetYesterdayComments();
+
+    res.json({
+      success: true,
+      message: `Reset ${count} diary comments`,
+      count: count,
+    });
+  } catch (error) {
+    console.error('Error resetting comments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset comments',
+    });
+  }
+});
+
 // Manual backup trigger endpoint (관리 리미터 + 토큰 인증)
 app.post('/api/jobs/trigger-backup', adminLimiter, requireAdminToken, async (req, res) => {
   try {
@@ -208,6 +239,110 @@ app.get('/api/jobs/backups', adminLimiter, requireAdminToken, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to list backups',
+    });
+  }
+});
+
+// 최근 AI 코멘트 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/admin/recent-comments', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // 최근 AI 코멘트가 생성된 일기 조회
+    const recentComments = DiaryDatabase.getRecentAIComments(limit);
+
+    res.json({
+      success: true,
+      count: recentComments.length,
+      data: recentComments,
+    });
+  } catch (error) {
+    console.error('Error fetching recent comments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recent comments',
+    });
+  }
+});
+
+// 일기 중요도 분석 테스트 (관리 리미터 + 토큰 인증)
+app.post('/api/admin/test-importance', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'content (string) is required',
+      });
+    }
+
+    // ClaudeService의 analyzeImportance는 private이므로 Reflection으로 접근
+    const analyzeImportance = (claudeService as any)['analyzeImportance'].bind(claudeService);
+    const result = await analyzeImportance(content);
+
+    const IMPORTANCE_THRESHOLD = 20;
+    const selectedModel = result.total >= IMPORTANCE_THRESHOLD ? 'sonnet' : 'haiku';
+
+    res.json({
+      success: true,
+      data: {
+        emotional_intensity: result.emotional_intensity,
+        significant_event: result.significant_event,
+        depth_of_reflection: result.depth_of_reflection,
+        change_signal: result.change_signal,
+        total: result.total,
+        reason: result.reason,
+        threshold: IMPORTANCE_THRESHOLD,
+        selected_model: selectedModel,
+      },
+    });
+  } catch (error) {
+    console.error('❌❌❌ Error testing importance:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test importance',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+  }
+});
+
+// DB 통계 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/admin/db-stats', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const stats = DiaryDatabase.getStats();
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Error fetching DB stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch DB stats',
+    });
+  }
+});
+
+// 모델 사용 통계 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/admin/model-stats', adminLimiter, requireAdminToken, (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const stats = DiaryDatabase.getModelStats();
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Error fetching model stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch model stats',
     });
   }
 });

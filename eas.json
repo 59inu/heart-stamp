@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 13.2.0"
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -16,17 +17,25 @@
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "env": {
-        "APP_ENV": "development"
+        "APP_ENV": "development",
+        "APP_VARIANT": "preview",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
+      "node": "22.11.0",
+      "autoIncrement": true,
+      "channel": "production",
       "env": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
   "submit": {
+    "preview": {},
     "production": {}
   }
 }

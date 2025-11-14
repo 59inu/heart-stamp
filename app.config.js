@@ -1,40 +1,14 @@
 export default ({ config }) => {
-  // EAS Build가 자동으로 주입하는 환경 변수
-  const buildProfile = process.env.EAS_BUILD_PROFILE || 'production';
+  // APP_VARIANT 환경 변수로 판단 (eas.json에서 주입)
+  const appVariant = process.env.APP_VARIANT;
+  const isProduction = process.env.APP_ENV === 'production';
 
-  // 모든 빌드에서 동일한 앱 이름 사용 (스킴 일관성 유지)
-  const getAppName = () => {
-    return 'Heart Stamp';
-  };
-
-  // 빌드 프로파일에 따라 Bundle Identifier 결정
-  const getBundleIdentifier = () => {
-    switch (buildProfile) {
-      case 'development':
-        return 'com.heartstamp.app.dev';
-      case 'preview':
-        return 'com.heartstamp.app.preview';
-      default:
-        return 'com.heartstamp.app';
-    }
-  };
-
-  // 빌드 프로파일에 따라 Android Package 결정
-  const getAndroidPackage = () => {
-    switch (buildProfile) {
-      case 'development':
-        return 'com.heartstamp.app.dev';
-      case 'preview':
-        return 'com.heartstamp.app.preview';
-      default:
-        return 'com.heartstamp.app';
-    }
-  };
+  console.log('🔍 [app.config.js] APP_VARIANT:', appVariant);
+  console.log('🔍 [app.config.js] APP_ENV:', process.env.APP_ENV);
 
   return {
-    ...config,
     expo: {
-      name: getAppName(),
+      name: 'Heart Stamp',
       slug: 'heart-stamp',
       scheme: 'heartstamp',
       version: '1.0.0',
@@ -51,9 +25,17 @@ export default ({ config }) => {
       },
       ios: {
         supportsTablet: true,
-        bundleIdentifier: getBundleIdentifier(),
+        bundleIdentifier: isProduction ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.preview',
+        associatedDomains: [
+          'applinks:heartstamp.kr',
+          'applinks:www.heartstamp.kr'
+        ],
         config: {
           usesNonExemptEncryption: false,
+        },
+        infoPlist: {
+          UIBackgroundModes: ['remote-notification'],
+          LSMinimumSystemVersion: '17.0',
         },
         splash: {
           image: './assets/splash.png',
@@ -62,11 +44,15 @@ export default ({ config }) => {
         },
       },
       android: {
-        package: getAndroidPackage(),
+        package: isProduction ? 'com.team59inu.heartstamp' : 'com.team59inu.heartstamp.dev',
         adaptiveIcon: {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',
         },
+        permissions: [
+          'POST_NOTIFICATIONS',
+          'RECEIVE_BOOT_COMPLETED',
+        ],
         edgeToEdgeEnabled: true,
         predictiveBackGestureEnabled: false,
       },
@@ -77,6 +63,13 @@ export default ({ config }) => {
         'expo-web-browser',
         'expo-secure-store',
         '@sentry/react-native/expo',
+        [
+          'expo-notifications',
+          {
+            icon: './assets/icon.png',
+            color: '#ffffff',
+          },
+        ],
       ],
       extra: {
         eas: {

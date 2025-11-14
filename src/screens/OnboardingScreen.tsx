@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
 import { logger } from '../utils/logger';
@@ -189,7 +190,7 @@ export const OnboardingScreen: React.FC = () => {
             checked={agreements.ageVerification}
             onPress={handleAgeVerificationToggle}
             required
-            title="만 14세 이상입니다"
+            title="만 17세 이상입니다"
           />
 
           <AgreementItem
@@ -197,7 +198,7 @@ export const OnboardingScreen: React.FC = () => {
             onPress={handleTermsToggle}
             required
             title="서비스 이용약관"
-            onDetail={() => navigation.navigate('TermsDetail')}
+            onDetail={() => WebBrowser.openBrowserAsync('https://heartstamp.kr/terms')}
           />
 
           <AgreementItem
@@ -205,8 +206,8 @@ export const OnboardingScreen: React.FC = () => {
             onPress={handlePrivacyToggle}
             required
             title="개인정보 처리방침"
-            description="AI 코멘트를 위해 Anthropic Claude로 일기 내용이 전송됩니다"
-            onDetail={() => navigation.navigate('PrivacyDetail')}
+            description="일기 내용이 미국 Anthropic으로 전송됩니다 (30일 후 자동 삭제)"
+            onDetail={() => WebBrowser.openBrowserAsync('https://heartstamp.kr/privacy')}
           />
         </View>
 

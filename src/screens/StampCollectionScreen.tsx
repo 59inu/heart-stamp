@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,51 @@ import { DiaryEntry } from '../models/DiaryEntry';
 import { DiaryStorage } from '../services/diaryStorage';
 import { getStampImage, getStampColor } from '../utils/stampUtils';
 import { COLORS } from '../constants/colors';
+
+// 도장 이미지 메모이제이션 (앱 전체에서 한 번만 로드)
+const STAMP_IMAGE = require('../../assets/stamp.png');
+
+// 개별 아이템 컴포넌트 - React.memo로 불필요한 리렌더링 방지
+const StampGridItem = React.memo<{
+  item: DiaryEntry;
+  onPress: (id: string) => void;
+}>(({ item, onPress }) => {
+  // 계산은 렌더링 시 한 번만
+  const stampColor = useMemo(() => getStampColor(item._id), [item._id]);
+  const dayText = useMemo(() => format(new Date(item.date), 'd일', { locale: ko }), [item.date]);
+
+  return (
+    <TouchableOpacity
+      style={styles.gridItem}
+      onPress={() => onPress(item._id)}
+      activeOpacity={0.7}
+    >
+      {/* 도장 */}
+      {item.stampType && (
+        <Image
+          source={STAMP_IMAGE}
+          style={[styles.stampImageGrid, { tintColor: stampColor }]}
+          resizeMode="contain"
+        />
+      )}
+
+      {/* 날짜 */}
+      <Text style={styles.gridDateText}>{dayText}</Text>
+
+      {/* 감정 도트 */}
+      {item.mood && (
+        <View
+          style={[
+            styles.gridMoodDot,
+            item.mood === 'red' && styles.moodRed,
+            item.mood === 'yellow' && styles.moodYellow,
+            item.mood === 'green' && styles.moodGreen,
+          ]}
+        />
+      )}
+    </TouchableOpacity>
+  );
+});
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'StampCollection'>;
 type StampCollectionRouteProp = RouteProp<RootStackParamList, 'StampCollection'>;
@@ -62,44 +107,9 @@ export const StampCollectionScreen: React.FC = () => {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: DiaryEntry }) => {
-      const stampColor = getStampColor(item._id);
-      const dateObj = new Date(item.date);
-      const dayText = format(dateObj, 'd일', { locale: ko });
-
-      return (
-        <TouchableOpacity
-          style={styles.gridItem}
-          onPress={() => handleDiaryPress(item._id)}
-          activeOpacity={0.7}
-        >
-          {/* 도장 */}
-          {item.stampType && (
-            <Image
-              source={getStampImage(item.stampType)}
-              style={styles.stampImageGrid}
-              tintColor={stampColor}
-              resizeMode="contain"
-            />
-          )}
-
-          {/* 날짜 */}
-          <Text style={styles.gridDateText}>{dayText}</Text>
-
-          {/* 감정 도트 */}
-          {item.mood && (
-            <View
-              style={[
-                styles.gridMoodDot,
-                item.mood === 'red' && styles.moodRed,
-                item.mood === 'yellow' && styles.moodYellow,
-                item.mood === 'green' && styles.moodGreen,
-              ]}
-            />
-          )}
-        </TouchableOpacity>
-      );
-    },
+    ({ item }: { item: DiaryEntry }) => (
+      <StampGridItem item={item} onPress={handleDiaryPress} />
+    ),
     [handleDiaryPress]
   );
 
@@ -137,6 +147,16 @@ export const StampCollectionScreen: React.FC = () => {
         contentContainerStyle={styles.gridContent}
         columnWrapperStyle={styles.gridRow}
         showsVerticalScrollIndicator={false}
+        // 성능 최적화
+        initialNumToRender={12}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={true}
+        getItemLayout={(data, index) => ({
+          length: 120, // 아이템 높이 (aspectRatio 1 + margin)
+          offset: 120 * Math.floor(index / 3),
+          index,
+        })}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>아직 모은 도장이 없어요</Text>

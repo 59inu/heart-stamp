@@ -34,7 +34,7 @@ export const ENV = getEnvironment();
 
 // 환경별 API 엔드포인트
 export const API_ENDPOINTS = {
-  local: 'http://192.168.0.14:3000/api',
+  local: 'http://192.168.0.14:3000/api', // 로컬 서버
   development: 'https://heart-stamp-dev.up.railway.app/api',
   production: 'https://heart-stamp-production.up.railway.app/api',
 };

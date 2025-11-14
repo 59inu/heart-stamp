@@ -56,8 +56,7 @@ export class ReportService {
     endDate: string
   ): Promise<{ keywords: KeywordWithCount[]; summary: string; insight: string }> {
     if (!this.anthropic) {
-      // Mock 데이터 (개발/테스트용)
-      return this.generateMockReport(diaries, period);
+      throw new Error('ANTHROPIC_API_KEY is not configured');
     }
 
     const periodLabel = period === 'weekly' ? '일주일' : '한 달';
@@ -80,7 +79,6 @@ ${diariesText}
    - 일기에 직접 등장하지 않더라도, 전체적인 감정과 분위기를 잘 표현하는 키워드를 선택하세요
    - 단, 일기 내용과 **완전히 무관하거나 반대되는** 키워드는 피하세요
    - 일기 개수가 적거나 내용이 부족하면 1-2개 정도만 추출해도 됩니다
-   - 예시: "스트레스", "성취감", "외로움", "설렘", "불안", "행복" 등
    - 구체적인 단어를 사용하고, 2-4글자의 명사형으로 작성
 
 2. summary: ${periodLabel} 동안의 주요 감정과 경험을 간단히 요약한 한 문장
@@ -148,41 +146,11 @@ JSON 형식 (키워드는 2-3개 정도):
         }
       }
 
-      return this.generateMockReport(diaries, period);
+      throw new Error('Failed to parse AI response');
     } catch (error) {
       console.error('AI 리포트 생성 실패:', error);
-      return this.generateMockReport(diaries, period);
+      throw error;
     }
-  }
-
-  // Mock 리포트 생성 (AI 없을 때)
-  private generateMockReport(
-    diaries: DiaryEntry[],
-    period: ReportPeriod
-  ): { keywords: KeywordWithCount[]; summary: string; insight: string } {
-    // 감정 태그 빈도수 계산
-    const tagCounts: { [tag: string]: number } = {};
-    diaries.forEach((diary) => {
-      if (diary.moodTag) {
-        tagCounts[diary.moodTag] = (tagCounts[diary.moodTag] || 0) + 1;
-      }
-    });
-
-    const keywords = Object.entries(tagCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([tag, count]) => ({ keyword: tag, count }));
-
-    const periodLabel = period === 'weekly' ? '이번 주' : '이번 달';
-    const keywordsText = keywords.slice(0, 3).map((k) => `'${k.keyword}'`).join(', ');
-
-    return {
-      keywords,
-      summary: keywords.length > 0
-        ? `${periodLabel}에는 ${keywordsText}${keywords.length === 3 ? '이라는' : '라는'} 키워드가 자주 등장했어요.`
-        : `${periodLabel}의 감정을 기록했어요.`,
-      insight: `${periodLabel}엔 '만족'과 '피로'가 함께 보이네요. ${periodLabel}는 평온하면서도 약간 지쳤던 ${period === 'weekly' ? '주' : '달'}였어요.`,
-    };
   }
 
   // 주간/월간 리포트 생성

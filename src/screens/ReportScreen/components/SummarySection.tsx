@@ -30,7 +30,7 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
       <View style={styles.summaryTitleRow}>
         <View style={styles.summaryTitleWithIcon}>
           <Text style={styles.summaryTitle}>
-            🗓 {period === 'week' ? '주간' : '월간'} 심리 리포트
+            🗓 {period === 'week' ? '주간' : '월간'} 감정 리포트
           </Text>
           <TouchableOpacity onPress={onInfoPress} style={styles.infoIconButton}>
             <MaterialCommunityIcons name="information" size={22} color={COLORS.settingsIconColor} />

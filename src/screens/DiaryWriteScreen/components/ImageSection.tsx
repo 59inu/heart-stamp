@@ -3,11 +3,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { logger } from '../../../utils/logger';
 import { COLORS } from '../../../constants/colors';
 
@@ -42,7 +42,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
     <TouchableOpacity
       style={[
         styles.imageContainer,
-        { height: (imageUri && imageUri.trim() !== '') ? IMAGE_HEIGHT : PLACEHOLDER_HEIGHT }
+        { height: imageUri ? IMAGE_HEIGHT : PLACEHOLDER_HEIGHT }
       ]}
       onPress={onImagePick}
       activeOpacity={0.7}
@@ -52,27 +52,22 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
         </View>
-      ) : imageUri && imageUri.trim() !== '' ? (
-        <>
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.diaryImage}
-            resizeMode="contain"
-            onLoadStart={onLoadStart}
-            onLoad={onLoad}
-            onError={onError}
-          />
-          {loadingImage && (
-            <View style={styles.uploadingOverlay}>
-              <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
-            </View>
-          )}
-        </>
+      ) : imageUri ? (
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.diaryImage}
+          contentFit="contain"
+          transition={200}
+          placeholder={require('../../../../assets/image-placeholder.png')}
+          placeholderContentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+        />
       ) : (
         <Image
           source={require('../../../../assets/image-placeholder.png')}
           style={[styles.diaryImage, styles.placeholderImage]}
-          resizeMode="contain"
+          contentFit="contain"
         />
       )}
       {uploadingImage && (
@@ -81,12 +76,12 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
           <Text style={styles.uploadingText}>업로드 중...</Text>
         </View>
       )}
-      {(!imageUri || imageUri.trim() === '') && !uploadingImage && (
+      {!imageUri && !uploadingImage && (
         <View style={styles.imagePlaceholderOverlay}>
           <Text style={styles.imagePlaceholderText}>탭하여 사진 추가</Text>
         </View>
       )}
-      {imageUri && imageUri.trim() !== '' && !uploadingImage && (
+      {imageUri && !uploadingImage && (
         <TouchableOpacity
           style={styles.imageDeleteButton}
           onPress={onImageRemove}

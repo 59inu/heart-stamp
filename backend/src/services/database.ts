@@ -84,6 +84,22 @@ try {
   // 컬럼이 이미 존재하면 무시
 }
 
+// 마이그레이션: model 컬럼 추가 (AI 모델 추적용)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN model TEXT`);
+  console.log('✅ Added model column to diaries table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
+// 마이그레이션: importanceScore 컬럼 추가 (중요도 점수 추적용)
+try {
+  db.exec(`ALTER TABLE diaries ADD COLUMN importanceScore INTEGER`);
+  console.log('✅ Added importanceScore column to diaries table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
+}
+
 // userId 인덱스 생성 (성능 향상)
 try {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries(userId)`);
@@ -206,8 +222,8 @@ export class DiaryDatabase {
         const encrypted = encryptFields(diary);
 
         const stmt = db.prepare(`
-          INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, createdAt, updatedAt, syncedWithServer, version)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, model, importanceScore, createdAt, updatedAt, syncedWithServer, version)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(
@@ -220,6 +236,8 @@ export class DiaryDatabase {
           encrypted.moodTag || null,
           encrypted.aiComment || null,
           encrypted.stampType || null,
+          encrypted.model || null,
+          encrypted.importanceScore || null,
           encrypted.createdAt,
           encrypted.updatedAt,
           encrypted.syncedWithServer ? 1 : 0,
@@ -243,31 +261,40 @@ export class DiaryDatabase {
         const fields: string[] = [];
         const values: any[] = [];
 
-        if (encrypted.content !== undefined) {
+        // updates 객체의 키를 확인 (encrypted는 undefined 값이 사라질 수 있음)
+        if ('content' in updates) {
           fields.push('content = ?');
-          values.push(encrypted.content);
+          values.push(encrypted.content ?? null);
         }
-        if (encrypted.weather !== undefined) {
+        if ('weather' in updates) {
           fields.push('weather = ?');
-          values.push(encrypted.weather);
+          values.push(encrypted.weather ?? null);
         }
-        if (encrypted.mood !== undefined) {
+        if ('mood' in updates) {
           fields.push('mood = ?');
-          values.push(encrypted.mood);
+          values.push(encrypted.mood ?? null);
         }
-        if (encrypted.moodTag !== undefined) {
+        if ('moodTag' in updates) {
           fields.push('moodTag = ?');
-          values.push(encrypted.moodTag);
+          values.push(encrypted.moodTag ?? null);
         }
-        if (encrypted.aiComment !== undefined) {
+        if ('aiComment' in updates) {
           fields.push('aiComment = ?');
-          values.push(encrypted.aiComment);
+          values.push(encrypted.aiComment ?? null);
         }
-        if (encrypted.stampType !== undefined) {
+        if ('stampType' in updates) {
           fields.push('stampType = ?');
-          values.push(encrypted.stampType);
+          values.push(encrypted.stampType ?? null);
         }
-        if (encrypted.syncedWithServer !== undefined) {
+        if ('model' in updates) {
+          fields.push('model = ?');
+          values.push(encrypted.model ?? null);
+        }
+        if ('importanceScore' in updates) {
+          fields.push('importanceScore = ?');
+          values.push(encrypted.importanceScore ?? null);
+        }
+        if ('syncedWithServer' in updates) {
           fields.push('syncedWithServer = ?');
           values.push(encrypted.syncedWithServer ? 1 : 0);
         }
@@ -409,6 +436,149 @@ export class DiaryDatabase {
     console.log(`👥 [DiaryDatabase] ${yesterdayStr} 일기 AI 코멘트 받은 사용자: ${userIds.length}명`);
 
     return userIds;
+  }
+
+  // 최근 AI 코멘트 조회 (관리자용)
+  static getRecentAIComments(limit: number = 10): any[] {
+    console.log(`📋 [DiaryDatabase] 최근 AI 코멘트 ${limit}개 조회`);
+
+    // AI 코멘트가 있는 최근 일기 조회 (updatedAt 기준 정렬)
+    const stmt = db.prepare(`
+      SELECT
+        _id,
+        userId,
+        date,
+        content,
+        moodTag,
+        aiComment,
+        stampType,
+        createdAt,
+        updatedAt
+      FROM diaries
+      WHERE aiComment IS NOT NULL
+        AND deletedAt IS NULL
+      ORDER BY updatedAt DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(limit) as any[];
+
+    console.log(`✅ [DiaryDatabase] ${rows.length}개의 AI 코멘트 조회 완료`);
+
+    return rows.map(row => {
+      const entry = {
+        ...row,
+        syncedWithServer: row.syncedWithServer === 1,
+      };
+      // 복호화: content, moodTag, aiComment
+      return decryptFields(entry);
+    });
+  }
+
+  // DB 통계 조회 (관리자용)
+  static getStats(): any {
+    console.log(`📊 [DiaryDatabase] DB 통계 조회`);
+
+    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE deletedAt IS NULL');
+    const total = (totalStmt.get() as any).count;
+
+    const withCommentStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND deletedAt IS NULL');
+    const withComment = (withCommentStmt.get() as any).count;
+
+    const withoutCommentStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NULL AND deletedAt IS NULL');
+    const withoutComment = (withoutCommentStmt.get() as any).count;
+
+    const deletedStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE deletedAt IS NOT NULL');
+    const deleted = (deletedStmt.get() as any).count;
+
+    const usersStmt = db.prepare('SELECT COUNT(DISTINCT userId) as count FROM diaries WHERE deletedAt IS NULL');
+    const uniqueUsers = (usersStmt.get() as any).count;
+
+    const stats = {
+      totalDiaries: total,
+      diariesWithAIComment: withComment,
+      diariesWithoutAIComment: withoutComment,
+      deletedDiaries: deleted,
+      uniqueUsers: uniqueUsers,
+    };
+
+    console.log(`✅ [DiaryDatabase] 통계:`, stats);
+
+    return stats;
+  }
+
+  // 모델 사용 통계 조회 (관리자용)
+  static getModelStats(): any {
+    console.log(`📊 [DiaryDatabase] 모델 사용 통계 조회`);
+
+    // 전체 AI 코멘트 수
+    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND deletedAt IS NULL');
+    const total = (totalStmt.get() as any).count;
+
+    // Sonnet 사용 횟수
+    const sonnetStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE model = ? AND deletedAt IS NULL');
+    const sonnetCount = (sonnetStmt.get('sonnet') as any).count;
+
+    // Haiku 사용 횟수
+    const haikuCount = (sonnetStmt.get('haiku') as any).count;
+
+    // 모델 정보 없는 코멘트 (마이그레이션 전 데이터)
+    const unknownStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND model IS NULL AND deletedAt IS NULL');
+    const unknownCount = (unknownStmt.get() as any).count;
+
+    // 평균 중요도 점수
+    const avgScoreStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE importanceScore IS NOT NULL AND deletedAt IS NULL');
+    const avgScore = (avgScoreStmt.get() as any).avg;
+
+    // Sonnet 평균 중요도
+    const sonnetAvgStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE model = ? AND deletedAt IS NULL');
+    const sonnetAvgScore = (sonnetAvgStmt.get('sonnet') as any).avg;
+
+    // Haiku 평균 중요도
+    const haikuAvgScore = (sonnetAvgStmt.get('haiku') as any).avg;
+
+    // 모델 정보가 있는 코멘트 수 (unknown 제외)
+    const totalWithModel = sonnetCount + haikuCount;
+
+    const stats = {
+      totalComments: total,
+      sonnetCount: sonnetCount,
+      haikuCount: haikuCount,
+      unknownCount: unknownCount,
+      sonnetPercentage: totalWithModel > 0 ? Math.round((sonnetCount / totalWithModel) * 100) : 0,
+      haikuPercentage: totalWithModel > 0 ? Math.round((haikuCount / totalWithModel) * 100) : 0,
+      averageImportanceScore: avgScore ? Math.round(avgScore * 10) / 10 : null,
+      sonnetAverageScore: sonnetAvgScore ? Math.round(sonnetAvgScore * 10) / 10 : null,
+      haikuAverageScore: haikuAvgScore ? Math.round(haikuAvgScore * 10) / 10 : null,
+    };
+
+    console.log(`✅ [DiaryDatabase] 모델 통계:`, stats);
+
+    return stats;
+  }
+
+  // 어제 일기의 AI 코멘트 초기화 (관리자용 - 재생성용)
+  static resetYesterdayComments(): number {
+    // 어제 날짜 계산
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const day = String(yesterday.getDate()).padStart(2, '0');
+    const yesterdayStr = `${year}-${month}-${day}`;
+
+    console.log(`🔄 [DiaryDatabase] ${yesterdayStr} 날짜 일기의 AI 코멘트 초기화`);
+
+    // 어제 날짜 일기의 aiComment와 stampType을 NULL로 설정
+    const stmt = db.prepare(`
+      UPDATE diaries
+      SET aiComment = NULL, stampType = NULL, syncedWithServer = 0
+      WHERE date LIKE ? AND deletedAt IS NULL
+    `);
+    const result = stmt.run(`${yesterdayStr}%`);
+
+    console.log(`✅ [DiaryDatabase] ${result.changes}개 일기의 AI 코멘트 초기화 완료`);
+
+    return result.changes;
   }
 }
 

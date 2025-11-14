@@ -45,6 +45,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({ visible, period, onClose }
                 일기에서 반복해 등장하거나 감정에 영향을 준 주요 키워드를 의미합니다
               </Text>
             </View>
+
+            <Text style={styles.modalDisclaimer}>
+              이 리포트는 의료 조언이 아닙니다
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -103,5 +107,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  modalDisclaimer: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
 });
