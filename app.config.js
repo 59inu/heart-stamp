@@ -33,6 +33,9 @@ export default ({ config }) => {
         config: {
           usesNonExemptEncryption: false,
         },
+        infoPlist: {
+          UIBackgroundModes: ['remote-notification'],
+        },
         splash: {
           image: './assets/splash.png',
           resizeMode: "contain",
@@ -45,6 +48,10 @@ export default ({ config }) => {
           foregroundImage: './assets/adaptive-icon.png',
           backgroundColor: '#ffffff',
         },
+        permissions: [
+          'POST_NOTIFICATIONS',
+          'RECEIVE_BOOT_COMPLETED',
+        ],
         edgeToEdgeEnabled: true,
         predictiveBackGestureEnabled: false,
       },
@@ -55,6 +62,14 @@ export default ({ config }) => {
         'expo-web-browser',
         'expo-secure-store',
         '@sentry/react-native/expo',
+        [
+          'expo-notifications',
+          {
+            icon: './assets/icon.png',
+            color: '#ffffff',
+            sounds: ['./assets/notification.wav'],
+          },
+        ],
       ],
       extra: {
         eas: {
