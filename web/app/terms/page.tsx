@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function TermsOfService() {
+function TermsContent() {
   const searchParams = useSearchParams();
   const isEmbedded = searchParams.get('embedded') === 'true';
 
@@ -237,5 +238,13 @@ export default function TermsOfService() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function TermsOfService() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TermsContent />
+    </Suspense>
   );
 }

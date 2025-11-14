@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function PrivacyPolicy() {
+function PrivacyContent() {
   const searchParams = useSearchParams();
   const isEmbedded = searchParams.get('embedded') === 'true';
 
@@ -229,5 +230,13 @@ export default function PrivacyPolicy() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function PrivacyPolicy() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PrivacyContent />
+    </Suspense>
   );
 }
