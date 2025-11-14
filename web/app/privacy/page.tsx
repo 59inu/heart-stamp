@@ -1,16 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
-export const metadata = {
-  title: '개인정보 처리방침 - Heart Stamp',
-  description: 'Heart Stamp 개인정보 처리방침',
-};
-
-export default function PrivacyPolicy({
-  searchParams,
-}: {
-  searchParams: { embedded?: string };
-}) {
-  const isEmbedded = searchParams.embedded === 'true';
+export default function PrivacyPolicy() {
+  const searchParams = useSearchParams();
+  const isEmbedded = searchParams.get('embedded') === 'true';
 
   return (
     <div className="min-h-screen bg-white">

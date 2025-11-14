@@ -1,16 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
-export const metadata = {
-  title: '서비스 이용약관 - Heart Stamp',
-  description: 'Heart Stamp 서비스 이용약관',
-};
-
-export default function TermsOfService({
-  searchParams,
-}: {
-  searchParams: { embedded?: string };
-}) {
-  const isEmbedded = searchParams.embedded === 'true';
+export default function TermsOfService() {
+  const searchParams = useSearchParams();
+  const isEmbedded = searchParams.get('embedded') === 'true';
 
   return (
     <div className="min-h-screen bg-white">
