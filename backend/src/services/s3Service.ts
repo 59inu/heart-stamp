@@ -60,8 +60,7 @@ export class S3Service {
       Key: key,
       Body: buffer,
       ContentType: mimeType,
-      // 퍼블릭 읽기 권한 (버킷 정책으로 설정하는 것을 권장)
-      // ACL: 'public-read', // 최신 AWS는 ACL 대신 버킷 정책 사용 권장
+      ACL: 'public-read', // 퍼블릭 읽기 권한 설정
     });
 
     await s3Client.send(command);
