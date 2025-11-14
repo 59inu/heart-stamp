@@ -123,25 +123,33 @@ export const SettingsScreen: React.FC = () => {
   const handleTeacherCommentNotificationToggle = async (value: boolean) => {
     const previousState = notificationEnabled;
 
-    // 켜려고 할 때: 권한 체크 후 없으면 설정으로 안내
-    if (value && !hasPushPermission) {
-      handleOpenSettings();
-      return;
-    }
-
     try {
+      // 일단 낙관적 업데이트
       setNotificationEnabled(value);
-      await NotificationService.setTeacherCommentNotificationEnabled(value);
 
-      // 권한 상태 다시 체크
-      const newPermission = await NotificationService.checkPushPermission();
-      setHasPushPermission(newPermission);
-
-      // Analytics: 알림 설정 토글 (이탈 위험 신호 감지)
-      await AnalyticsService.logNotificationToggle('teacher_comment', value, previousState);
-      await AnalyticsService.updateNotificationSettings(value, dailyReminderEnabled);
-
+      // 켜려고 할 때
       if (value) {
+        logger.log('🔔 [Settings] Enabling teacher comment notification...');
+
+        // 알림 활성화 시도 (내부에서 권한 요청)
+        await NotificationService.setTeacherCommentNotificationEnabled(true);
+
+        // 권한 상태 다시 체크
+        const newPermission = await NotificationService.checkPushPermission();
+        logger.log('🔔 [Settings] Permission check result:', newPermission);
+        setHasPushPermission(newPermission);
+
+        if (!newPermission) {
+          // 권한 없으면 설정으로 안내
+          setNotificationEnabled(false);
+          handleOpenSettings();
+          return;
+        }
+
+        // Analytics: 알림 설정 토글 (이탈 위험 신호 감지)
+        await AnalyticsService.logNotificationToggle('teacher_comment', true, previousState);
+        await AnalyticsService.updateNotificationSettings(true, dailyReminderEnabled);
+
         Toast.show({
           type: 'success',
           text1: '알림 설정 완료',
@@ -150,6 +158,13 @@ export const SettingsScreen: React.FC = () => {
           visibilityTime: 3000,
         });
       } else {
+        // 끄기
+        await NotificationService.setTeacherCommentNotificationEnabled(false);
+
+        // Analytics
+        await AnalyticsService.logNotificationToggle('teacher_comment', false, previousState);
+        await AnalyticsService.updateNotificationSettings(false, dailyReminderEnabled);
+
         Toast.show({
           type: 'info',
           text1: '알림 끄기 완료',
@@ -161,7 +176,7 @@ export const SettingsScreen: React.FC = () => {
     } catch (error) {
       logger.error('Failed to toggle teacher comment notification:', error);
       // 실패 시 원래 상태로 복구
-      setNotificationEnabled(!value);
+      setNotificationEnabled(previousState);
       Alert.alert(
         '알림 설정 실패',
         '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'

@@ -41,18 +41,24 @@ export class NotificationService {
 
     try {
       // 알림 권한 요청
+      logger.log('📱 [registerForPushNotifications] Checking existing permission...');
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      logger.log('📱 [registerForPushNotifications] Existing status:', existingStatus);
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
+        logger.log('📱 [registerForPushNotifications] Requesting permission...');
         const { status } = await Notifications.requestPermissionsAsync();
+        logger.log('📱 [registerForPushNotifications] Request result:', status);
         finalStatus = status;
       }
 
       if (finalStatus !== 'granted') {
-        logger.log('⚠️ 푸시 알림 권한이 거부되었습니다');
+        logger.log('⚠️ 푸시 알림 권한이 거부되었습니다. Final status:', finalStatus);
         return { success: false, reason: 'permission_denied' };
       }
+
+      logger.log('✅ 푸시 알림 권한 획득!');
 
       // 푸시 토큰 받기
       // 여러 방법으로 projectId 가져오기 시도
