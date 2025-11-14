@@ -83,16 +83,11 @@ export default function App() {
 
     // 푸시 알림 등록 및 리스너 설정
     const initPushNotifications = async () => {
-      // 선생님 코멘트 알림 설정 확인
-      const isTeacherCommentNotificationEnabled = await NotificationService.getTeacherCommentNotificationEnabled();
+      // ⚠️ IMPORTANT: 항상 권한을 요청해야 iOS 설정에 알림 항목이 생성됨
+      // 권한 상태와 무관하게 최소 한 번은 요청해야 함
+      logger.log('📱 [App] Requesting notification permission...');
 
-      // 알림이 활성화되어 있을 때만 푸시 토큰 등록
-      if (!isTeacherCommentNotificationEnabled) {
-        logger.log('ℹ️ Teacher comment notification is disabled - skipping push token registration');
-        return;
-      }
-
-      // 푸시 토큰 등록 (백엔드 등록 포함)
+      // 푸시 토큰 등록 (권한 요청 포함)
       const result = await NotificationService.registerForPushNotifications();
 
       // 실패 시 사용자에게 알림
