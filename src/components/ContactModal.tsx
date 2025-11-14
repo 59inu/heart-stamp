@@ -5,11 +5,13 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
+  Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import { CONTACT_FORM_URL } from '../constants/faq';
 import { COLORS } from '../constants/colors';
+
+const CONTACT_EMAIL = 'heartstampdiary@gmail.com';
 
 interface ContactModalProps {
   visible: boolean;
@@ -22,10 +24,29 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   onFAQ,
 }) => {
-  const handleContactForm = async () => {
-    const result = await WebBrowser.openBrowserAsync(CONTACT_FORM_URL);
-    // 웹뷰가 닫힌 후 모달도 닫기
-    onClose();
+  const handleContactEmail = async () => {
+    const subject = encodeURIComponent('Heart Stamp 문의');
+    const mailtoUrl = `mailto:${CONTACT_EMAIL}?subject=${subject}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+        onClose();
+      } else {
+        Alert.alert(
+          '이메일 앱 없음',
+          `이메일 앱을 찾을 수 없습니다.\n\n직접 연락 주세요:\n${CONTACT_EMAIL}`,
+          [{ text: '확인' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        '오류',
+        `이메일 앱을 열 수 없습니다.\n\n직접 연락 주세요:\n${CONTACT_EMAIL}`,
+        [{ text: '확인' }]
+      );
+    }
   };
 
   return (
@@ -65,7 +86,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
           <TouchableOpacity
             style={styles.optionButton}
-            onPress={handleContactForm}
+            onPress={handleContactEmail}
             activeOpacity={0.7}
           >
             <View style={styles.optionIcon}>
@@ -74,7 +95,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>문의하기</Text>
               <Text style={styles.optionDescription}>
-                새로운 문의사항을 보내주세요
+                이메일로 문의사항을 보내주세요
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />

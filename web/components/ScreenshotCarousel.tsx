@@ -42,7 +42,7 @@ export default function ScreenshotCarousel({ screenshots }: ScreenshotCarouselPr
 
   return (
     <div className="relative">
-      {/* Desktop: Static Grid (1024px 이상) */}
+      {/* Desktop: Static Grid - CSS로 숨김/보임 처리 */}
       <div className="hidden lg:grid lg:grid-cols-3 gap-8 justify-items-center">
         {screenshots.map((screenshot, index) => (
           <div key={index} className="w-[280px]">
@@ -63,8 +63,8 @@ export default function ScreenshotCarousel({ screenshots }: ScreenshotCarouselPr
         ))}
       </div>
 
-      {/* Mobile/Tablet: Carousel (1024px 미만) */}
-      <div className="lg:hidden">
+      {/* Mobile/Tablet: Carousel - CSS로 숨김/보임 처리 */}
+      <div className="block lg:hidden">
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex">
             {screenshots.map((screenshot, index) => (
@@ -90,7 +90,7 @@ export default function ScreenshotCarousel({ screenshots }: ScreenshotCarouselPr
           </div>
         </div>
 
-        {/* Navigation Arrows (모바일/태블릿만) */}
+        {/* Navigation Arrows */}
         <button
           onClick={scrollPrev}
           className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/80 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all z-10"
@@ -110,7 +110,7 @@ export default function ScreenshotCarousel({ screenshots }: ScreenshotCarouselPr
           </svg>
         </button>
 
-        {/* Dots Indicator (모바일/태블릿만) */}
+        {/* Dots Indicator */}
         <div className="flex justify-center gap-2 mt-8">
           {screenshots.map((_, index) => (
             <button

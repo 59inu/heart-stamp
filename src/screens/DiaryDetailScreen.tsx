@@ -412,6 +412,7 @@ export const DiaryDetailScreen: React.FC = () => {
               )}
             </View>
             <Text style={styles.aiCommentText}>{entry.aiComment}</Text>
+            <Text style={styles.aiDisclaimer}>AI가 자동 생성한 코멘트입니다</Text>
           </View>
         )}
 
@@ -660,5 +661,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  aiDisclaimer: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

@@ -84,12 +84,12 @@ export const SettingsScreen: React.FC = () => {
     setShowNoticeModal(true);
   };
 
-  const handleTerms = () => {
-    navigation.navigate('TermsDetail');
+  const handleTerms = async () => {
+    await WebBrowser.openBrowserAsync('https://heartstamp.kr/terms');
   };
 
-  const handlePrivacyPolicy = () => {
-    navigation.navigate('PrivacyDetail');
+  const handlePrivacyPolicy = async () => {
+    await WebBrowser.openBrowserAsync('https://heartstamp.kr/privacy');
   };
 
   const handleUserGuide = () => {

@@ -5,8 +5,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from './types';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
-import { TermsDetailScreen } from '../screens/TermsDetailScreen';
-import { PrivacyDetailScreen } from '../screens/PrivacyDetailScreen';
 import { DiaryListScreen } from '../screens/DiaryListScreen';
 import { DiaryWriteScreen } from '../screens/DiaryWriteScreen';
 import { DiaryDetailScreen } from '../screens/DiaryDetailScreen';
@@ -71,17 +69,13 @@ export const AppNavigator: React.FC = () => {
         }}
       >
         {!hasAgreed && (
-          <>
-            <Stack.Screen name="Onboarding">
-              {() => (
-                <ErrorBoundary level="screen">
-                  <OnboardingScreen />
-                </ErrorBoundary>
-              )}
-            </Stack.Screen>
-            <Stack.Screen name="TermsDetail" component={TermsDetailScreen} />
-            <Stack.Screen name="PrivacyDetail" component={PrivacyDetailScreen} />
-          </>
+          <Stack.Screen name="Onboarding">
+            {() => (
+              <ErrorBoundary level="screen">
+                <OnboardingScreen />
+              </ErrorBoundary>
+            )}
+          </Stack.Screen>
         )}
         <Stack.Screen name="DiaryList">
           {() => (
@@ -125,12 +119,6 @@ export const AppNavigator: React.FC = () => {
             </ErrorBoundary>
           )}
         </Stack.Screen>
-        {hasAgreed && (
-          <>
-            <Stack.Screen name="TermsDetail" component={TermsDetailScreen} />
-            <Stack.Screen name="PrivacyDetail" component={PrivacyDetailScreen} />
-          </>
-        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
