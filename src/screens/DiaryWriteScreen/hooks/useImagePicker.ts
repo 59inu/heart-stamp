@@ -65,21 +65,20 @@ export const useImagePicker = (
       try {
         setUploadingImage(true);
 
-        // 1. 로컬에 저장하고 S3 업로드 시작
+        // 1. 로컬에 저장하고 S3 업로드 시작 (로딩 스피너 표시)
         logger.log('💾 [useImagePicker] Saving image locally and uploading to S3...');
-        const localUri = await ImageCache.saveAndUpload(
+        await ImageCache.saveAndUpload(
           selectedImage.uri,
           (serverUrl) => {
-            // 2. S3 업로드 성공 시 URL 업데이트
+            // 2. S3 업로드 성공 시 URL 설정하고 로딩 종료
             logger.log('✅ [useImagePicker] S3 upload complete:', serverUrl);
             setImageUri(serverUrl);
+            setUploadingImage(false);
           }
         );
 
-        // 3. 로컬 경로를 즉시 설정하여 이미지 표시
-        logger.log('✅ [useImagePicker] Image saved locally:', localUri);
-        setImageUri(localUri);
-        setUploadingImage(false);
+        // 3. saveAndUpload는 백그라운드에서 진행되므로
+        //    로딩 스피너는 S3 업로드 완료 시(콜백)까지 유지
       } catch (error: any) {
         setUploadingImage(false);
         logger.error('❌ [useImagePicker] Error saving image:', error);
