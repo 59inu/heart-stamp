@@ -127,13 +127,6 @@ export const ReportScreen: React.FC = () => {
 
               // 삭제 후 다시 생성
               await handleGenerateReport();
-              Toast.show({
-                type: 'success',
-                text1: '성공',
-                text2: '리포트가 재생성되었습니다',
-                position: 'bottom',
-                visibilityTime: 3000,
-              });
             } catch (error) {
               logger.error('Error regenerating report:', error);
               Toast.show({
