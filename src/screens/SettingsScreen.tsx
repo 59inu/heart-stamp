@@ -122,9 +122,20 @@ export const SettingsScreen: React.FC = () => {
 
   const handleTeacherCommentNotificationToggle = async (value: boolean) => {
     const previousState = notificationEnabled;
+
+    // 켜려고 할 때: 권한 체크 후 없으면 설정으로 안내
+    if (value && !hasPushPermission) {
+      handleOpenSettings();
+      return;
+    }
+
     try {
       setNotificationEnabled(value);
       await NotificationService.setTeacherCommentNotificationEnabled(value);
+
+      // 권한 상태 다시 체크
+      const newPermission = await NotificationService.checkPushPermission();
+      setHasPushPermission(newPermission);
 
       // Analytics: 알림 설정 토글 (이탈 위험 신호 감지)
       await AnalyticsService.logNotificationToggle('teacher_comment', value, previousState);
@@ -249,7 +260,6 @@ export const SettingsScreen: React.FC = () => {
             <Switch
               value={notificationEnabled}
               onValueChange={handleTeacherCommentNotificationToggle}
-              disabled={!hasPushPermission}
               trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
               thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
             />
