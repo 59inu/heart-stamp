@@ -96,14 +96,6 @@ export const SettingsScreen: React.FC = () => {
           logger.log('✅ [Settings] Permission granted, enabling notifications');
           await NotificationService.setTeacherCommentNotificationEnabled(true);
           setNotificationEnabled(true);
-
-          Toast.show({
-            type: 'success',
-            text1: '알림이 활성화되었습니다',
-            text2: '선생님 코멘트를 받을 수 있어요',
-            position: 'bottom',
-            visibilityTime: 3000,
-          });
         }
         // 권한이 사라졌을 때 (true → false)
         else if (previousPermission && !pushPermission) {
@@ -169,14 +161,6 @@ export const SettingsScreen: React.FC = () => {
         // Analytics
         await AnalyticsService.logNotificationToggle('teacher_comment', true, previousState);
         await AnalyticsService.updateNotificationSettings(true, dailyReminderEnabled);
-
-        Toast.show({
-          type: 'success',
-          text1: '알림 설정 완료',
-          text2: '선생님 코멘트가 도착하면 오전에 알림을 받습니다',
-          position: 'bottom',
-          visibilityTime: 3000,
-        });
       } else {
         // 끄기
         await NotificationService.setTeacherCommentNotificationEnabled(false);
@@ -184,14 +168,6 @@ export const SettingsScreen: React.FC = () => {
         // Analytics
         await AnalyticsService.logNotificationToggle('teacher_comment', false, previousState);
         await AnalyticsService.updateNotificationSettings(false, dailyReminderEnabled);
-
-        Toast.show({
-          type: 'info',
-          text1: '알림 끄기 완료',
-          text2: '선생님 코멘트 알림을 더 이상 받지 않습니다',
-          position: 'bottom',
-          visibilityTime: 3000,
-        });
       }
     } catch (error) {
       logger.error('Failed to toggle teacher comment notification:', error);
@@ -227,24 +203,6 @@ export const SettingsScreen: React.FC = () => {
       // Analytics: 알림 설정 토글
       await AnalyticsService.logNotificationToggle('daily_reminder', value, previousState);
       await AnalyticsService.updateNotificationSettings(notificationEnabled, value);
-
-      if (value) {
-        Toast.show({
-          type: 'success',
-          text1: '알림 설정 완료',
-          text2: '매일 저녁 9시에 일기 작성 알림을 받습니다',
-          position: 'bottom',
-          visibilityTime: 3000,
-        });
-      } else {
-        Toast.show({
-          type: 'info',
-          text1: '알림 끄기 완료',
-          text2: '일기 작성 알림을 더 이상 받지 않습니다',
-          position: 'bottom',
-          visibilityTime: 3000,
-        });
-      }
     } catch (error) {
       logger.error('Failed to toggle daily reminder:', error);
       // 실패 시 원래 상태로 복구
