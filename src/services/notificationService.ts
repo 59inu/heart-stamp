@@ -350,19 +350,29 @@ export class NotificationService {
    */
   static async setTeacherCommentNotificationEnabled(enabled: boolean): Promise<void> {
     try {
-      await AsyncStorage.setItem(TEACHER_COMMENT_NOTIFICATION_KEY, String(enabled));
-
       if (enabled) {
-        // 알림 활성화: 푸시 토큰 등록
-        const result = await this.registerForPushNotifications();
-        if (!result.success) {
-          throw new Error(`Push notification registration failed: ${result.reason}`);
+        // 권한 확인
+        const hasPermission = await this.checkPushPermission();
+        if (!hasPermission) {
+          throw new Error('Push notification permission denied');
+        }
+
+        // 토큰이 서버에 등록되어 있는지 확인
+        const token = await this.getPushToken();
+        if (!token) {
+          // 토큰이 없으면 재등록 시도 (네트워크 오류 복구)
+          logger.log('🔄 No push token found, re-registering...');
+          const result = await this.registerForPushNotifications();
+          if (!result.success) {
+            throw new Error(`Failed to register push token: ${result.reason}`);
+          }
         }
       } else {
         // 알림 비활성화: 백엔드에서 푸시 토큰 삭제
         await this.unregisterPushToken();
       }
 
+      await AsyncStorage.setItem(TEACHER_COMMENT_NOTIFICATION_KEY, String(enabled));
       logger.log(`✅ Teacher comment notification ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       logger.error('❌ Failed to set teacher comment notification setting:', error);

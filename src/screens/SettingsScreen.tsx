@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
   Platform,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -80,6 +81,48 @@ export const SettingsScreen: React.FC = () => {
     }, [])
   );
 
+  // AppState 리스너: 디바이스 설정에서 돌아왔을 때 권한 상태 재확인
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        logger.log('🔄 [Settings] App became active, checking permissions...');
+
+        const pushPermission = await NotificationService.checkPushPermission();
+        const previousPermission = hasPushPermission;
+        setHasPushPermission(pushPermission);
+
+        // 권한이 새로 생겼을 때 (false → true)
+        if (!previousPermission && pushPermission) {
+          logger.log('✅ [Settings] Permission granted, enabling notifications');
+          await NotificationService.setTeacherCommentNotificationEnabled(true);
+          setNotificationEnabled(true);
+
+          Toast.show({
+            type: 'success',
+            text1: '알림이 활성화되었습니다',
+            text2: '선생님 코멘트를 받을 수 있어요',
+            position: 'bottom',
+            visibilityTime: 3000,
+          });
+        }
+        // 권한이 사라졌을 때 (true → false)
+        else if (previousPermission && !pushPermission) {
+          logger.log('⚠️ [Settings] Permission denied, disabling notifications');
+          await NotificationService.setTeacherCommentNotificationEnabled(false);
+          setNotificationEnabled(false);
+        }
+
+        // 현재 설정 값 다시 로드
+        const teacherCommentSetting = await NotificationService.getTeacherCommentNotificationEnabled();
+        setNotificationEnabled(teacherCommentSetting);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [hasPushPermission]);
+
   const handleNotice = () => {
     setShowNoticeModal(true);
   };
@@ -124,58 +167,15 @@ export const SettingsScreen: React.FC = () => {
     const previousState = notificationEnabled;
 
     try {
-      // 일단 낙관적 업데이트
       setNotificationEnabled(value);
 
-      // 켜려고 할 때
       if (value) {
         logger.log('🔔 [Settings] Enabling teacher comment notification...');
 
-        // 알림 활성화 시도 (내부에서 권한 요청)
-        try {
-          await NotificationService.setTeacherCommentNotificationEnabled(true);
+        // 설정 저장 (내부에서 권한 확인 및 토큰 등록 처리)
+        await NotificationService.setTeacherCommentNotificationEnabled(true);
 
-          // 권한 상태 다시 체크
-          const newPermission = await NotificationService.checkPushPermission();
-          logger.log('🔔 [Settings] Permission check result:', newPermission);
-          setHasPushPermission(newPermission);
-
-          if (!newPermission) {
-            // 권한 거부됨 - 설정으로 안내
-            setNotificationEnabled(false);
-            Alert.alert(
-              '알림 권한 필요',
-              '선생님 코멘트 알림을 받으려면 알림 권한이 필요합니다.\n\niOS 설정에서 알림을 허용해주세요.',
-              [
-                { text: '취소', style: 'cancel' },
-                {
-                  text: '설정으로 이동',
-                  onPress: handleOpenSettings,
-                },
-              ]
-            );
-            return;
-          }
-        } catch (error) {
-          // 권한 요청 실패
-          logger.error('Failed to enable notification:', error);
-          setNotificationEnabled(false);
-          setHasPushPermission(false);
-          Alert.alert(
-            '알림 설정 실패',
-            '알림 권한을 요청하는 중 오류가 발생했습니다.\n\n다시 시도하거나, iOS 설정에서 직접 알림을 허용해주세요.',
-            [
-              { text: '취소', style: 'cancel' },
-              {
-                text: '설정으로 이동',
-                onPress: handleOpenSettings,
-              },
-            ]
-          );
-          return;
-        }
-
-        // Analytics: 알림 설정 토글 (이탈 위험 신호 감지)
+        // Analytics
         await AnalyticsService.logNotificationToggle('teacher_comment', true, previousState);
         await AnalyticsService.updateNotificationSettings(true, dailyReminderEnabled);
 
@@ -204,12 +204,26 @@ export const SettingsScreen: React.FC = () => {
       }
     } catch (error) {
       logger.error('Failed to toggle teacher comment notification:', error);
-      // 실패 시 원래 상태로 복구
       setNotificationEnabled(previousState);
-      Alert.alert(
-        '알림 설정 실패',
-        '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
-      );
+
+      // 에러 메시지 파싱
+      const errorMessage = error instanceof Error ? error.message : '';
+
+      if (errorMessage.includes('permission denied')) {
+        Alert.alert(
+          '알림 권한 필요',
+          '선생님 코멘트 알림을 받으려면 알림 권한이 필요합니다.\n\niOS 설정에서 알림을 허용해주세요.',
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '설정으로 이동', onPress: handleOpenSettings },
+          ]
+        );
+      } else {
+        Alert.alert(
+          '알림 설정 실패',
+          '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
+        );
+      }
     }
   };
 
@@ -256,26 +270,12 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleOpenSettings = () => {
-    Alert.alert(
-      '알림 권한 필요',
-      '알림을 받으려면 설정에서 알림 권한을 허용해주세요.',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '설정으로 이동',
-          onPress: () => {
-            if (Platform.OS === 'ios') {
-              Linking.openURL('app-settings:');
-            } else {
-              Linking.openSettings();
-            }
-          },
-        },
-      ]
-    );
+    // 바로 설정으로 이동 (중복 Alert 방지)
+    if (Platform.OS === 'ios') {
+      Linking.openURL('app-settings:');
+    } else {
+      Linking.openSettings();
+    }
   };
 
   return (
