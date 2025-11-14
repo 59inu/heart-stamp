@@ -132,17 +132,46 @@ export const SettingsScreen: React.FC = () => {
         logger.log('🔔 [Settings] Enabling teacher comment notification...');
 
         // 알림 활성화 시도 (내부에서 권한 요청)
-        const result = await NotificationService.setTeacherCommentNotificationEnabled(true);
+        try {
+          await NotificationService.setTeacherCommentNotificationEnabled(true);
 
-        // 권한 상태 다시 체크
-        const newPermission = await NotificationService.checkPushPermission();
-        logger.log('🔔 [Settings] Permission check result:', newPermission);
-        setHasPushPermission(newPermission);
+          // 권한 상태 다시 체크
+          const newPermission = await NotificationService.checkPushPermission();
+          logger.log('🔔 [Settings] Permission check result:', newPermission);
+          setHasPushPermission(newPermission);
 
-        if (!newPermission) {
-          // 권한 없으면 설정으로 안내
+          if (!newPermission) {
+            // 권한 거부됨 - 설정으로 안내
+            setNotificationEnabled(false);
+            Alert.alert(
+              '알림 권한 필요',
+              '선생님 코멘트 알림을 받으려면 알림 권한이 필요합니다.\n\niOS 설정에서 알림을 허용해주세요.',
+              [
+                { text: '취소', style: 'cancel' },
+                {
+                  text: '설정으로 이동',
+                  onPress: handleOpenSettings,
+                },
+              ]
+            );
+            return;
+          }
+        } catch (error) {
+          // 권한 요청 실패
+          logger.error('Failed to enable notification:', error);
           setNotificationEnabled(false);
-          handleOpenSettings();
+          setHasPushPermission(false);
+          Alert.alert(
+            '알림 설정 실패',
+            '알림 권한을 요청하는 중 오류가 발생했습니다.\n\n다시 시도하거나, iOS 설정에서 직접 알림을 허용해주세요.',
+            [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '설정으로 이동',
+                onPress: handleOpenSettings,
+              },
+            ]
+          );
           return;
         }
 
@@ -279,21 +308,6 @@ export const SettingsScreen: React.FC = () => {
               thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
             />
           </View>
-
-          {/* 권한 없을 때 안내 문구 */}
-          {!hasPushPermission && (
-            <TouchableOpacity
-              style={styles.permissionWarning}
-              onPress={handleOpenSettings}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="alert-circle" size={18} color="#FF9800" />
-              <Text style={styles.permissionWarningText}>
-                알림 권한이 필요합니다. 탭하여 설정으로 이동
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color="#FF9800" />
-            </TouchableOpacity>
-          )}
 
           <View style={styles.settingItem}>
             <View style={styles.settingTextContainer}>
