@@ -35,6 +35,7 @@ export default ({ config }) => {
         },
         infoPlist: {
           UIBackgroundModes: ['remote-notification'],
+          NSUserNotificationsUsageDescription: '매일 아침 AI 선생님의 따뜻한 코멘트를 받아보세요',
         },
         splash: {
           image: './assets/splash.png',
