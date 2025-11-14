@@ -71,6 +71,7 @@ export default ({ config }) => {
           {
             icon: './assets/icon.png',
             color: '#ffffff',
+            enableBackgroundRemoteNotifications: true,
           },
         ],
       ],
