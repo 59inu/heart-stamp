@@ -143,15 +143,6 @@ export const SettingsScreen: React.FC = () => {
     setShowContactModal(true);
   };
 
-  const handleDataRestore = () => {
-    Toast.show({
-      type: 'info',
-      text1: '데이터 복원',
-      text2: '데이터 복원 기능이 준비 중입니다',
-      position: 'bottom',
-      visibilityTime: 2000,
-    });
-  };
 
   const handleDataExport = () => {
     Toast.show({
@@ -328,15 +319,6 @@ export const SettingsScreen: React.FC = () => {
         {/* 데이터 관리 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>데이터 관리</Text>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleDataRestore}>
-            <Ionicons name="cloud-download-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>데이터 복원</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>준비중</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
             <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
