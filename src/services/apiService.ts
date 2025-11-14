@@ -207,12 +207,13 @@ export class ApiService {
     }
   }
 
-  async deletePushToken(userId: string): Promise<{
+  async deletePushToken(): Promise<{
     success: boolean;
     error?: string;
   }> {
     try {
-      const response = await this.axiosInstance.delete(`/push/unregister/${userId}`, {
+      // userId는 인터셉터에서 X-User-Id 헤더로 자동 전송됨
+      const response = await this.axiosInstance.delete('/push/unregister', {
         timeout: 5000,
       });
       return { success: response.data.success };

@@ -385,8 +385,7 @@ export class NotificationService {
    */
   private static async unregisterPushToken(): Promise<void> {
     try {
-      const userId = await UserService.getUserId();
-      const result = await apiService.deletePushToken(userId);
+      const result = await apiService.deletePushToken();
 
       if (result.success) {
         // 로컬에 저장된 토큰도 삭제
