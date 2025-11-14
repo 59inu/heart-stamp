@@ -20,14 +20,14 @@ export const EMOTION_MESSAGES: Record<EmotionType, Record<DatePeriod, string>> =
     end: '나를 알아주세요. 정말 고생했어요 💙',
   },
   positive_dominant: {
-    start: '좋은 시작이에요 ☘️',
+    start: '근사한 시작이에요 🍀',
     mid: '즐겁게 보내고 있어요 😊',
-    end: '웃는 날이 많았네요 ☀️',
+    end: '멋지게 웃는 날이 많았네요 ☀️',
   },
   neutral_dominant: {
     start: '담담하게 시작하고 있어요 🌾',
-    mid: '여러 기분으로 바쁘게 보내고 있어요 💫',
-    end: '감정이 바쁘고 다채로운 한달이었어요 🌈',
+    mid: '차분한 날들이 이어지고 있어요 ☘️',
+    end: '잔잔히 흘러간 날들을 마무리하고 있어요 💌',
   },
   balanced_positive_negative: {
     start: '파도를 멋지게 타볼까요 🌊',
