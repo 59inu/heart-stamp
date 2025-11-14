@@ -31,8 +31,8 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // 스플래시 화면을 2초간 보여주기
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // 스플래시 화면을 1.5초간 보여주기
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (e) {
         logger.error('Splash screen preparation error:', e);
       } finally {
