@@ -65,31 +65,26 @@ export const useImagePicker = (
       try {
         setUploadingImage(true);
 
-        // 1. 먼저 로컬에 저장 (항상 성공, 즉시 반환)
-        logger.log('💾 [useImagePicker] Saving image locally...');
-        const localUri = await ImageCache.saveAndUpload(
+        // 1. 로컬에 저장하고 S3 업로드 시작
+        logger.log('💾 [useImagePicker] Saving image locally and uploading to S3...');
+        await ImageCache.saveAndUpload(
           selectedImage.uri,
           (serverUrl) => {
-            // 2. 백그라운드에서 S3 업로드 성공 시 URL 업데이트
-            logger.log('✅ [useImagePicker] Server upload complete, updating URI');
+            // 2. S3 업로드 성공 시 URL 설정
+            logger.log('✅ [useImagePicker] S3 upload complete:', serverUrl);
             setImageUri(serverUrl);
+            setUploadingImage(false);
+
+            // 성공 토스트
+            Toast.show({
+              type: 'success',
+              text1: '이미지 추가 완료',
+              text2: '일기에 사진이 추가되었어요',
+              position: 'bottom',
+              visibilityTime: 2000,
+            });
           }
         );
-
-        // 3. 로컬 경로를 즉시 설정 (일기 저장 시 사용)
-        logger.log('✅ [useImagePicker] Image saved locally:', localUri);
-        setImageUri(localUri);
-
-        setUploadingImage(false);
-
-        // 성공 토스트
-        Toast.show({
-          type: 'success',
-          text1: '이미지 추가 완료',
-          text2: '일기에 사진이 추가되었어요',
-          position: 'bottom',
-          visibilityTime: 2000,
-        });
       } catch (error: any) {
         setUploadingImage(false);
         logger.error('❌ [useImagePicker] Error saving image:', error);
