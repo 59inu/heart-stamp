@@ -139,12 +139,6 @@ export const SettingsScreen: React.FC = () => {
         logger.log('🔔 [Settings] Permission check result:', newPermission);
         setHasPushPermission(newPermission);
 
-        // 디버깅: 결과 표시 (임시)
-        Alert.alert(
-          '디버그 정보',
-          `권한 상태: ${newPermission ? '허용됨' : '거부됨'}\n\n이제 iOS 설정 → Heart Stamp에서\n알림 항목이 보이나요?`
-        );
-
         if (!newPermission) {
           // 권한 없으면 설정으로 안내
           setNotificationEnabled(false);
