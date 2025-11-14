@@ -35,7 +35,6 @@ export default ({ config }) => {
         },
         infoPlist: {
           UIBackgroundModes: ['remote-notification'],
-          LSMinimumSystemVersion: '17.0',
         },
         splash: {
           image: './assets/splash.png',
