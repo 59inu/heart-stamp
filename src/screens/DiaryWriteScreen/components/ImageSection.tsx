@@ -3,11 +3,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { logger } from '../../../utils/logger';
 import { COLORS } from '../../../constants/colors';
 
@@ -38,9 +38,6 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
   onLoad,
   onError,
 }) => {
-  // 로컬 이미지인지 확인 (file:// 또는 documentDirectory 경로)
-  const isLocalImage = imageUri?.startsWith('file://') || imageUri?.includes('ExponentExperienceData');
-
   return (
     <TouchableOpacity
       style={[
@@ -56,27 +53,21 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
           <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
         </View>
       ) : imageUri ? (
-        <>
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.diaryImage}
-            resizeMode="contain"
-            onLoadStart={isLocalImage ? undefined : onLoadStart}
-            onLoad={isLocalImage ? undefined : onLoad}
-            onError={onError}
-          />
-          {/* 로컬 이미지가 아닐 때만 로딩 스피너 표시 */}
-          {!isLocalImage && loadingImage && (
-            <View style={styles.uploadingOverlay}>
-              <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
-            </View>
-          )}
-        </>
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.diaryImage}
+          contentFit="contain"
+          transition={200}
+          placeholder={require('../../../../assets/image-placeholder.png')}
+          placeholderContentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+        />
       ) : (
         <Image
           source={require('../../../../assets/image-placeholder.png')}
           style={[styles.diaryImage, styles.placeholderImage]}
-          resizeMode="contain"
+          contentFit="contain"
         />
       )}
       {uploadingImage && (

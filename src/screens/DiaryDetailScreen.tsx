@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Alert,
   Dimensions,
   RefreshControl,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
@@ -363,7 +363,12 @@ export const DiaryDetailScreen: React.FC = () => {
             <Image
               source={{ uri: entry.imageUri }}
               style={styles.diaryImage}
-              resizeMode="contain"
+              contentFit="contain"
+              transition={200}
+              placeholder={require('../../assets/image-placeholder.png')}
+              placeholderContentFit="contain"
+              cachePolicy="memory-disk"
+              priority="high"
             />
           </View>
         )}
