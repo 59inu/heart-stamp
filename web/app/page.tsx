@@ -42,7 +42,7 @@ export default function Home() {
           </div>
         </div>
 
-        <h1 className="text-3xl md:text-4xl font-light text-[#2F2B4C] mb-20 tracking-wide">
+        <h1 className="text-3xl md:text-4xl font-light text-[#2F2B4C] mb-20 tracking-wide leading-[1.4]">
           당신의 하루에,<br/> 칭찬 도장을 찍어드려요
         </h1>
 
@@ -53,12 +53,12 @@ export default function Home() {
       <section className="bg-gradient-to-b from-[#F7F6F9] to-white py-20">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <p className="text-xl md:text-2xl text-[#2F2B4C]/80 leading-relaxed font-light mb-8">
-            하루의 마음을 기록하면,<br className="md:hidden" />
+            하루의 마음을 기록하면, <br className="md:hidden" />
             선생님이 당신의 감정을 읽어드립니다
           </p>
           <p className="text-base text-[#2F2B4C]/60 leading-relaxed">
-            Heart Stamp는 일기장에 하루의 감정을 기록하면,<br className="md:hidden" />
-            AI 선생님이 칭찬 도장을 찍어주는 다이어리 앱이에요
+            Heart Stamp는 일기장에 하루의 감정을 기록하고, <br />
+            칭찬 도장과 따뜻한 코멘트를 받는 다이어리 앱이에요
           </p>
         </div>
       </section>
@@ -242,10 +242,10 @@ export default function Home() {
       {/* Final CTA */}
       <section id="download" className="container mx-auto px-6 py-32 text-center">
         <h2 className="text-3xl md:text-4xl font-light text-[#2F2B4C] mb-6">
-          응석 부릴 어른들을 위한 다이어리 앱
+          응석 부리고 싶은 어른들을 위한 다이어리 앱
         </h2>
         <p className="text-lg text-[#2F2B4C]/60 mb-12">
-          오늘부터 일기장에 마음을 기록해보세요
+          다정한 대답이 돌아오는 일기장에 마음을 기록해보세요
         </p>
 
         <DownloadButton size="large" />
