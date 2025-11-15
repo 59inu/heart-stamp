@@ -1,5 +1,6 @@
 import Image from "next/image";
 import ScreenshotCarousel from "@/components/ScreenshotCarousel";
+import DownloadButton from "@/components/DownloadButton";
 
 export default function Home() {
   const jsonLd = {
@@ -45,14 +46,7 @@ export default function Home() {
           당신의 하루,<br/> 마음으로 기록해보세요
         </h1>
 
-        <a
-          href="https://apps.apple.com/app/id6755212868"
-          className="inline-block bg-[#87A6D1] text-white px-10 py-4 rounded-full text-base font-medium shadow-md hover:shadow-lg transition-all hover:scale-105"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          App Store에서 다운로드
-        </a>
+        <DownloadButton />
       </section>
 
       {/* 앱 설명 - 감성적 표현 */}
@@ -254,14 +248,7 @@ export default function Home() {
           오늘부터 시작하는 감정 일기
         </p>
 
-        <a
-          href="https://apps.apple.com/app/id6755212868"
-          className="inline-block bg-[#87A6D1] text-white px-12 py-5 rounded-full text-lg font-medium shadow-md hover:shadow-lg transition-all hover:scale-105"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          App Store에서 다운로드
-        </a>
+        <DownloadButton size="large" />
 
         <p className="text-sm text-[#2F2B4C]/40 mt-8">
           iOS 14.0 이상
