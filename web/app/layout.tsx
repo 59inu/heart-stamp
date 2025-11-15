@@ -57,9 +57,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
-        )}
+        <GoogleAnalytics gaId="G-ZDX0B1R9SK" />
       </body>
     </html>
   );
