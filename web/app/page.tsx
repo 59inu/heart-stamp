@@ -199,7 +199,7 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white rounded-2xl p-8 shadow-sm">
               <p className="text-[#2F2B4C]/70 leading-relaxed mb-6">
-                "AI가 위로하려 하지 않아서 좋았어요."
+                "억지로 위로하지 않아서 좋아요."
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#E8F5EE] rounded-full"></div>
