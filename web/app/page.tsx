@@ -43,7 +43,7 @@ export default function Home() {
         </div>
 
         <h1 className="text-3xl md:text-4xl font-light text-[#2F2B4C] mb-20 tracking-wide">
-          당신의 하루,<br/> 마음으로 기록해보세요
+          당신의 하루에,<br/> 칭찬 도장을 찍어드려요
         </h1>
 
         <DownloadButton />
