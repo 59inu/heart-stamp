@@ -2,8 +2,31 @@ import Image from "next/image";
 import ScreenshotCarousel from "@/components/ScreenshotCarousel";
 
 export default function Home() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MobileApplication',
+    name: 'Heart Stamp',
+    description: '일기를 쓰면 선생님이 도장을 찍어주는 감정 일기 앱',
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'iOS',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'KRW',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '5.0',
+      ratingCount: '1',
+    },
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero Section - 여백 많고 간결하게 */}
       <section className="container mx-auto px-6 py-32 md:py-40 text-center">
         <div className="flex justify-center mb-12">
