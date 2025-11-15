@@ -19,12 +19,14 @@ export default function Home() {
         </div>
 
         <h1 className="text-3xl md:text-4xl font-light text-[#2F2B4C] mb-20 tracking-wide">
-          당신의 하루, 마음으로 기록해보세요
+          당신의 하루,<br/> 마음으로 기록해보세요
         </h1>
 
         <a
-          href="#download"
+          href="https://apps.apple.com/app/id6755212868"
           className="inline-block bg-[#87A6D1] text-white px-10 py-4 rounded-full text-base font-medium shadow-md hover:shadow-lg transition-all hover:scale-105"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           App Store에서 다운로드
         </a>
@@ -100,9 +102,9 @@ export default function Home() {
           <div className="max-w-6xl mx-auto">
             <ScreenshotCarousel
               screenshots={[
-                { src: "", alt: "Heart Stamp 일기 작성 화면" },
-                { src: "", alt: "Heart Stamp 선생님 코멘트" },
-                { src: "", alt: "Heart Stamp 주간 리포트" },
+                { src: "/screenshot1.png", alt: "Heart Stamp 일기 작성 화면" },
+                { src: "/screenshot2.png", alt: "Heart Stamp 선생님 코멘트" },
+                { src: "/screenshot3.png", alt: "Heart Stamp 주간 리포트" },
               ]}
             />
           </div>
@@ -230,8 +232,10 @@ export default function Home() {
         </p>
 
         <a
-          href="https://apps.apple.com/app/heart-stamp"
+          href="https://apps.apple.com/app/id6755212868"
           className="inline-block bg-[#87A6D1] text-white px-12 py-5 rounded-full text-lg font-medium shadow-md hover:shadow-lg transition-all hover:scale-105"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           App Store에서 다운로드
         </a>
