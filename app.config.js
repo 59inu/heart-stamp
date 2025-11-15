@@ -24,7 +24,7 @@ export default ({ config }) => {
         backgroundColor: "#F9F3EB"
       },
       ios: {
-        supportsTablet: true,
+        supportsTablet: false,
         bundleIdentifier: isProduction ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.preview',
         associatedDomains: [
           'applinks:heartstamp.kr',
