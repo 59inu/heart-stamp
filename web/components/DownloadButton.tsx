@@ -14,17 +14,11 @@ export default function DownloadButton({ className = '', size = 'default' }: Dow
 
   const handleClick = (e: React.MouseEvent) => {
     // Google Analytics 이벤트 추적
-    if (typeof window !== 'undefined') {
-      const gtag = (window as any).gtag;
-      if (gtag) {
-        gtag('event', 'download_button_click', {
-          event_category: 'engagement',
-          event_label: isAppLive ? 'app_store_redirect' : 'coming_soon_modal',
-        });
-        console.log('[GA] Event sent: download_button_click');
-      } else {
-        console.warn('[GA] gtag not found');
-      }
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'download_button_click', {
+        event_category: 'engagement',
+        event_label: isAppLive ? 'app_store_redirect' : 'coming_soon_modal',
+      });
     }
 
     if (!isAppLive) {
