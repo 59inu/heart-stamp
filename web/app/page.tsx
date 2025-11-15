@@ -181,8 +181,8 @@ export default function Home() {
 
             <div className="mt-8 pt-8 border-t border-[#F7F6F9]">
               <p className="text-[#2F2B4C]/70 text-center leading-relaxed">
-                "이번 주엔 만족과 피로가 함께 보이네요.<br />
-                잘 버텨내고 계시네요."
+                "성취감도 있었지만 에너지도 많이 쓴 한 주네요.<br />
+                충분히 잘해내고 있어요."
               </p>
             </div>
           </div>
