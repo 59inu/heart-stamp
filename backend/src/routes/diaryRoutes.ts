@@ -409,6 +409,37 @@ router.delete('/admin/delete-comment',
   }
 );
 
+// [Admin] Get all diaries (for admin UI)
+router.get('/admin/diaries',
+  requireAdminToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.query;
+
+      if (!userId || typeof userId !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'userId query parameter is required',
+        });
+      }
+
+      const userDiaries = DiaryDatabase.getAllByUserId(userId);
+
+      res.json({
+        success: true,
+        data: userDiaries,
+      });
+    } catch (error) {
+      console.error('Error fetching admin diaries:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch diaries',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 // [Admin] Get recent AI comments
 router.get('/admin/recent-comments',
   requireAdminToken,
