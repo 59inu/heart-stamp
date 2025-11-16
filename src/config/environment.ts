@@ -43,6 +43,20 @@ export const API_ENDPOINTS = {
 // 현재 환경의 API URL
 export const API_BASE_URL = API_ENDPOINTS[ENV];
 
-// 디버깅용
+// 런타임 환경 검증 (프로덕션 빌드인데 development 환경이면 경고)
+if (!__DEV__ && ENV !== 'production') {
+  const appEnv = Constants.expoConfig?.extra?.appEnv;
+  logger.warn(
+    `⚠️ CRITICAL: Release build is using ${ENV} environment!`,
+    `Expected: production, Got: ${ENV}`,
+    `API URL: ${API_BASE_URL}`,
+    `appEnv from config: ${appEnv}`,
+    `This means the app will connect to the wrong server!`
+  );
+}
+
+// 디버깅용 로그 (개발 환경에서만 출력됨)
 logger.log(`🌐 Environment: ${ENV}`);
 logger.log(`🌐 API Base URL: ${API_BASE_URL}`);
+logger.log(`🌐 __DEV__: ${__DEV__}`);
+logger.log(`🌐 appEnv from config: ${Constants.expoConfig?.extra?.appEnv}`);

@@ -1,10 +1,22 @@
 export default ({ config }) => {
   // APP_VARIANT 환경 변수로 판단 (eas.json에서 주입)
   const appVariant = process.env.APP_VARIANT;
-  const isProduction = process.env.APP_ENV === 'production';
+  const appEnv = process.env.APP_ENV;
+  const isProduction = appEnv === 'production';
 
-  console.log('🔍 [app.config.js] APP_VARIANT:', appVariant);
-  console.log('🔍 [app.config.js] APP_ENV:', process.env.APP_ENV);
+  console.log('========================================');
+  console.log('🔍 [app.config.js] Build Configuration');
+  console.log('----------------------------------------');
+  console.log('APP_VARIANT:', appVariant);
+  console.log('APP_ENV:', appEnv);
+  console.log('isProduction:', isProduction);
+
+  // 환경 변수 미설정 경고
+  if (!appVariant && !appEnv) {
+    console.warn('⚠️  WARNING: Neither APP_VARIANT nor APP_ENV is set!');
+    console.warn('⚠️  Defaulting to development environment.');
+  }
+  console.log('========================================');
 
   return {
     expo: {
@@ -79,7 +91,8 @@ export default ({ config }) => {
         eas: {
           projectId: '46e61da8-364c-4ce8-b1b8-03883e7e6919',
         },
-        appEnv: process.env.APP_ENV || 'development',
+        // EAS Build에서 주입된 환경 변수를 앱 런타임에 전달
+        appEnv: appEnv || 'development',
       },
       runtimeVersion: {
         policy: 'appVersion',

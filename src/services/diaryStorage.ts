@@ -122,13 +122,13 @@ export class DiaryStorage {
   /**
    * 서버에서 AI 코멘트 업데이트 동기화
    * 중복 실행 방지 기능 포함
-   * @returns { success: boolean, error?: string }
+   * @returns { success: boolean, error?: string, alreadySyncing?: boolean }
    */
-  static async syncWithServer(): Promise<{ success: boolean; error?: string }> {
+  static async syncWithServer(): Promise<{ success: boolean; error?: string; alreadySyncing?: boolean }> {
     // 이미 동기화 중이면 스킵
     if (this.isSyncing) {
       logger.log('⏭️ [DiaryStorage] Sync already in progress, skipping...');
-      return { success: false, error: '이미 동기화 중입니다' };
+      return { success: false, error: '이미 동기화 중입니다', alreadySyncing: true };
     }
 
     this.isSyncing = true;

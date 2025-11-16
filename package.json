@@ -17,7 +17,15 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "build:ios:dev": "APP_ENV=development eas build --profile development --platform ios",
+    "build:ios:preview": "APP_ENV=development eas build --profile preview --platform ios",
+    "build:ios:prod": "APP_ENV=production eas build --profile production --platform ios",
+    "build:android:dev": "APP_ENV=development eas build --profile development --platform android",
+    "build:android:preview": "APP_ENV=development eas build --profile preview --platform android",
+    "build:android:prod": "APP_ENV=production eas build --profile production --platform android",
+    "update:preview": "APP_ENV=development eas update --branch preview --message",
+    "update:prod": "APP_ENV=production eas update --branch production --message"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

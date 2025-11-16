@@ -59,27 +59,33 @@ export const useDiaryManagement = () => {
       const result = await DiaryStorage.syncWithServer();
 
       if (!result.success) {
-        logger.error('동기화 실패:', result.error);
-        // 사용자에게 Alert로 알림 (Toast보다 확실함)
-        Alert.alert(
-          '동기화 실패',
-          `서버와 동기화하지 못했습니다.\n\n${result.error}\n\n나중에 다시 시도해주세요.`,
-          [{ text: '확인' }]
-        );
+        // 중복 동기화는 정상적인 상황이므로 Alert 표시 안 함
+        if (result.alreadySyncing) {
+          logger.log('⏭️ [DiaryListScreen] Sync already in progress, skipping alert');
+        } else {
+          // 실제 에러(네트워크, 서버 등)만 Alert 표시
+          logger.error('동기화 실패:', result.error);
+          Alert.alert(
+            '동기화 실패',
+            `서버와 동기화하지 못했습니다.\n\n${result.error}\n\n나중에 다시 시도해주세요.`,
+            [{ text: '확인' }]
+          );
+        }
       } else {
         logger.log('✅ [DiaryListScreen] Pull-to-refresh completed');
         diaryEvents.emit(EVENTS.AI_COMMENT_RECEIVED);
       }
 
-      // 동기화 실패해도 로컬 데이터는 로드
-      await loadDiaries();
+      // 로컬 데이터만 새로고침 (중복 동기화 방지)
+      const entries = await DiaryStorage.getAll();
+      setDiaries(entries);
     } catch (error) {
       logger.error('Pull-to-refresh 오류:', error);
       Alert.alert('오류', '새로고침 중 오류가 발생했습니다.');
     } finally {
       setRefreshing(false);
     }
-  }, [loadDiaries]);
+  }, []);
 
   // 테스트용: 헤더 5번 탭으로 데이터 초기화 (개발 모드에서만)
   const handleHeaderTap = useCallback(() => {
