@@ -6,10 +6,17 @@ export default function Home() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'MobileApplication',
-    name: 'Heart Stamp',
-    description: '일기를 쓰면 선생님이 칭찬 도장을 찍어주는 다이어리 앱',
+    name: 'HeartStamp',
+    alternateName: '하트스탬프',
+    description: '한 줄만 적어도 작은 도장과 응원이 돌아오는 일기장. 어른의 하루에도 다정한 기록이 필요하니까.',
     applicationCategory: 'HealthApplication',
-    operatingSystem: 'iOS',
+    operatingSystem: 'iOS 14.0 이상',
+    url: 'https://heartstamp.kr',
+    author: {
+      '@type': 'Organization',
+      name: 'HeartStamp',
+      email: 'heartstampdiary@gmail.com',
+    },
     offers: {
       '@type': 'Offer',
       price: '0',
@@ -19,7 +26,10 @@ export default function Home() {
       '@type': 'AggregateRating',
       ratingValue: '5.0',
       ratingCount: '1',
+      bestRating: '5',
+      worstRating: '1',
     },
+    keywords: '일기, 일기장, 다이어리, 감정 일기, 칭찬 도장, 응원, 위로, 감성 일기, 마음 기록, 멘탈 헬스',
   };
 
   return (
