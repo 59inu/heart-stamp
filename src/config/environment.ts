@@ -14,7 +14,7 @@ export type Environment = 'local' | 'development' | 'production';
 
 // 현재 환경 결정
 const getEnvironment = (): Environment => {
-  // 개발 모드면 무조건 로컬
+  // 로컬 개발 모드
   if (__DEV__) {
     return 'local';
   }

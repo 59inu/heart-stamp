@@ -27,6 +27,7 @@ export default function App() {
   const lastSyncTime = useRef(0);
   const SYNC_DEBOUNCE_MS = 30000; // 30초 디바운스
   const [appIsReady, setAppIsReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     async function prepare() {
@@ -52,73 +53,79 @@ export default function App() {
 
   useEffect(() => {
     if (!appIsReady) return;
-    // EAS Updates 체크 (프로덕션/프리뷰 빌드에서만)
-    const checkForUpdates = async () => {
-      if (__DEV__) {
-        logger.log('ℹ️ [App] Skipping update check in development mode');
-        return;
-      }
 
-      try {
-        const update = await Updates.checkForUpdateAsync();
-
-        if (update.isAvailable) {
-          logger.log('🔄 [App] Update available, downloading...');
-          await Updates.fetchUpdateAsync();
-          logger.log('✅ [App] Update downloaded, will apply on next restart');
-
-          // 사용자에게 알림 (선택적)
-          Alert.alert(
-            '업데이트 완료',
-            '새로운 버전을 다운로드했습니다. 앱을 재시작하면 적용됩니다.',
-            [
-              { text: '나중에', style: 'cancel' },
-              { text: '재시작', onPress: () => Updates.reloadAsync() }
-            ]
-          );
-        } else {
-          logger.log('✅ [App] App is up to date');
+    const initializeApp = async () => {
+      // EAS Updates 체크 (프로덕션/프리뷰 빌드에서만)
+      const checkForUpdates = async () => {
+        if (__DEV__) {
+          logger.log('ℹ️ [App] Skipping update check in development mode');
+          return;
         }
-      } catch (e) {
-        logger.error('❌ [App] Error checking for updates:', e);
-      }
-    };
 
-    checkForUpdates();
+        try {
+          const update = await Updates.checkForUpdateAsync();
 
-    // Firebase Auth 및 Analytics 초기화
-    const initAuthAndAnalytics = async () => {
-      // Firebase 익명 로그인 초기화
-      const { AuthService } = await import('./src/services/authService');
-      try {
-        const user = await AuthService.initialize();
-        logger.log('✅ [App] Firebase Auth initialized:', user.uid);
+          if (update.isAvailable) {
+            logger.log('🔄 [App] Update available, downloading...');
+            await Updates.fetchUpdateAsync();
+            logger.log('✅ [App] Update downloaded, will apply on next restart');
 
-        // Sentry에 사용자 ID 설정
-        setUser(user.uid);
-      } catch (error) {
-        logger.error('❌ [App] Firebase Auth initialization failed:', error);
-      }
+            // 사용자에게 알림 (선택적)
+            Alert.alert(
+              '업데이트 완료',
+              '새로운 버전을 다운로드했습니다. 앱을 재시작하면 적용됩니다.',
+              [
+                { text: '나중에', style: 'cancel' },
+                { text: '재시작', onPress: () => Updates.reloadAsync() }
+              ]
+            );
+          } else {
+            logger.log('✅ [App] App is up to date');
+          }
+        } catch (e) {
+          logger.error('❌ [App] Error checking for updates:', e);
+        }
+      };
 
-      // Analytics 초기화
-      await AnalyticsService.initialize();
+      await checkForUpdates();
 
-      const isFirstOpen = await RetentionService.checkAndLogFirstOpen();
+      // Firebase Auth 및 Analytics 초기화 (완료될 때까지 대기)
+      const initAuthAndAnalytics = async () => {
+        // Firebase 익명 로그인 초기화
+        const { AuthService } = await import('./src/services/authService');
+        try {
+          const user = await AuthService.initialize();
+          logger.log('✅ [App] Firebase Auth initialized:', user.uid);
 
-      if (!isFirstOpen) {
-        // 첫 실행이 아니면 리텐션 지표 업데이트
-        await RetentionService.updateOnAppForeground();
-      }
-    };
+          // Sentry에 사용자 ID 설정
+          setUser(user.uid);
+        } catch (error) {
+          logger.error('❌ [App] Firebase Auth initialization failed:', error);
+        }
 
-    initAuthAndAnalytics();
+        // Analytics 초기화
+        await AnalyticsService.initialize();
 
-    // SyncQueue 네트워크 모니터링 시작
-    SyncQueue.startWatching();
-    logger.log('✅ [App] SyncQueue network monitoring started');
+        const isFirstOpen = await RetentionService.checkAndLogFirstOpen();
 
-    // 푸시 알림 등록 및 리스너 설정
-    const initPushNotifications = async () => {
+        if (!isFirstOpen) {
+          // 첫 실행이 아니면 리텐션 지표 업데이트
+          await RetentionService.updateOnAppForeground();
+        }
+      };
+
+      // Firebase Auth 초기화 완료 대기
+      await initAuthAndAnalytics();
+
+      // Firebase Auth 초기화 완료 표시
+      setAuthReady(true);
+
+      // SyncQueue 네트워크 모니터링 시작
+      SyncQueue.startWatching();
+      logger.log('✅ [App] SyncQueue network monitoring started');
+
+      // 푸시 알림 등록 및 리스너 설정
+      const initPushNotifications = async () => {
       // ⚠️ IMPORTANT: 항상 권한을 요청해야 iOS 설정에 알림 항목이 생성됨
       // 권한 상태와 무관하게 최소 한 번은 요청해야 함
       logger.log('📱 [App] Requesting notification permission...');
@@ -190,24 +197,28 @@ export default function App() {
           }
         }
       );
-    };
+      };
 
-    initPushNotifications();
+      await initPushNotifications();
 
-    // 일기 작성 알림 초기화 (설정이 활성화되어 있으면 예약)
-    const initDailyReminder = async () => {
-      try {
-        const enabled = await NotificationService.getDailyReminderEnabled();
-        if (enabled) {
-          await NotificationService.scheduleDailyReminder(21, 0);
-          logger.log('✅ Daily reminder initialized');
+      // 일기 작성 알림 초기화 (설정이 활성화되어 있으면 예약)
+      const initDailyReminder = async () => {
+        try {
+          const enabled = await NotificationService.getDailyReminderEnabled();
+          if (enabled) {
+            await NotificationService.scheduleDailyReminder(21, 0);
+            logger.log('✅ Daily reminder initialized');
+          }
+        } catch (error) {
+          logger.error('❌ Failed to initialize daily reminder:', error);
         }
-      } catch (error) {
-        logger.error('❌ Failed to initialize daily reminder:', error);
-      }
+      };
+
+      await initDailyReminder();
     };
 
-    initDailyReminder();
+    // 앱 초기화 실행
+    initializeApp();
 
     // 앱 상태 변경 리스너 (백그라운드 → 포그라운드 전환 시 데이터 새로고침)
     const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
@@ -247,7 +258,7 @@ export default function App() {
     };
   }, [appIsReady]);
 
-  if (!appIsReady) {
+  if (!appIsReady || !authReady) {
     return null;
   }
 
