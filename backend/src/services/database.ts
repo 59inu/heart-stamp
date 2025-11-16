@@ -519,7 +519,8 @@ export class DiaryDatabase {
     const sonnetCount = (sonnetStmt.get('sonnet') as any).count;
 
     // Haiku 사용 횟수
-    const haikuCount = (sonnetStmt.get('haiku') as any).count;
+    const haikuStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE model = ? AND deletedAt IS NULL');
+    const haikuCount = (haikuStmt.get('haiku') as any).count;
 
     // 모델 정보 없는 코멘트 (마이그레이션 전 데이터)
     const unknownStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND model IS NULL AND deletedAt IS NULL');
@@ -534,7 +535,8 @@ export class DiaryDatabase {
     const sonnetAvgScore = (sonnetAvgStmt.get('sonnet') as any).avg;
 
     // Haiku 평균 중요도
-    const haikuAvgScore = (sonnetAvgStmt.get('haiku') as any).avg;
+    const haikuAvgStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE model = ? AND deletedAt IS NULL');
+    const haikuAvgScore = (haikuAvgStmt.get('haiku') as any).avg;
 
     // 모델 정보가 있는 코멘트 수 (unknown 제외)
     const totalWithModel = sonnetCount + haikuCount;

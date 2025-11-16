@@ -409,4 +409,53 @@ router.delete('/admin/delete-comment',
   }
 );
 
+// [Admin] Get recent AI comments
+router.get('/admin/recent-comments',
+  requireAdminToken,
+  async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const comments = DiaryDatabase.getRecentAIComments(limit);
+
+      res.json({
+        success: true,
+        data: comments,
+      });
+    } catch (error) {
+      console.error('Error fetching recent comments:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch recent comments',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+// [Admin] Get database statistics
+router.get('/admin/stats',
+  requireAdminToken,
+  async (req: Request, res: Response) => {
+    try {
+      const stats = DiaryDatabase.getStats();
+      const modelStats = DiaryDatabase.getModelStats();
+
+      res.json({
+        success: true,
+        data: {
+          ...stats,
+          ...modelStats,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch stats',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;
