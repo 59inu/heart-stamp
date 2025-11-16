@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { DiaryEntry } from '../models/DiaryEntry';
 import { Report } from '../models/Report';
 import { UserService } from './userService';
+import { AuthService } from './authService';
 import { API_BASE_URL, ENV } from '../config/environment';
 import { getLocalizedErrorMessage, ErrorContext } from '../utils/errorMessages';
 import { logger } from '../utils/logger';
@@ -28,10 +29,17 @@ export class ApiService {
       timeout: 10000, // 10초 타임아웃 (푸시 토큰 등록은 개별 설정)
     });
 
-    // 모든 요청에 userId 헤더 추가
+    // 모든 요청에 userId 헤더와 Firebase Auth 토큰 추가
     this.axiosInstance.interceptors.request.use(async (config) => {
       const userId = await UserService.getOrCreateUserId();
       config.headers['X-User-Id'] = userId;
+
+      // Firebase Auth 토큰 추가
+      const token = await AuthService.getIdToken();
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+
       logger.log(`🔍 [apiService] Request interceptor - URL: ${config.baseURL}${config.url}`);
       logger.log(`🔍 [apiService] Request method: ${config.method}`);
       logger.log(`🔍 [apiService] Request headers:`, JSON.stringify(config.headers));
