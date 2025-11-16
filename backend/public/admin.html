@@ -304,10 +304,18 @@
       <div id="importanceResult" class="result"></div>
     </div>
 
+    <!-- User Diaries List -->
+    <div class="card">
+      <h2>사용자 일기 목록 조회</h2>
+      <input type="text" id="diariesUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+      <button class="btn btn-primary" onclick="loadUserDiaries()">일기 목록 조회</button>
+      <div id="userDiariesResult" class="result"></div>
+    </div>
+
     <!-- Generate/Delete Comment for Specific Date -->
     <div class="card">
       <h2>특정 날짜 코멘트 생성/삭제</h2>
-      <input type="text" id="generateUserId" placeholder="사용자 ID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+      <input type="text" id="generateUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
       <input type="date" id="generateDate" placeholder="YYYY-MM-DD" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
       <div style="display: flex; gap: 10px;">
         <button class="btn btn-success" onclick="generateCommentForDate()" style="flex: 1;">코멘트 생성</button>
@@ -727,6 +735,88 @@ ${data.reason}</pre>
 
             <div style="margin-top: 12px; color: #718096;">
               AI 코멘트, 모델 정보, 중요도 점수, 도장이 모두 삭제되었습니다.
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function loadUserDiaries() {
+      const userId = document.getElementById('diariesUserId').value.trim();
+      const resultDiv = document.getElementById('userDiariesResult');
+
+      if (!userId) {
+        alert('사용자 Firebase UID를 입력하세요');
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">일기 목록 조회 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall(`/api/admin/diaries?userId=${encodeURIComponent(userId)}`);
+        const diaries = result.data;
+
+        if (!diaries || diaries.length === 0) {
+          resultDiv.innerHTML = '<div class="loading">일기가 없습니다</div>';
+          return;
+        }
+
+        // Sort by date descending
+        diaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const diariesHtml = diaries.map(diary => {
+          const date = new Date(diary.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+          const hasComment = !!diary.aiComment;
+          const commentBadge = hasComment ?
+            '<span style="background: #48bb78; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px;">✓ AI 코멘트</span>' :
+            '<span style="background: #e2e8f0; color: #718096; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px;">코멘트 없음</span>';
+          const moodEmoji = diary.mood === 'red' ? '😞' : diary.mood === 'yellow' ? '😐' : diary.mood === 'green' ? '😊' : '';
+          const stampEmoji = diary.stampType === 'nice' ? '😊' : diary.stampType === 'great' ? '🌟' : diary.stampType === 'best' ? '🏆' : '';
+
+          return `
+            <div style="padding: 16px; margin: 12px 0; background: #f7fafc; border-radius: 8px; border-left: 4px solid ${hasComment ? '#48bb78' : '#e2e8f0'};">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 15px;">${moodEmoji} ${date}</strong>
+                ${commentBadge}
+              </div>
+
+              <div style="color: #666; font-size: 13px; margin-bottom: 8px;">
+                <strong>일기 ID:</strong> <code style="font-size: 11px;">${diary._id}</code>
+              </div>
+
+              ${diary.moodTag ? `<div style="color: #667eea; font-size: 13px; margin-bottom: 8px;">💭 ${diary.moodTag}</div>` : ''}
+
+              <div style="color: #333; line-height: 1.5; margin: 12px 0; padding: 12px; background: white; border-radius: 6px;">
+                ${diary.content.substring(0, 200)}${diary.content.length > 200 ? '...' : ''}
+              </div>
+
+              ${hasComment ? `
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                  <div style="font-size: 13px; color: #666; margin-bottom: 6px;">
+                    ${stampEmoji} <strong>AI 코멘트</strong>
+                    ${diary.model ? `<span style="background: ${diary.model === 'sonnet' ? '#9f7aea' : '#48bb78'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 6px;">${diary.model.toUpperCase()}</span>` : ''}
+                    ${diary.importanceScore ? `<span style="color: #999; margin-left: 6px;">(${diary.importanceScore}/40)</span>` : ''}
+                  </div>
+                  <div style="color: #333; line-height: 1.5; padding: 8px; background: #fff; border-radius: 4px;">
+                    💬 ${diary.aiComment}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+
+        resultDiv.innerHTML = `
+          <div style="margin-top: 16px;">
+            <div style="background: #667eea; color: white; padding: 12px; border-radius: 8px 8px 0 0; font-weight: bold;">
+              📚 총 ${diaries.length}개의 일기
+              (AI 코멘트: ${diaries.filter(d => d.aiComment).length}개)
+            </div>
+            <div style="max-height: 600px; overflow-y: auto; background: white; padding: 12px; border-radius: 0 0 8px 8px; border: 2px solid #667eea;">
+              ${diariesHtml}
             </div>
           </div>
         `;
