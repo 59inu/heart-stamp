@@ -86,14 +86,22 @@ export default function App() {
 
     checkForUpdates();
 
-    // Analytics 및 리텐션 추적 초기화
-    const initAnalytics = async () => {
-      await AnalyticsService.initialize();
+    // Firebase Auth 및 Analytics 초기화
+    const initAuthAndAnalytics = async () => {
+      // Firebase 익명 로그인 초기화
+      const { AuthService } = await import('./src/services/authService');
+      try {
+        const user = await AuthService.initialize();
+        logger.log('✅ [App] Firebase Auth initialized:', user.uid);
 
-      // Sentry에 사용자 ID 설정 (AnalyticsService가 이미 생성한 ID 사용)
-      const { UserService } = await import('./src/services/userService');
-      const userId = await UserService.getOrCreateUserId();
-      setUser(userId);
+        // Sentry에 사용자 ID 설정
+        setUser(user.uid);
+      } catch (error) {
+        logger.error('❌ [App] Firebase Auth initialization failed:', error);
+      }
+
+      // Analytics 초기화
+      await AnalyticsService.initialize();
 
       const isFirstOpen = await RetentionService.checkAndLogFirstOpen();
 
@@ -103,7 +111,7 @@ export default function App() {
       }
     };
 
-    initAnalytics();
+    initAuthAndAnalytics();
 
     // SyncQueue 네트워크 모니터링 시작
     SyncQueue.startWatching();
