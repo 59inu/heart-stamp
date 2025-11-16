@@ -6,6 +6,7 @@
  * - production: Railway Prod 서버 (EAS production build, App Store)
  */
 
+import Constants from 'expo-constants';
 import { logger } from '../utils/logger';
 
 // 환경 타입
@@ -19,8 +20,8 @@ const getEnvironment = (): Environment => {
   }
 
   // 프로덕션 빌드일 때는 환경 변수로 구분
-  // EAS Build에서 APP_ENV 환경 변수 주입
-  const appEnv = process.env.APP_ENV;
+  // EAS Build에서 APP_ENV 환경 변수 주입 (app.config.js의 extra를 통해 전달)
+  const appEnv = Constants.expoConfig?.extra?.appEnv;
 
   if (appEnv === 'production') {
     return 'production';
@@ -36,7 +37,7 @@ export const ENV = getEnvironment();
 export const API_ENDPOINTS = {
   local: 'http://192.168.0.14:3000/api', // 로컬 서버
   development: 'https://heart-stamp-dev.up.railway.app/api',
-  production: 'https://heart-stamp-production.up.railway.app/api',
+  production: 'https://api.heartstamp.kr/api', // 커스텀 도메인
 };
 
 // 현재 환경의 API URL

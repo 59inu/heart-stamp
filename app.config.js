@@ -79,6 +79,7 @@ export default ({ config }) => {
         eas: {
           projectId: '46e61da8-364c-4ce8-b1b8-03883e7e6919',
         },
+        appEnv: process.env.APP_ENV || 'development',
       },
       runtimeVersion: {
         policy: 'appVersion',
