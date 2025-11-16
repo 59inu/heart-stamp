@@ -17,10 +17,12 @@ export const logger = {
   },
 
   error: (...args: any[]) => {
-    // 항상 콘솔에 출력
-    console.error(...args);
+    // 개발 환경에서만 콘솔 출력
+    if (isDevelopment) {
+      console.error(...args);
+    }
 
-    // 프로덕션에서는 Sentry로 전송
+    // 프로덕션에서는 Sentry로만 전송
     if (!isDevelopment) {
       // Error 객체가 있으면 exception으로 전송
       const error = args.find(arg => arg instanceof Error);
@@ -38,10 +40,12 @@ export const logger = {
   },
 
   warn: (...args: any[]) => {
-    // 항상 콘솔에 출력
-    console.warn(...args);
+    // 개발 환경에서만 콘솔 출력
+    if (isDevelopment) {
+      console.warn(...args);
+    }
 
-    // 프로덕션에서는 Sentry로 전송 (warning 레벨)
+    // 프로덕션에서는 Sentry로만 전송 (warning 레벨)
     if (!isDevelopment) {
       Sentry.captureMessage(args.join(' '), 'warning');
     }
