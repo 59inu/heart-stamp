@@ -149,9 +149,6 @@ export const ReportScreen: React.FC = () => {
       <ReportHeader onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 기간 선택 탭 */}
-        <PeriodTabs period={period} onPeriodChange={setPeriod} />
-
         {/* 기간 네비게이션 */}
         <PeriodNavigation
           periodText={periodText}
