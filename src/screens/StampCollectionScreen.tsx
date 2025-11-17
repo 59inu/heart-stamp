@@ -126,7 +126,7 @@ export const StampCollectionScreen: React.FC = () => {
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {year}년 {month}월 도장 컬렉션
+          {year}년 {month}월
         </Text>
         <View style={styles.backButton} />
       </View>

@@ -57,7 +57,7 @@ export const ExportScreen: React.FC = () => {
   const handleRequestExport = async () => {
     Alert.prompt(
       '일기 내보내기',
-      '다운로드 링크를 받을 이메일 주소를 입력해주세요.\n최대 24시간 이내에 처리됩니다.',
+      '이메일 주소를 입력해주세요.\n최대 24시간 이내에 처리됩니다.',
       [
         { text: '취소', style: 'cancel' },
         {
@@ -79,7 +79,7 @@ export const ExportScreen: React.FC = () => {
               Toast.show({
                 type: 'success',
                 text1: '내보내기 요청 완료',
-                text2: `${email}로 전송됩니다`,
+                text2: '최대 24시간 이내에 처리됩니다',
                 position: 'bottom',
                 visibilityTime: 3000,
               });
@@ -207,20 +207,30 @@ export const ExportScreen: React.FC = () => {
             {requesting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <>
-                <Ionicons name="download-outline" size={22} color="#fff" />
-                <Text style={styles.exportButtonText}>새로 내보내기</Text>
-              </>
+              <Text style={styles.exportButtonText}>새로 내보내기</Text>
             )}
           </TouchableOpacity>
           <Text style={styles.exportHint}>
-            이메일 주소를 입력하면 24시간 이내에 다운로드 링크를 보내드립니다
+            최대 24시간 이내에 처리됩니다
           </Text>
         </View>
 
         {/* 내보내기 기록 */}
         <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>내보내기 기록</Text>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={styles.sectionTitle}>내보내기 기록</Text>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  '다운로드 링크 유효기간',
+                  '다운로드 링크는 생성일로부터 14일간 유효합니다.'
+                );
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="information-circle-outline" size={20} color="#999" />
+            </TouchableOpacity>
+          </View>
 
           {exportJobs.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -274,13 +284,6 @@ export const ExportScreen: React.FC = () => {
               </View>
             ))
           )}
-        </View>
-
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={20} color="#666" />
-          <Text style={styles.infoText}>
-            다운로드 링크는 생성일로부터 14일간 유효합니다
-          </Text>
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -339,7 +342,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.settingsIconColor,
     paddingVertical: 16,
     borderRadius: 12,
-    gap: 8,
   },
   exportButtonDisabled: {
     opacity: 0.6,
@@ -359,12 +361,17 @@ const styles = StyleSheet.create({
   historySection: {
     marginTop: 8,
   },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 6,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -378,9 +385,9 @@ const styles = StyleSheet.create({
   jobCard: {
     backgroundColor: '#fff',
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -391,7 +398,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   jobDate: {
     fontSize: 14,
@@ -416,14 +423,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   downloadSection: {
-    marginTop: 4,
+    marginTop: 2,
   },
   downloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.settingsIconColor,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     gap: 8,
   },
@@ -435,7 +442,7 @@ const styles = StyleSheet.create({
   expiryText: {
     fontSize: 12,
     color: '#999',
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
   },
   pendingText: {
@@ -456,22 +463,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     color: '#F44336',
-    lineHeight: 18,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 8,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#666',
     lineHeight: 18,
   },
   bottomSpacing: {

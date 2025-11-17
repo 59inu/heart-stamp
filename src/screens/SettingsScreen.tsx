@@ -145,47 +145,6 @@ export const SettingsScreen: React.FC = () => {
     navigation.navigate('Export');
   };
 
-  const handleDataExport = async () => {
-    Alert.prompt(
-      '일기 내보내기',
-      '다운로드 링크를 받을 이메일 주소를 입력해주세요.\n최대 24시간 이내에 이메일로 전송됩니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '확인',
-          onPress: async (email) => {
-            if (!email || !email.trim()) {
-              Alert.alert('오류', '이메일 주소를 입력해주세요');
-              return;
-            }
-
-            if (!email.includes('@')) {
-              Alert.alert('오류', '올바른 이메일 주소를 입력해주세요');
-              return;
-            }
-
-            try {
-              await ExportService.requestExport(email.trim(), 'txt');
-              setHasActiveExport(true);
-              Toast.show({
-                type: 'success',
-                text1: '내보내기 요청 완료',
-                text2: `${email}로 전송됩니다`,
-                position: 'bottom',
-                visibilityTime: 3000,
-              });
-            } catch (error: any) {
-              Alert.alert('내보내기 요청 실패', error.message);
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-      'email-address'
-    );
-  };
-
   const handleDeleteAllData = () => {
     Alert.alert(
       '모든 데이터 삭제',
@@ -355,15 +314,9 @@ export const SettingsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>데이터 관리</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleExportHistory}>
             <Ionicons name="download-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>일기 내보내기</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleExportHistory}>
-            <Ionicons name="time-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>내보내기 기록</Text>
             {hasActiveExport && (
               <View style={styles.processingBadge}>
                 <Text style={styles.processingText}>처리중</Text>
