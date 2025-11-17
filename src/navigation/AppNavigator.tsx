@@ -11,7 +11,7 @@ import { DiaryDetailScreen } from '../screens/DiaryDetailScreen';
 import { ReportScreen } from '../screens/ReportScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { StampCollectionScreen } from '../screens/StampCollectionScreen';
-import { ExportHistoryScreen } from '../screens/ExportHistoryScreen';
+import { ExportScreen } from '../screens/ExportScreen';
 import { COLORS } from '../constants/colors';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { logger } from '../utils/logger';
@@ -120,10 +120,10 @@ export const AppNavigator: React.FC = () => {
             </ErrorBoundary>
           )}
         </Stack.Screen>
-        <Stack.Screen name="ExportHistory">
+        <Stack.Screen name="Export">
           {() => (
             <ErrorBoundary level="screen">
-              <ExportHistoryScreen />
+              <ExportScreen />
             </ErrorBoundary>
           )}
         </Stack.Screen>

@@ -12,25 +12,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ExportService, ExportJob } from '../services/exportService';
 import { COLORS } from '../constants/colors';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { RootStackParamList } from '../navigation/types';
+import Toast from 'react-native-toast-message';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'ExportHistory'>;
+type NavigationProp = StackNavigationProp<RootStackParamList, 'Export'>;
 
-export const ExportHistoryScreen: React.FC = () => {
+export const ExportScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [requesting, setRequesting] = useState(false);
 
-  useEffect(() => {
-    loadExportJobs();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadExportJobs();
+    }, [])
+  );
 
   const loadExportJobs = async () => {
     try {
@@ -48,6 +52,51 @@ export const ExportHistoryScreen: React.FC = () => {
   const handleRefresh = () => {
     setRefreshing(true);
     loadExportJobs();
+  };
+
+  const handleRequestExport = async () => {
+    Alert.prompt(
+      '일기 내보내기',
+      '다운로드 링크를 받을 이메일 주소를 입력해주세요.\n최대 24시간 이내에 처리됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '확인',
+          onPress: async (email) => {
+            if (!email || !email.trim()) {
+              Alert.alert('오류', '이메일 주소를 입력해주세요');
+              return;
+            }
+
+            if (!email.includes('@')) {
+              Alert.alert('오류', '올바른 이메일 주소를 입력해주세요');
+              return;
+            }
+
+            try {
+              setRequesting(true);
+              await ExportService.requestExport(email.trim(), 'txt');
+              Toast.show({
+                type: 'success',
+                text1: '내보내기 요청 완료',
+                text2: `${email}로 전송됩니다`,
+                position: 'bottom',
+                visibilityTime: 3000,
+              });
+              // Reload jobs to show new request
+              loadExportJobs();
+            } catch (error: any) {
+              Alert.alert('내보내기 요청 실패', error.message);
+            } finally {
+              setRequesting(false);
+            }
+          },
+        },
+      ],
+      'plain-text',
+      '',
+      'email-address'
+    );
   };
 
   const handleDownload = async (job: ExportJob) => {
@@ -116,7 +165,7 @@ export const ExportHistoryScreen: React.FC = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={28} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>내보내기 기록</Text>
+          <Text style={styles.headerTitle}>일기 내보내기</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
@@ -132,7 +181,7 @@ export const ExportHistoryScreen: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>내보내기 기록</Text>
+        <Text style={styles.headerTitle}>일기 내보내기</Text>
         <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton} disabled={refreshing}>
           <Ionicons
             name="refresh"
@@ -148,25 +197,46 @@ export const ExportHistoryScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {exportJobs.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyTitle}>내보내기 기록이 없습니다</Text>
-            <Text style={styles.emptyDescription}>
-              설정에서 일기 내보내기를 요청하면{'\n'}
-              여기에서 다운로드할 수 있습니다
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.listContainer}>
-            {exportJobs.map((job) => (
+        {/* 내보내기 버튼 */}
+        <View style={styles.exportButtonContainer}>
+          <TouchableOpacity
+            style={[styles.exportButton, requesting && styles.exportButtonDisabled]}
+            onPress={handleRequestExport}
+            disabled={requesting}
+          >
+            {requesting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="download-outline" size={22} color="#fff" />
+                <Text style={styles.exportButtonText}>새로 내보내기</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.exportHint}>
+            이메일 주소를 입력하면 24시간 이내에 다운로드 링크를 보내드립니다
+          </Text>
+        </View>
+
+        {/* 내보내기 기록 */}
+        <View style={styles.historySection}>
+          <Text style={styles.sectionTitle}>내보내기 기록</Text>
+
+          {exportJobs.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="document-text-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>내보내기 기록이 없습니다</Text>
+            </View>
+          ) : (
+            exportJobs.map((job) => (
               <View key={job.id} style={styles.jobCard}>
                 <View style={styles.jobHeader}>
-                  <Text style={styles.jobDate}>{formatDate(job.createdAt)}</Text>
+                  <View>
+                    <Text style={styles.jobDate}>요청일: {formatDate(job.createdAt)}</Text>
+                    <Text style={styles.jobEmail}>{job.email}</Text>
+                  </View>
                   {getStatusBadge(job.status)}
                 </View>
-
-                <Text style={styles.jobEmail}>{job.email}</Text>
 
                 {job.status === 'completed' && job.s3Url && (
                   <View style={styles.downloadSection}>
@@ -179,7 +249,7 @@ export const ExportHistoryScreen: React.FC = () => {
                     </TouchableOpacity>
                     {job.expiresAt && (
                       <Text style={styles.expiryText}>
-                        만료: {formatExpiry(job.expiresAt)}
+                        만료일: {formatExpiry(job.expiresAt)}
                       </Text>
                     )}
                   </View>
@@ -202,9 +272,9 @@ export const ExportHistoryScreen: React.FC = () => {
                   <Text style={styles.errorText}>{job.errorMessage}</Text>
                 )}
               </View>
-            ))}
-          </View>
-        )}
+            ))
+          )}
+        </View>
 
         <View style={styles.infoBox}>
           <Ionicons name="information-circle-outline" size={20} color="#666" />
@@ -256,33 +326,61 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  exportButtonContainer: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  exportButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 100,
+    justifyContent: 'center',
+    backgroundColor: COLORS.settingsIconColor,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
   },
-  emptyTitle: {
-    fontSize: 18,
+  exportButtonDisabled: {
+    opacity: 0.6,
+  },
+  exportButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 8,
+    color: '#fff',
   },
-  emptyDescription: {
-    fontSize: 14,
+  exportHint: {
+    fontSize: 13,
     color: '#999',
     textAlign: 'center',
-    lineHeight: 20,
+    marginTop: 12,
+    lineHeight: 18,
   },
-  listContainer: {
-    padding: 16,
+  historySection: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 12,
   },
   jobCard: {
     backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 12,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -291,14 +389,19 @@ const styles = StyleSheet.create({
   },
   jobHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   jobDate: {
     fontSize: 14,
     color: '#666',
     fontWeight: '500',
+    marginBottom: 4,
+  },
+  jobEmail: {
+    fontSize: 13,
+    color: '#999',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -311,11 +414,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  jobEmail: {
-    fontSize: 13,
-    color: '#999',
-    marginBottom: 12,
   },
   downloadSection: {
     marginTop: 4,

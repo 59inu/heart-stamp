@@ -142,7 +142,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleExportHistory = () => {
-    navigation.navigate('ExportHistory');
+    navigation.navigate('Export');
   };
 
   const handleDataExport = async () => {
