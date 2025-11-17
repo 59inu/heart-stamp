@@ -46,12 +46,12 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
     endDate.setUTCDate(targetMonday.getUTCDate() + 6);
     endDate.setUTCHours(23, 59, 59, 999); // 해당 일의 끝까지 포함
 
-    // 현재 날짜와 비교 (타임존 차이를 고려하여 24시간 여유)
+    // 현재 날짜와 비교 (UTC 기준 날짜만 비교)
     const now = new Date();
-    const endDateWithBuffer = new Date(endDate);
-    endDateWithBuffer.setHours(endDateWithBuffer.getHours() + 24);
+    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endDateUTC = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
 
-    if (endDateWithBuffer > now) {
+    if (nowUTC <= endDateUTC) {
       return res.status(400).json({
         success: false,
         message: 'Week not completed yet',
@@ -129,12 +129,12 @@ router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) =
     endDate.setUTCDate(targetMonday.getUTCDate() + 6);
     endDate.setUTCHours(23, 59, 59, 999); // 해당 일의 끝까지 포함
 
-    // 현재 날짜와 비교 (타임존 차이를 고려하여 24시간 여유)
+    // 현재 날짜와 비교 (UTC 기준 날짜만 비교)
     const now = new Date();
-    const endDateWithBuffer = new Date(endDate);
-    endDateWithBuffer.setHours(endDateWithBuffer.getHours() + 24);
+    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endDateUTC = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
 
-    if (endDateWithBuffer > now) {
+    if (nowUTC <= endDateUTC) {
       return res.status(400).json({
         success: false,
         message: 'Week not completed yet',
@@ -198,12 +198,12 @@ router.get('/reports/monthly/:year/:month', async (req: Request, res: Response) 
     endDate.setUTCDate(0); // 전월 마지막 날
     endDate.setUTCHours(23, 59, 59, 999);
 
-    // 현재 날짜와 비교 (타임존 차이를 고려하여 24시간 여유)
+    // 현재 날짜와 비교 (UTC 기준 날짜만 비교)
     const now = new Date();
-    const endDateWithBuffer = new Date(endDate);
-    endDateWithBuffer.setHours(endDateWithBuffer.getHours() + 24);
+    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endDateUTC = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
 
-    if (endDateWithBuffer > now) {
+    if (nowUTC <= endDateUTC) {
       return res.status(400).json({
         success: false,
         message: 'Month not completed yet',

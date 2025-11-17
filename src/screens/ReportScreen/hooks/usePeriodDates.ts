@@ -4,7 +4,8 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
-  isFuture,
+  startOfDay,
+  isAfter,
 } from 'date-fns';
 
 type ReportPeriod = 'week' | 'month';
@@ -25,7 +26,11 @@ export const usePeriodDates = (period: ReportPeriod, currentDate: Date) => {
   }, [period, currentDate]);
 
   const isPeriodCompleted = useMemo(() => {
-    return !isFuture(endDate);
+    // 날짜만 비교 (시간 무시)
+    const today = startOfDay(new Date());
+    const periodEnd = startOfDay(endDate);
+    // 기간 종료일이 오늘보다 이전이면 완료
+    return !isAfter(periodEnd, today);
   }, [endDate]);
 
   return { startDate, endDate, isPeriodCompleted };
