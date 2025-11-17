@@ -97,33 +97,45 @@ export class AuthService {
   }
 
   /**
-   * 사용자 데이터 마이그레이션 (Firebase UID -> SecureStore UUID)
+   * 사용자 데이터 마이그레이션 (로컬 일기 ID 기반)
    * 앱 시작 시 한 번만 실행되며, 이미 마이그레이션된 경우 스킵
+   * Firebase UID가 계속 변경되는 문제를 해결하기 위해 로컬 일기 ID 사용
    */
   static async migrateUserData(): Promise<void> {
     try {
-      const firebaseUid = auth.currentUser?.uid;
-      if (!firebaseUid) {
-        logger.warn('⚠️ [Migration] No Firebase user found, skipping migration');
-        return;
-      }
-
-      // 이미 마이그레이션 완료되었는지 확인
-      const migrationKey = `migration_done_${firebaseUid}`;
+      // 이미 마이그레이션 완료되었는지 확인 (전역 플래그)
+      const migrationKey = 'migration_done_v2'; // v2: ID 기반 마이그레이션
       const alreadyMigrated = await AsyncStorage.getItem(migrationKey);
       if (alreadyMigrated === 'true') {
-        logger.log('ℹ️ [Migration] Already migrated for Firebase UID:', firebaseUid);
+        logger.log('ℹ️ [Migration] Already migrated (ID-based)');
         return;
       }
 
-      logger.log('🔄 [Migration] Starting migration for Firebase UID:', firebaseUid);
+      logger.log('🔄 [Migration] Starting ID-based migration...');
+
+      // 로컬 AsyncStorage에서 모든 일기 가져오기
+      const { DiaryStorage } = await import('./diaryStorage');
+      const localDiaries = await DiaryStorage.getAll();
+
+      if (localDiaries.length === 0) {
+        logger.log('ℹ️ [Migration] No local diaries to migrate');
+        await AsyncStorage.setItem(migrationKey, 'true');
+        return;
+      }
+
+      // 모든 일기 ID 추출
+      const diaryIds = localDiaries.map(d => d._id);
+      logger.log(`🔄 [Migration] Found ${diaryIds.length} local diaries to migrate`);
 
       // 마이그레이션 API 호출
-      const result = await apiService.migrateDiaries(firebaseUid);
+      const result = await apiService.migrateDiaries(diaryIds);
 
       if (result.success) {
-        const { migratedCount } = result.data;
+        const { migratedCount, notFound } = result.data;
         logger.log(`✅ [Migration] Migration completed: ${migratedCount} diaries migrated`);
+        if (notFound > 0) {
+          logger.warn(`⚠️ [Migration] ${notFound} diaries not found in server (may be newly created)`);
+        }
 
         // 마이그레이션 완료 표시
         await AsyncStorage.setItem(migrationKey, 'true');

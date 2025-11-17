@@ -495,13 +495,14 @@ router.get('/admin/recent-comments',
   }
 );
 
-// [Migration] Migrate user's diaries from Firebase UID to X-User-Id
+// [Migration] Migrate user's diaries by diary IDs (more reliable than Firebase UID)
 router.post('/diaries/migrate',
-  body('firebaseUid').isString().trim().notEmpty(),
+  body('diaryIds').isArray().withMessage('diaryIds must be an array'),
+  body('diaryIds.*').isString().trim().notEmpty(),
   async (req: Request, res: Response) => {
     try {
       const secureStoreId = req.headers['x-user-id'] as string;
-      const { firebaseUid } = req.body;
+      const { diaryIds } = req.body;
 
       if (!secureStoreId) {
         return res.status(401).json({
@@ -510,13 +511,8 @@ router.post('/diaries/migrate',
         });
       }
 
-      console.log(`🔄 [Migration] Attempting to migrate diaries from Firebase UID: ${firebaseUid} to SecureStore ID: ${secureStoreId}`);
-
-      // Find all diaries with old Firebase UID
-      const oldDiaries = DiaryDatabase.getAllByUserId(firebaseUid);
-
-      if (oldDiaries.length === 0) {
-        console.log(`ℹ️  [Migration] No diaries found for Firebase UID: ${firebaseUid}`);
+      if (!diaryIds || diaryIds.length === 0) {
+        console.log(`ℹ️  [Migration] No diary IDs provided for migration`);
         return res.json({
           success: true,
           message: 'No diaries to migrate',
@@ -524,22 +520,53 @@ router.post('/diaries/migrate',
         });
       }
 
-      // Update all to new SecureStore UUID
+      console.log(`🔄 [Migration] Attempting to migrate ${diaryIds.length} diaries to SecureStore ID: ${secureStoreId}`);
+
+      // Find all diaries by IDs (regardless of current userId)
+      const allDiaries = DiaryDatabase.getAll();
+      const diariesToMigrate = allDiaries.filter(d => diaryIds.includes(d._id));
+
+      if (diariesToMigrate.length === 0) {
+        console.log(`⚠️  [Migration] No matching diaries found in database`);
+        return res.json({
+          success: true,
+          message: 'No matching diaries found',
+          migratedCount: 0,
+          notFound: diaryIds.length,
+        });
+      }
+
+      // Update all found diaries to new SecureStore UUID
       let migratedCount = 0;
-      for (const diary of oldDiaries) {
+      const migratedDiaries = [];
+
+      for (const diary of diariesToMigrate) {
+        // Skip if already has correct userId
+        if (diary.userId === secureStoreId) {
+          console.log(`⏭️  [Migration] Diary ${diary._id} already has correct userId, skipping`);
+          continue;
+        }
+
         await DiaryDatabase.update(diary._id, {
           userId: secureStoreId,
         });
         migratedCount++;
+        migratedDiaries.push({ id: diary._id, date: diary.date, oldUserId: diary.userId });
       }
 
-      console.log(`✅ [Migration] Successfully migrated ${migratedCount} diaries from ${firebaseUid} to ${secureStoreId}`);
+      const notFound = diaryIds.length - diariesToMigrate.length;
+
+      console.log(`✅ [Migration] Successfully migrated ${migratedCount} diaries to ${secureStoreId}`);
+      if (notFound > 0) {
+        console.log(`⚠️  [Migration] ${notFound} diaries not found in database`);
+      }
 
       res.json({
         success: true,
         message: 'Migration successful',
         migratedCount,
-        diaries: oldDiaries.map(d => ({ id: d._id, date: d.date })),
+        notFound,
+        diaries: migratedDiaries,
       });
     } catch (error) {
       console.error('❌ [Migration] Error migrating diaries:', error);

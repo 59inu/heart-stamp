@@ -307,17 +307,18 @@ export class ApiService {
     }
   }
 
-  // 일기 마이그레이션 (Firebase UID -> SecureStore UUID)
-  async migrateDiaries(firebaseUid: string): Promise<ApiResult<{ migratedCount: number }>> {
+  // 일기 마이그레이션 (로컬 일기 ID 기반 - Firebase UID보다 확실함)
+  async migrateDiaries(diaryIds: string[]): Promise<ApiResult<{ migratedCount: number; notFound: number }>> {
     try {
       const response = await this.axiosInstance.post('/diaries/migrate', {
-        firebaseUid,
+        diaryIds,
       });
-      logger.info(`Migration successful: ${response.data.migratedCount} diaries migrated`);
+      logger.info(`Migration successful: ${response.data.migratedCount} diaries migrated, ${response.data.notFound || 0} not found`);
       return {
         success: true,
         data: {
           migratedCount: response.data.migratedCount,
+          notFound: response.data.notFound || 0,
         },
       };
     } catch (error: any) {
