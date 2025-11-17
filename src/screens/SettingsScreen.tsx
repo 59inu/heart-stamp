@@ -141,6 +141,9 @@ export const SettingsScreen: React.FC = () => {
     setShowContactModal(true);
   };
 
+  const handleExportHistory = () => {
+    navigation.navigate('ExportHistory');
+  };
 
   const handleDataExport = async () => {
     Alert.prompt(
@@ -355,6 +358,12 @@ export const SettingsScreen: React.FC = () => {
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
             <Ionicons name="download-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>일기 내보내기</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleExportHistory}>
+            <Ionicons name="time-outline" size={24} color={COLORS.settingsIconColor} />
+            <Text style={styles.menuItemText}>내보내기 기록</Text>
             {hasActiveExport && (
               <View style={styles.processingBadge}>
                 <Text style={styles.processingText}>처리중</Text>
