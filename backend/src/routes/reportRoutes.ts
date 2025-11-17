@@ -38,6 +38,11 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
     const startDate = startOfISOWeek(referenceDate);
     const endDate = endOfISOWeek(referenceDate);
 
+    console.log(`\n[DEBUG GET] Week ${year}-W${week} calculation:`);
+    console.log(`  TZ: ${process.env.TZ || 'not set (using UTC)'}`);
+    console.log(`  startDate: ${startDate.toISOString()}`);
+    console.log(`  endDate: ${endDate.toISOString()}`);
+
     // 현재 날짜와 비교 (로컬 시간 기준, 날짜만 비교)
     const today = startOfDay(new Date());
     const periodEnd = startOfDay(endDate);
@@ -53,10 +58,21 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
     const { DiaryDatabase } = await import('../services/database');
     const allDiaries = DiaryDatabase.getAllByUserId(userId);
 
+    console.log(`  Total diaries for GET: ${allDiaries.length}`);
+
     const periodDiaries = allDiaries.filter((diary) => {
       const diaryDate = new Date(diary.date);
-      return diaryDate >= startDate && diaryDate <= endDate;
+      const matches = diaryDate >= startDate && diaryDate <= endDate;
+
+      // 일기가 10개 이하면 모두 출력, 아니면 이번 주 일기만
+      if (allDiaries.length <= 10 || matches) {
+        console.log(`  GET Diary: ${diary.date} → ${diaryDate.toISOString()} → ${matches ? 'MATCH' : 'NO MATCH'}`);
+      }
+
+      return matches;
     });
+
+    console.log(`  GET Period diaries: ${periodDiaries.length}\n`);
 
     // 기존 리포트 조회만
     const { ReportDatabase } = await import('../services/reportDatabase');
@@ -111,6 +127,11 @@ router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) =
     const referenceDate = setISOWeek(setYear(new Date(), year), week);
     const startDate = startOfISOWeek(referenceDate);
     const endDate = endOfISOWeek(referenceDate);
+
+    console.log(`\n[DEBUG POST] Week ${year}-W${week} calculation:`);
+    console.log(`  TZ: ${process.env.TZ || 'not set (using UTC)'}`);
+    console.log(`  startDate: ${startDate.toISOString()}`);
+    console.log(`  endDate: ${endDate.toISOString()}`);
 
     // 현재 날짜와 비교 (로컬 시간 기준, 날짜만 비교)
     const today = startOfDay(new Date());
