@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { ExportJobDatabase } from '../services/exportDatabase';
 import { ExportFormat, ExportRequest } from '../types/export';
 import { DiaryDatabase } from '../services/database';
+import { requireFirebaseAuth } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -11,14 +12,9 @@ const router = express.Router();
  * POST /api/export/request
  * Body: { format: 'txt' | 'pdf' }
  */
-router.post('/export/request', async (req: Request, res: Response): Promise<void> => {
+router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.body.userId || (req as any).userId;
-
-    if (!userId) {
-      res.status(401).json({ error: 'User ID is required' });
-      return;
-    }
+    const userId = req.userId!;
 
     const { format }: ExportRequest = req.body;
 
@@ -75,15 +71,10 @@ router.post('/export/request', async (req: Request, res: Response): Promise<void
  *
  * GET /api/export/status/:jobId
  */
-router.get('/export/status/:jobId', async (req: Request, res: Response): Promise<void> => {
+router.get('/export/status/:jobId', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.body.userId || (req as any).userId;
+    const userId = req.userId!;
     const { jobId } = req.params;
-
-    if (!userId) {
-      res.status(401).json({ error: 'User ID is required' });
-      return;
-    }
 
     const job = ExportJobDatabase.get(jobId);
 
@@ -119,14 +110,9 @@ router.get('/export/status/:jobId', async (req: Request, res: Response): Promise
  *
  * GET /api/export/jobs
  */
-router.get('/export/jobs', async (req: Request, res: Response): Promise<void> => {
+router.get('/export/jobs', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.body.userId || (req as any).userId;
-
-    if (!userId) {
-      res.status(401).json({ error: 'User ID is required' });
-      return;
-    }
+    const userId = req.userId!;
 
     const jobs = ExportJobDatabase.getAllForUser(userId);
 
@@ -153,14 +139,9 @@ router.get('/export/jobs', async (req: Request, res: Response): Promise<void> =>
  *
  * DELETE /api/export/delete-all
  */
-router.delete('/export/delete-all', async (req: Request, res: Response): Promise<void> => {
+router.delete('/export/delete-all', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.body.userId || (req as any).userId;
-
-    if (!userId) {
-      res.status(401).json({ error: 'User ID is required' });
-      return;
-    }
+    const userId = req.userId!;
 
     // Delete all diaries
     const deletedDiaries = await DiaryDatabase.deleteAllForUser(userId);
