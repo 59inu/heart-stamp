@@ -17,7 +17,6 @@ export function initializeClaudeService(apiKey: string) {
 
 // Upload diary from mobile app
 router.post('/diaries',
-  requireFirebaseAuth, // Firebase Auth 인증 필수
   // Input validation
   body('_id').isString().trim().notEmpty(),
   body('date').isISO8601().withMessage('Invalid date format'),
@@ -39,8 +38,14 @@ router.post('/diaries',
     }
 
     try {
-      // req.userId는 requireFirebaseAuth에서 설정됨
-      const userId = req.userId!;
+      // X-User-Id 헤더에서 userId 추출
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'User ID is required',
+        });
+      }
 
       const diaryEntry: DiaryEntry = {
         ...req.body,
@@ -72,7 +77,6 @@ router.post('/diaries',
 
 // Get AI comment for a specific diary
 router.get('/diaries/:id/ai-comment',
-  requireFirebaseAuth, // Firebase Auth 인증 필수
   param('id').isString().trim().notEmpty(),
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -85,6 +89,14 @@ router.get('/diaries/:id/ai-comment',
     }
 
     try {
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'User ID is required',
+        });
+      }
+
       const { id } = req.params;
       const diary = DiaryDatabase.getById(id);
 
@@ -96,7 +108,7 @@ router.get('/diaries/:id/ai-comment',
       }
 
       // 자신의 일기만 조회 가능
-      if (diary.userId !== req.userId) {
+      if (diary.userId !== userId) {
         return res.status(403).json({
           success: false,
           message: 'Forbidden - not your diary',
@@ -123,7 +135,6 @@ router.get('/diaries/:id/ai-comment',
 // Manually trigger AI analysis for a specific diary (for testing)
 // AI 분석 레이트리미트 적용: 시간당 10회
 router.post('/diaries/:id/analyze',
-  requireFirebaseAuth, // Firebase Auth 인증 필수
   param('id').isString().trim().notEmpty(),
   aiAnalysisLimiter,
   async (req: Request, res: Response) => {
@@ -137,6 +148,14 @@ router.post('/diaries/:id/analyze',
     }
 
     try {
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'User ID is required',
+        });
+      }
+
       const { id } = req.params;
       const diary = DiaryDatabase.getById(id);
 
@@ -148,7 +167,7 @@ router.post('/diaries/:id/analyze',
       }
 
       // 자신의 일기만 분석 가능
-      if (diary.userId !== req.userId) {
+      if (diary.userId !== userId) {
         return res.status(403).json({
           success: false,
           message: 'Forbidden - not your diary',
@@ -193,10 +212,15 @@ router.post('/diaries/:id/analyze',
 );
 
 // Get all diaries for a specific user
-router.get('/diaries', requireFirebaseAuth, async (req: Request, res: Response) => {
+router.get('/diaries', async (req: Request, res: Response) => {
   try {
-    // req.userId는 requireFirebaseAuth에서 설정됨
-    const userId = req.userId!;
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User ID is required',
+      });
+    }
 
     const userDiaries = DiaryDatabase.getAllByUserId(userId);
 
@@ -232,8 +256,16 @@ router.get('/diaries/pending', requireAdminToken, async (req: Request, res: Resp
 });
 
 // Delete a diary
-router.delete('/diaries/:id', requireFirebaseAuth, async (req: Request, res: Response) => {
+router.delete('/diaries/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User ID is required',
+      });
+    }
+
     const { id } = req.params;
     const diary = DiaryDatabase.getById(id);
 
@@ -245,7 +277,7 @@ router.delete('/diaries/:id', requireFirebaseAuth, async (req: Request, res: Res
     }
 
     // 자신의 일기만 삭제 가능
-    if (diary.userId !== req.userId) {
+    if (diary.userId !== userId) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden - not your diary',
@@ -457,6 +489,63 @@ router.get('/admin/recent-comments',
       res.status(500).json({
         success: false,
         message: 'Failed to fetch recent comments',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+// [Migration] Migrate user's diaries from Firebase UID to X-User-Id
+router.post('/diaries/migrate',
+  body('firebaseUid').isString().trim().notEmpty(),
+  async (req: Request, res: Response) => {
+    try {
+      const secureStoreId = req.headers['x-user-id'] as string;
+      const { firebaseUid } = req.body;
+
+      if (!secureStoreId) {
+        return res.status(401).json({
+          success: false,
+          message: 'X-User-Id header is required',
+        });
+      }
+
+      console.log(`🔄 [Migration] Attempting to migrate diaries from Firebase UID: ${firebaseUid} to SecureStore ID: ${secureStoreId}`);
+
+      // Find all diaries with old Firebase UID
+      const oldDiaries = DiaryDatabase.getAllByUserId(firebaseUid);
+
+      if (oldDiaries.length === 0) {
+        console.log(`ℹ️  [Migration] No diaries found for Firebase UID: ${firebaseUid}`);
+        return res.json({
+          success: true,
+          message: 'No diaries to migrate',
+          migratedCount: 0,
+        });
+      }
+
+      // Update all to new SecureStore UUID
+      let migratedCount = 0;
+      for (const diary of oldDiaries) {
+        await DiaryDatabase.update(diary._id, {
+          userId: secureStoreId,
+        });
+        migratedCount++;
+      }
+
+      console.log(`✅ [Migration] Successfully migrated ${migratedCount} diaries from ${firebaseUid} to ${secureStoreId}`);
+
+      res.json({
+        success: true,
+        message: 'Migration successful',
+        migratedCount,
+        diaries: oldDiaries.map(d => ({ id: d._id, date: d.date })),
+      });
+    } catch (error) {
+      console.error('❌ [Migration] Error migrating diaries:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to migrate diaries',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

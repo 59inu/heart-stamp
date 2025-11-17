@@ -4,8 +4,10 @@ import {
   User,
   signOut as firebaseSignOut
 } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/logger';
 import { auth } from '../config/firebaseConfig';
+import { apiService } from './apiService';
 
 export class AuthService {
   /**
@@ -92,5 +94,46 @@ export class AuthService {
         }
       });
     });
+  }
+
+  /**
+   * 사용자 데이터 마이그레이션 (Firebase UID -> SecureStore UUID)
+   * 앱 시작 시 한 번만 실행되며, 이미 마이그레이션된 경우 스킵
+   */
+  static async migrateUserData(): Promise<void> {
+    try {
+      const firebaseUid = auth.currentUser?.uid;
+      if (!firebaseUid) {
+        logger.warn('⚠️ [Migration] No Firebase user found, skipping migration');
+        return;
+      }
+
+      // 이미 마이그레이션 완료되었는지 확인
+      const migrationKey = `migration_done_${firebaseUid}`;
+      const alreadyMigrated = await AsyncStorage.getItem(migrationKey);
+      if (alreadyMigrated === 'true') {
+        logger.log('ℹ️ [Migration] Already migrated for Firebase UID:', firebaseUid);
+        return;
+      }
+
+      logger.log('🔄 [Migration] Starting migration for Firebase UID:', firebaseUid);
+
+      // 마이그레이션 API 호출
+      const result = await apiService.migrateDiaries(firebaseUid);
+
+      if (result.success) {
+        const { migratedCount } = result.data;
+        logger.log(`✅ [Migration] Migration completed: ${migratedCount} diaries migrated`);
+
+        // 마이그레이션 완료 표시
+        await AsyncStorage.setItem(migrationKey, 'true');
+      } else {
+        logger.error('❌ [Migration] Migration failed:', result.error);
+        // 실패해도 앱 사용은 가능하도록 에러를 던지지 않음
+      }
+    } catch (error) {
+      logger.error('❌ [Migration] Unexpected error during migration:', error);
+      // 마이그레이션 실패가 앱 실행을 막지 않도록 에러를 던지지 않음
+    }
   }
 }

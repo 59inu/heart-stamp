@@ -99,6 +99,9 @@ export default function App() {
 
           // Sentry에 사용자 ID 설정
           setUser(user.uid);
+
+          // 사용자 데이터 마이그레이션 (Firebase UID -> SecureStore UUID)
+          await AuthService.migrateUserData();
         } catch (error) {
           logger.error('❌ [App] Firebase Auth initialization failed:', error);
         }

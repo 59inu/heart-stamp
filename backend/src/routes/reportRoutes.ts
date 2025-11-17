@@ -15,11 +15,10 @@ export function initializeReportService(apiKey?: string) {
 router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) => {
   try {
     const userId = req.headers['x-user-id'] as string;
-
     if (!userId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: 'User ID required',
+        message: 'User ID is required',
       });
     }
 
@@ -105,11 +104,10 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
 router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) => {
   try {
     const userId = req.headers['x-user-id'] as string;
-
     if (!userId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: 'User ID required',
+        message: 'User ID is required',
       });
     }
 
@@ -176,11 +174,10 @@ router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) =
 router.get('/reports/monthly/:year/:month', async (req: Request, res: Response) => {
   try {
     const userId = req.headers['x-user-id'] as string;
-
     if (!userId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: 'User ID required',
+        message: 'User ID is required',
       });
     }
 
@@ -242,11 +239,10 @@ router.get('/reports/monthly/:year/:month', async (req: Request, res: Response) 
 router.delete('/reports/weekly/:year/:week', async (req: Request, res: Response) => {
   try {
     const userId = req.headers['x-user-id'] as string;
-
     if (!userId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: 'User ID required',
+        message: 'User ID is required',
       });
     }
 
@@ -283,11 +279,10 @@ router.delete('/reports/weekly/:year/:week', async (req: Request, res: Response)
 router.delete('/reports/monthly/:year/:month', async (req: Request, res: Response) => {
   try {
     const userId = req.headers['x-user-id'] as string;
-
     if (!userId) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: 'User ID required',
+        message: 'User ID is required',
       });
     }
 

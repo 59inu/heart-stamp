@@ -307,6 +307,30 @@ export class ApiService {
     }
   }
 
+  // 일기 마이그레이션 (Firebase UID -> SecureStore UUID)
+  async migrateDiaries(firebaseUid: string): Promise<ApiResult<{ migratedCount: number }>> {
+    try {
+      const response = await this.axiosInstance.post('/diaries/migrate', {
+        firebaseUid,
+      });
+      logger.info(`Migration successful: ${response.data.migratedCount} diaries migrated`);
+      return {
+        success: true,
+        data: {
+          migratedCount: response.data.migratedCount,
+        },
+      };
+    } catch (error: any) {
+      logger.error('Error migrating diaries:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_SYNC),
+        errorType,
+      };
+    }
+  }
+
   // 주간 리포트 조회 (조회만, 생성 안 함)
   async getWeeklyReport(
     year: number,
