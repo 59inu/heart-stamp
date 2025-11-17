@@ -307,30 +307,6 @@ export class ApiService {
     }
   }
 
-  // 일기 마이그레이션 (로컬 일기 ID 기반 - Firebase UID보다 확실함)
-  async migrateDiaries(diaryIds: string[]): Promise<ApiResult<{ migratedCount: number; notFound: number }>> {
-    try {
-      const response = await this.axiosInstance.post('/diaries/migrate', {
-        diaryIds,
-      });
-      logger.info(`Migration successful: ${response.data.migratedCount} diaries migrated, ${response.data.notFound || 0} not found`);
-      return {
-        success: true,
-        data: {
-          migratedCount: response.data.migratedCount,
-          notFound: response.data.notFound || 0,
-        },
-      };
-    } catch (error: any) {
-      logger.error('Error migrating diaries:', error);
-      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
-      return {
-        success: false,
-        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_SYNC),
-        errorType,
-      };
-    }
-  }
 
   // 주간 리포트 조회 (조회만, 생성 안 함)
   async getWeeklyReport(
