@@ -13,25 +13,26 @@ export class ExportJobDatabase {
   /**
    * Create a new export job
    */
-  static create(userId: string, format: ExportFormat): ExportJob {
+  static create(userId: string, format: ExportFormat, email: string): ExportJob {
     const now = new Date().toISOString();
     const job: ExportJob = {
       id: uuidv4(),
       userId,
       status: 'pending',
       format,
+      email,
       createdAt: now,
       updatedAt: now,
     };
 
     const stmt = db.prepare(`
-      INSERT INTO export_jobs (id, userId, status, format, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO export_jobs (id, userId, status, format, email, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(job.id, job.userId, job.status, job.format, job.createdAt, job.updatedAt);
+    stmt.run(job.id, job.userId, job.status, job.format, job.email, job.createdAt, job.updatedAt);
 
-    console.log(`📝 [ExportDB] Created export job ${job.id} for user ${userId} (format: ${format})`);
+    console.log(`📝 [ExportDB] Created export job ${job.id} for user ${userId} (format: ${format}, email: ${email})`);
     return job;
   }
 
@@ -162,6 +163,7 @@ export class ExportJobDatabase {
       userId: row.userId,
       status: row.status as ExportStatus,
       format: row.format as ExportFormat,
+      email: row.email,
       s3Url: row.s3Url || undefined,
       expiresAt: row.expiresAt || undefined,
       errorMessage: row.errorMessage || undefined,

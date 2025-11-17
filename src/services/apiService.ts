@@ -467,9 +467,9 @@ export class ApiService {
   }
 
   // Export methods
-  async requestExport(format: 'txt' | 'pdf' = 'txt'): Promise<{ jobId: string }> {
+  async requestExport(format: 'txt' | 'pdf' = 'txt', email: string): Promise<{ jobId: string }> {
     try {
-      const response = await this.axiosInstance.post('/export/request', { format });
+      const response = await this.axiosInstance.post('/export/request', { format, email });
       return { jobId: response.data.jobId };
     } catch (error: any) {
       logger.error('Error requesting export:', error);

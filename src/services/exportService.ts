@@ -5,6 +5,7 @@ export interface ExportJob {
   id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   format: 'txt' | 'pdf';
+  email: string;
   s3Url?: string;
   expiresAt?: string;
   errorMessage?: string;
@@ -21,11 +22,11 @@ export class ExportService {
   /**
    * Request data export
    */
-  static async requestExport(format: 'txt' | 'pdf' = 'txt'): Promise<{ jobId: string }> {
+  static async requestExport(email: string, format: 'txt' | 'pdf' = 'txt'): Promise<{ jobId: string }> {
     try {
-      logger.log(`📤 [ExportService] Requesting ${format} export...`);
+      logger.log(`📤 [ExportService] Requesting ${format} export to ${email}...`);
 
-      const response = await apiService.requestExport(format);
+      const response = await apiService.requestExport(format, email);
 
       if (!response.jobId) {
         throw new Error('No jobId in response');
@@ -42,6 +43,19 @@ export class ExportService {
       }
 
       throw new Error(error.message || '내보내기 요청에 실패했습니다');
+    }
+  }
+
+  /**
+   * Check if user has active export job
+   */
+  static async hasActiveExportJob(): Promise<boolean> {
+    try {
+      const jobs = await this.getAllExportJobs();
+      return jobs.some(job => job.status === 'pending' || job.status === 'processing');
+    } catch (error) {
+      logger.error('❌ [ExportService] Failed to check active jobs:', error);
+      return false;
     }
   }
 

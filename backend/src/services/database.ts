@@ -149,6 +149,7 @@ db.exec(`
     userId TEXT NOT NULL,
     status TEXT NOT NULL,
     format TEXT NOT NULL,
+    email TEXT NOT NULL,
     s3Url TEXT,
     expiresAt TEXT,
     errorMessage TEXT,
@@ -171,6 +172,14 @@ try {
   console.log('✅ Created status index on export_jobs table');
 } catch (error) {
   // 인덱스가 이미 존재하면 무시
+}
+
+// 마이그레이션: export_jobs에 email 컬럼 추가
+try {
+  db.exec(`ALTER TABLE export_jobs ADD COLUMN email TEXT`);
+  console.log('✅ Added email column to export_jobs table');
+} catch (error) {
+  // 컬럼이 이미 존재하면 무시
 }
 
 console.log('✅ SQLite database initialized');

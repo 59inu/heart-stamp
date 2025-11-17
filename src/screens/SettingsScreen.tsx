@@ -43,6 +43,7 @@ export const SettingsScreen: React.FC = () => {
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [hasActiveExport, setHasActiveExport] = useState(false);
 
   const appVersion = '1.0.0';
 
@@ -60,10 +61,10 @@ export const SettingsScreen: React.FC = () => {
     loadDiaryCount();
   }, []);
 
-  // 알림 설정 불러오기
+  // 알림 설정 및 export job 상태 불러오기
   useFocusEffect(
     React.useCallback(() => {
-      const loadNotificationSettings = async () => {
+      const loadSettings = async () => {
         try {
           // 푸시 권한 체크
           const pushPermission = await NotificationService.checkPushPermission();
@@ -74,11 +75,15 @@ export const SettingsScreen: React.FC = () => {
 
           const teacherCommentSetting = await NotificationService.getTeacherCommentNotificationEnabled();
           setNotificationEnabled(teacherCommentSetting);
+
+          // Export job 상태 체크
+          const activeExport = await ExportService.hasActiveExportJob();
+          setHasActiveExport(activeExport);
         } catch (error) {
-          logger.error('Failed to load notification settings:', error);
+          logger.error('Failed to load settings:', error);
         }
       };
-      loadNotificationSettings();
+      loadSettings();
     }, [])
   );
 
@@ -138,20 +143,31 @@ export const SettingsScreen: React.FC = () => {
 
 
   const handleDataExport = async () => {
-    Alert.alert(
+    Alert.prompt(
       '일기 내보내기',
-      '일기 데이터를 텍스트 파일로 내보냅니다.\n최대 24시간이 소요되며, 완료되면 알림으로 안내해드립니다.',
+      '다운로드 링크를 받을 이메일 주소를 입력해주세요.\n최대 24시간 이내에 이메일로 전송됩니다.',
       [
         { text: '취소', style: 'cancel' },
         {
           text: '확인',
-          onPress: async () => {
+          onPress: async (email) => {
+            if (!email || !email.trim()) {
+              Alert.alert('오류', '이메일 주소를 입력해주세요');
+              return;
+            }
+
+            if (!email.includes('@')) {
+              Alert.alert('오류', '올바른 이메일 주소를 입력해주세요');
+              return;
+            }
+
             try {
-              await ExportService.requestExport('txt');
+              await ExportService.requestExport(email.trim(), 'txt');
+              setHasActiveExport(true);
               Toast.show({
                 type: 'success',
                 text1: '내보내기 요청 완료',
-                text2: '24시간 내에 완료됩니다',
+                text2: `${email}로 전송됩니다`,
                 position: 'bottom',
                 visibilityTime: 3000,
               });
@@ -160,7 +176,10 @@ export const SettingsScreen: React.FC = () => {
             }
           },
         },
-      ]
+      ],
+      'plain-text',
+      '',
+      'email-address'
     );
   };
 
@@ -336,6 +355,11 @@ export const SettingsScreen: React.FC = () => {
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
             <Ionicons name="download-outline" size={24} color={COLORS.settingsIconColor} />
             <Text style={styles.menuItemText}>일기 내보내기</Text>
+            {hasActiveExport && (
+              <View style={styles.processingBadge}>
+                <Text style={styles.processingText}>처리중</Text>
+              </View>
+            )}
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
@@ -591,6 +615,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#999',
+  },
+  processingBadge: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  processingText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FF9800',
   },
   bottomSpacing: {
     height: 40,

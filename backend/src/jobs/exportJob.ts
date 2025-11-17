@@ -57,22 +57,33 @@ export class ExportJob {
           console.log(`🔄 [ExportJob] Processing job ${job.id} for user ${job.userId}`);
           await ExportService.processExportJob(job.id);
 
-          // Send push notification on success
+          // Send notifications on completion
           const updatedJob = ExportJobDatabase.get(job.id);
           if (updatedJob?.status === 'completed') {
+            // Send push notification
             await PushNotificationService.sendNotification(
               job.userId,
               '내보내기 준비 완료',
-              '일기 데이터 내보내기가 완료되었습니다. 설정에서 다운로드하세요.',
+              `일기 데이터가 ${updatedJob.email}로 전송되었습니다.`,
               { type: 'export_ready', jobId: job.id }
             );
+
+            // TODO: Send email with download link
+            // await EmailService.sendExportEmail(updatedJob.email, updatedJob.s3Url!, updatedJob.expiresAt!);
+            console.log(`📧 [ExportJob] TODO: Send email to ${updatedJob.email} with download link`);
+            console.log(`   Download URL: ${updatedJob.s3Url}`);
+            console.log(`   Expires: ${updatedJob.expiresAt}`);
           } else if (updatedJob?.status === 'failed') {
+            // Send push notification
             await PushNotificationService.sendNotification(
               job.userId,
               '내보내기 실패',
               '일기 데이터 내보내기 중 오류가 발생했습니다. 다시 시도해주세요.',
               { type: 'export_failed', jobId: job.id }
             );
+
+            // TODO: Send failure email
+            // await EmailService.sendExportFailureEmail(updatedJob.email, updatedJob.errorMessage);
           }
 
           // Wait between jobs to reduce server load
