@@ -80,11 +80,13 @@ export class ImageCache {
    * 이미지를 로컬에 저장한 후 백그라운드에서 S3 업로드 시도
    * @param uri 원본 이미지 URI
    * @param onUploadComplete 업로드 완료 시 콜백 (S3 URL 전달)
+   * @param onUploadFailed 업로드 실패 시 콜백
    * @returns 로컬 경로 (즉시 반환)
    */
   static async saveAndUpload(
     uri: string,
-    onUploadComplete?: (serverUrl: string) => void
+    onUploadComplete?: (serverUrl: string) => void,
+    onUploadFailed?: (error: string) => void
   ): Promise<string> {
     try {
       // 1. 먼저 로컬에 저장 (항상 성공)
@@ -98,15 +100,17 @@ export class ImageCache {
             logger.log(`✅ [ImageCache] Upload complete, server URL: ${serverUrl}`);
             onUploadComplete?.(serverUrl);
           } else {
-            // 업로드 실패 시 큐에 추가
+            // 업로드 실패 시 큐에 추가 및 실패 콜백 호출
             logger.log(`⏳ [ImageCache] Upload failed, adding to queue`);
             SyncQueue.add('upload_image', { uri: localUri });
+            onUploadFailed?.('이미지 업로드에 실패했습니다. 나중에 다시 시도됩니다.');
           }
         })
         .catch((error) => {
           logger.error('[ImageCache] Background upload error:', error);
-          // 에러 발생 시 큐에 추가
+          // 에러 발생 시 큐에 추가 및 실패 콜백 호출
           SyncQueue.add('upload_image', { uri: localUri });
+          onUploadFailed?.('이미지 업로드 중 오류가 발생했습니다.');
         });
 
       // 3. 로컬 경로 즉시 반환

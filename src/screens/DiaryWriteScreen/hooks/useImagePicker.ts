@@ -89,6 +89,18 @@ export const useImagePicker = (
             logger.log('✅ [useImagePicker] S3 upload complete:', serverUrl);
             setImageUri(serverUrl);
             setUploadingImage(false);
+          },
+          (error) => {
+            // 4. S3 업로드 실패 시 사용자에게 알리고 로딩 종료
+            logger.error('❌ [useImagePicker] S3 upload failed:', error);
+            setUploadingImage(false);
+            Toast.show({
+              type: 'error',
+              text1: '이미지 업로드 실패',
+              text2: error,
+              position: 'bottom',
+              visibilityTime: 3000,
+            });
           }
         );
 
