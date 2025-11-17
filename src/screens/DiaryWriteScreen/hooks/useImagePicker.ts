@@ -80,9 +80,9 @@ export const useImagePicker = (
           processedUri = manipResult.uri;
         }
 
-        // 2. 로컬에 저장하고 S3 업로드 시작 (로딩 스피너 표시)
+        // 2. 로컬에 저장하고 S3 업로드 시작
         logger.log('💾 [useImagePicker] Saving image locally and uploading to S3...');
-        await ImageCache.saveAndUpload(
+        const localUri = await ImageCache.saveAndUpload(
           processedUri,
           (serverUrl) => {
             // 3. S3 업로드 성공 시 URL 설정하고 로딩 종료
@@ -103,6 +103,10 @@ export const useImagePicker = (
             });
           }
         );
+
+        // 로컬 이미지를 먼저 표시하고 업로드는 백그라운드에서 진행
+        setImageUri(localUri);
+        // uploadingImage는 S3 업로드 완료/실패 시 콜백에서 false로 설정
 
         // 4. saveAndUpload는 백그라운드에서 진행되므로
         //    로딩 스피너는 S3 업로드 완료 시(콜백)까지 유지
