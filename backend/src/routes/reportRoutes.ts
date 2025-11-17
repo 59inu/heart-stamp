@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ReportService } from '../services/reportService';
+import { startOfISOWeek, endOfISOWeek, setISOWeek, setYear, startOfDay, isAfter, startOfMonth, endOfMonth } from 'date-fns';
 
 const router = Router();
 
@@ -32,26 +33,16 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
       });
     }
 
-    // 주의 시작일과 종료일 계산 (ISO 8601) - UTC 기준
-    const jan4 = new Date(Date.UTC(year, 0, 4));
-    const jan4Day = (jan4.getUTCDay() + 6) % 7; // 월요일=0
-    const firstMonday = new Date(jan4);
-    firstMonday.setUTCDate(jan4.getUTCDate() - jan4Day);
+    // 주의 시작일과 종료일 계산 (ISO 8601) - date-fns 사용 (TZ 환경변수 기준)
+    const referenceDate = setISOWeek(setYear(new Date(), year), week);
+    const startDate = startOfISOWeek(referenceDate);
+    const endDate = endOfISOWeek(referenceDate);
 
-    const targetMonday = new Date(firstMonday);
-    targetMonday.setUTCDate(firstMonday.getUTCDate() + (week - 1) * 7);
+    // 현재 날짜와 비교 (로컬 시간 기준, 날짜만 비교)
+    const today = startOfDay(new Date());
+    const periodEnd = startOfDay(endDate);
 
-    const startDate = targetMonday;
-    const endDate = new Date(targetMonday);
-    endDate.setUTCDate(targetMonday.getUTCDate() + 6);
-    endDate.setUTCHours(23, 59, 59, 999); // 해당 일의 끝까지 포함
-
-    // 현재 날짜와 비교 (UTC 기준 날짜만 비교)
-    const now = new Date();
-    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const endDateUTC = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
-
-    if (nowUTC <= endDateUTC) {
+    if (!isAfter(today, periodEnd)) {
       return res.status(400).json({
         success: false,
         message: 'Week not completed yet',
@@ -116,26 +107,16 @@ router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) =
       });
     }
 
-    // 주의 시작일과 종료일 계산 (ISO 8601) - UTC 기준
-    const jan4 = new Date(Date.UTC(year, 0, 4));
-    const jan4Day = (jan4.getUTCDay() + 6) % 7;
-    const firstMonday = new Date(jan4);
-    firstMonday.setUTCDate(jan4.getUTCDate() - jan4Day);
+    // 주의 시작일과 종료일 계산 (ISO 8601) - date-fns 사용 (TZ 환경변수 기준)
+    const referenceDate = setISOWeek(setYear(new Date(), year), week);
+    const startDate = startOfISOWeek(referenceDate);
+    const endDate = endOfISOWeek(referenceDate);
 
-    const targetMonday = new Date(firstMonday);
-    targetMonday.setUTCDate(firstMonday.getUTCDate() + (week - 1) * 7);
+    // 현재 날짜와 비교 (로컬 시간 기준, 날짜만 비교)
+    const today = startOfDay(new Date());
+    const periodEnd = startOfDay(endDate);
 
-    const startDate = targetMonday;
-    const endDate = new Date(targetMonday);
-    endDate.setUTCDate(targetMonday.getUTCDate() + 6);
-    endDate.setUTCHours(23, 59, 59, 999); // 해당 일의 끝까지 포함
-
-    // 현재 날짜와 비교 (UTC 기준 날짜만 비교)
-    const now = new Date();
-    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const endDateUTC = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
-
-    if (nowUTC <= endDateUTC) {
+    if (!isAfter(today, periodEnd)) {
       return res.status(400).json({
         success: false,
         message: 'Week not completed yet',
@@ -192,19 +173,16 @@ router.get('/reports/monthly/:year/:month', async (req: Request, res: Response) 
       });
     }
 
-    // 월의 시작일과 종료일 계산 (UTC 기준)
-    const startDate = new Date(Date.UTC(year, month - 1, 1));
-    const endDate = new Date(Date.UTC(year, month - 1, 1));
-    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
-    endDate.setUTCDate(0); // 전월 마지막 날
-    endDate.setUTCHours(23, 59, 59, 999);
+    // 월의 시작일과 종료일 계산 (TZ 환경변수 기준)
+    const referenceDate = new Date(year, month - 1, 1);
+    const startDate = startOfMonth(referenceDate);
+    const endDate = endOfMonth(referenceDate);
 
-    // 현재 날짜와 비교 (UTC 기준 날짜만 비교)
-    const now = new Date();
-    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const endDateUTC = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate()));
+    // 현재 날짜와 비교 (로컬 시간 기준, 날짜만 비교)
+    const today = startOfDay(new Date());
+    const periodEnd = startOfDay(endDate);
 
-    if (nowUTC <= endDateUTC) {
+    if (!isAfter(today, periodEnd)) {
       return res.status(400).json({
         success: false,
         message: 'Month not completed yet',
