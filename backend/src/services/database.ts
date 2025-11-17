@@ -491,6 +491,8 @@ export class DiaryDatabase {
         content,
         moodTag,
         aiComment,
+        aiModel,
+        importance,
         stampType,
         createdAt,
         updatedAt
