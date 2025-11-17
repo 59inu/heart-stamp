@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import {
-  startOfWeek,
-  endOfWeek,
+  startOfISOWeek,
+  endOfISOWeek,
   startOfMonth,
   endOfMonth,
   startOfDay,
@@ -14,8 +14,8 @@ export const usePeriodDates = (period: ReportPeriod, currentDate: Date) => {
   const { startDate, endDate } = useMemo(() => {
     if (period === 'week') {
       return {
-        startDate: startOfWeek(currentDate, { weekStartsOn: 1 }),
-        endDate: endOfWeek(currentDate, { weekStartsOn: 1 }),
+        startDate: startOfISOWeek(currentDate),
+        endDate: endOfISOWeek(currentDate),
       };
     } else {
       return {

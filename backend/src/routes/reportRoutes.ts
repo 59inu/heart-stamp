@@ -61,6 +61,7 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
     // 일기 개수 확인
     const { DiaryDatabase } = await import('../services/database');
     const allDiaries = DiaryDatabase.getAllByUserId(userId);
+
     const periodDiaries = allDiaries.filter((diary) => {
       const diaryDate = new Date(diary.date);
       return diaryDate >= startDate && diaryDate <= endDate;
