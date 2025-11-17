@@ -49,13 +49,17 @@ router.post('/diaries',
 
       const diaryEntry: DiaryEntry = {
         ...req.body,
-        userId, // userId 추가
+        userId, // X-User-Id 헤더의 userId로 설정
       };
 
       // 기존 일기가 있으면 업데이트, 없으면 생성
       const existing = DiaryDatabase.getById(diaryEntry._id);
       if (existing) {
-        await DiaryDatabase.update(diaryEntry._id, diaryEntry);
+        // update 시 X-User-Id 헤더의 userId를 명시적으로 전달하여 덮어쓰기
+        await DiaryDatabase.update(diaryEntry._id, {
+          ...diaryEntry,
+          userId, // X-User-Id 헤더의 userId 강제 적용
+        });
       } else {
         await DiaryDatabase.create(diaryEntry);
       }

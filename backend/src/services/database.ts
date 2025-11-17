@@ -302,6 +302,10 @@ export class DiaryDatabase {
         const values: any[] = [];
 
         // updates 객체의 키를 확인 (encrypted는 undefined 값이 사라질 수 있음)
+        if ('userId' in updates) {
+          fields.push('userId = ?');
+          values.push(encrypted.userId ?? null);
+        }
         if ('content' in updates) {
           fields.push('content = ?');
           values.push(encrypted.content ?? null);
