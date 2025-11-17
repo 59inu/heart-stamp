@@ -69,19 +69,22 @@ export class DiaryStorage {
     }) || null;
   }
 
-  // 서버에서 가져온 데이터를 그대로 저장 (ID 포함)
+  // 서버에서 가져온 데이터를 저장 (userId는 제외 - 로컬에서 관리)
   static async saveFromServer(entry: DiaryEntry): Promise<DiaryEntry> {
     const entries = await this.getAllEntries();
     const existing = entries.find((e) => e._id === entry._id);
 
+    // userId는 서버 데이터에서 제거 (로컬에서 관리되어야 함)
+    const { userId, ...entryWithoutUserId } = entry;
+
     if (existing) {
-      // 이미 존재하면 업데이트
-      return (await this.update(entry._id, entry))!;
+      // 이미 존재하면 업데이트 (userId 제외)
+      return (await this.update(entry._id, entryWithoutUserId))!;
     } else {
-      // 없으면 새로 추가
-      entries.push(entry);
+      // 없으면 새로 추가 (userId 제외)
+      entries.push(entryWithoutUserId as DiaryEntry);
       await this.saveAllEntries(entries);
-      return entry;
+      return entryWithoutUserId as DiaryEntry;
     }
   }
 
@@ -180,10 +183,12 @@ export class DiaryStorage {
 
           if (needsUpdate) {
             // 메모리에서만 업데이트 (파일 I/O 없음)
+            // userId는 업데이트하지 않음 - 로컬에서 관리
             entries[i] = {
               ...entry,
               aiComment: serverData.aiComment,
               stampType: serverData.stampType,
+              // userId는 entry의 기존 값 유지 (serverData.userId 사용 안 함)
               syncedWithServer: true,
               updatedAt: new Date().toISOString(),
             };
