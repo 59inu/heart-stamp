@@ -60,7 +60,7 @@ export class S3Service {
       Key: key,
       Body: buffer,
       ContentType: mimeType,
-      ACL: 'public-read', // 퍼블릭 읽기 권한 설정
+      // ACL 제거 - 버킷 정책으로 퍼블릭 액세스 관리
     });
 
     await s3Client.send(command);
