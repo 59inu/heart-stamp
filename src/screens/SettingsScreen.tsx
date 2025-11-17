@@ -23,7 +23,7 @@ import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
 import { NoticeModal } from '../components/NoticeModal';
-import { DataManagementModal } from '../components/DataManagementModal';
+import { ExportService } from '../services/exportService';
 import { DiaryStorage } from '../services/diaryStorage';
 import { NotificationService } from '../services/notificationService';
 import { RootStackParamList } from '../navigation/types';
@@ -43,7 +43,6 @@ export const SettingsScreen: React.FC = () => {
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
-  const [showDataManagementModal, setShowDataManagementModal] = useState(false);
 
   const appVersion = '1.0.0';
 
@@ -138,8 +137,68 @@ export const SettingsScreen: React.FC = () => {
   };
 
 
-  const handleDataExport = () => {
-    setShowDataManagementModal(true);
+  const handleDataExport = async () => {
+    Alert.alert(
+      '일기 내보내기',
+      '일기 데이터를 텍스트 파일로 내보냅니다.\n최대 24시간이 소요되며, 완료되면 알림으로 안내해드립니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '확인',
+          onPress: async () => {
+            try {
+              await ExportService.requestExport('txt');
+              Toast.show({
+                type: 'success',
+                text1: '내보내기 요청 완료',
+                text2: '24시간 내에 완료됩니다',
+                position: 'bottom',
+                visibilityTime: 3000,
+              });
+            } catch (error: any) {
+              Alert.alert('내보내기 요청 실패', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAllData = () => {
+    Alert.alert(
+      '모든 데이터 삭제',
+      '정말로 모든 일기 데이터를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await ExportService.deleteAllData();
+
+              // 로컬 데이터도 삭제
+              await DiaryStorage.clearAll();
+
+              Alert.alert(
+                '삭제 완료',
+                `${result.deletedDiaries}개의 일기가 삭제되었습니다.\n앱을 다시 시작해주세요.`,
+                [
+                  {
+                    text: '확인',
+                    onPress: () => {
+                      // TODO: Navigate to onboarding or restart app
+                    },
+                  },
+                ]
+              );
+            } catch (error: any) {
+              Alert.alert('삭제 실패', error.message);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleTeacherCommentNotificationToggle = async (value: boolean) => {
@@ -275,8 +334,14 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>데이터 관리</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
-            <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>데이터 관리</Text>
+            <Ionicons name="download-outline" size={24} color={COLORS.settingsIconColor} />
+            <Text style={styles.menuItemText}>일기 내보내기</Text>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAllData}>
+            <Ionicons name="trash-outline" size={24} color="#F44336" />
+            <Text style={[styles.menuItemText, { color: '#F44336' }]}>모든 데이터 삭제</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         </View>
@@ -376,12 +441,6 @@ export const SettingsScreen: React.FC = () => {
       <NoticeModal
         visible={showNoticeModal}
         onClose={() => setShowNoticeModal(false)}
-      />
-
-      {/* 데이터 관리 모달 */}
-      <DataManagementModal
-        visible={showDataManagementModal}
-        onClose={() => setShowDataManagementModal(false)}
       />
     </SafeAreaView>
   );
