@@ -104,9 +104,9 @@ export class ExportService {
     content += `총 일기 수: ${diaries.length}개\n\n`;
     content += '='.repeat(60) + '\n\n';
 
-    // Sort diaries by date (newest first)
+    // Sort diaries by date (oldest first - chronological order)
     const sortedDiaries = [...diaries].sort((a, b) => {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
 
     for (const diary of sortedDiaries) {
