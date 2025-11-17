@@ -465,6 +465,47 @@ export class ApiService {
       };
     }
   }
+
+  // Export methods
+  async requestExport(format: 'txt' | 'pdf' = 'txt'): Promise<{ jobId: string }> {
+    try {
+      const response = await this.axiosInstance.post('/export/request', { format });
+      return { jobId: response.data.jobId };
+    } catch (error: any) {
+      logger.error('Error requesting export:', error);
+      throw new Error(error.response?.data?.error || 'Failed to request export');
+    }
+  }
+
+  async getExportStatus(jobId: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get(`/export/status/${jobId}`);
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error getting export status:', error);
+      throw new Error(error.response?.data?.error || 'Failed to get export status');
+    }
+  }
+
+  async getAllExportJobs(): Promise<{ jobs: any[] }> {
+    try {
+      const response = await this.axiosInstance.get('/export/jobs');
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error getting export jobs:', error);
+      throw new Error(error.response?.data?.error || 'Failed to get export jobs');
+    }
+  }
+
+  async deleteAllData(): Promise<{ deletedDiaries: number; deletedJobs: number }> {
+    try {
+      const response = await this.axiosInstance.delete('/export/delete-all');
+      return response.data;
+    } catch (error: any) {
+      logger.error('Error deleting all data:', error);
+      throw new Error(error.response?.data?.error || 'Failed to delete all data');
+    }
+  }
 }
 
 export const apiService = new ApiService();

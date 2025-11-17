@@ -15,9 +15,11 @@ import { requireFirebaseAuth, requireAdminToken } from './middleware/auth';
 import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
 import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
+import exportRoutes from './routes/exportRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
+import { ExportJob } from './jobs/exportJob';
 import { PushNotificationService } from './services/pushNotificationService';
 import { initialize as initializeEncryption } from './services/encryptionService';
 
@@ -94,6 +96,7 @@ app.get('/admin', (req, res) => {
 app.use('/api', generalApiLimiter, diaryRoutes);
 app.use('/api', generalApiLimiter, reportRoutes);
 app.use('/api', generalApiLimiter, imageRoutes);
+app.use('/api', generalApiLimiter, exportRoutes);
 
 // Initialize Encryption Service FIRST
 initializeEncryption();
@@ -118,6 +121,10 @@ aiAnalysisJob.start();
 // Start Backup Job
 const backupJob = new BackupJob();
 backupJob.start();
+
+// Start Export Job
+ExportJob.start();
+ExportJob.startCleanup();
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {

@@ -142,6 +142,37 @@ try {
   // 컬럼이 이미 존재하면 무시
 }
 
+// Export Jobs 테이블 생성
+db.exec(`
+  CREATE TABLE IF NOT EXISTS export_jobs (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    status TEXT NOT NULL,
+    format TEXT NOT NULL,
+    s3Url TEXT,
+    expiresAt TEXT,
+    errorMessage TEXT,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  )
+`);
+
+// userId 인덱스 생성 (export jobs 조회 성능 향상)
+try {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_export_userId ON export_jobs(userId)`);
+  console.log('✅ Created userId index on export_jobs table');
+} catch (error) {
+  // 인덱스가 이미 존재하면 무시
+}
+
+// status 인덱스 생성 (pending jobs 조회 성능 향상)
+try {
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_export_status ON export_jobs(status)`);
+  console.log('✅ Created status index on export_jobs table');
+} catch (error) {
+  // 인덱스가 이미 존재하면 무시
+}
+
 console.log('✅ SQLite database initialized');
 
 export class DiaryDatabase {
@@ -581,6 +612,20 @@ export class DiaryDatabase {
     console.log(`✅ [DiaryDatabase] ${result.changes}개 일기의 AI 코멘트 초기화 완료`);
 
     return result.changes;
+  }
+
+  // 사용자의 모든 일기 삭제 (하드 삭제)
+  static async deleteAllForUser(userId: string): Promise<number> {
+    try {
+      return await this.retryOnBusy(() => {
+        const stmt = db.prepare('DELETE FROM diaries WHERE userId = ?');
+        const result = stmt.run(userId);
+        console.log(`🗑️  [DiaryDatabase] Deleted ${result.changes} diaries for user ${userId}`);
+        return result.changes;
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'deleteAllForUser');
+    }
   }
 }
 

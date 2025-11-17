@@ -23,6 +23,7 @@ import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
 import { NoticeModal } from '../components/NoticeModal';
+import { DataManagementModal } from '../components/DataManagementModal';
 import { DiaryStorage } from '../services/diaryStorage';
 import { NotificationService } from '../services/notificationService';
 import { RootStackParamList } from '../navigation/types';
@@ -42,6 +43,7 @@ export const SettingsScreen: React.FC = () => {
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [showDataManagementModal, setShowDataManagementModal] = useState(false);
 
   const appVersion = '1.0.0';
 
@@ -137,13 +139,7 @@ export const SettingsScreen: React.FC = () => {
 
 
   const handleDataExport = () => {
-    Toast.show({
-      type: 'info',
-      text1: '일기 내보내기',
-      text2: '일기 내보내기 기능이 준비 중입니다',
-      position: 'bottom',
-      visibilityTime: 2000,
-    });
+    setShowDataManagementModal(true);
   };
 
   const handleTeacherCommentNotificationToggle = async (value: boolean) => {
@@ -280,10 +276,7 @@ export const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDataExport}>
             <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>일기 내보내기</Text>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>준비중</Text>
-            </View>
+            <Text style={styles.menuItemText}>데이터 관리</Text>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         </View>
@@ -383,6 +376,12 @@ export const SettingsScreen: React.FC = () => {
       <NoticeModal
         visible={showNoticeModal}
         onClose={() => setShowNoticeModal(false)}
+      />
+
+      {/* 데이터 관리 모달 */}
+      <DataManagementModal
+        visible={showDataManagementModal}
+        onClose={() => setShowDataManagementModal(false)}
       />
     </SafeAreaView>
   );
