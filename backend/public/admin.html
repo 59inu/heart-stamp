@@ -436,7 +436,7 @@
       container.innerHTML = '<div class="loading">로딩 중...</div>';
 
       try {
-        const result = await apiCall('/api/admin/model-stats');
+        const result = await apiCall('/api/admin/stats');
         const stats = result.data;
 
         const total = stats.sonnetCount + stats.haikuCount;
