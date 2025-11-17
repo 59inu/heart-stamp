@@ -103,8 +103,8 @@ export class ClaudeService {
       // 🔍 [1단계] Haiku로 일기 중요도 분석
       importanceScore = await this.analyzeImportance(diaryContent);
 
-      // 📊 중요도에 따라 모델 선택 (임계값: 20점)
-      const IMPORTANCE_THRESHOLD = 25;
+      // 📊 중요도에 따라 모델 선택
+      const IMPORTANCE_THRESHOLD = 30;
       useSonnet = importanceScore.total >= IMPORTANCE_THRESHOLD;
       selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
 

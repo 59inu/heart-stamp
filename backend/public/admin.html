@@ -570,8 +570,8 @@
           const date = new Date(comment.date).toLocaleString('ko-KR');
           const content = comment.content.substring(0, 100) + (comment.content.length > 100 ? '...' : '');
           const aiComment = comment.aiComment.substring(0, 150) + (comment.aiComment.length > 150 ? '...' : '');
-          const model = comment.model ? ` [${comment.model.toUpperCase()}]` : '';
-          const score = comment.importanceScore ? ` (${comment.importanceScore}점)` : '';
+          const model = comment.aiModel ? ` [${comment.aiModel.toUpperCase()}]` : '';
+          const score = comment.importance ? ` (${comment.importance}점)` : '';
 
           return `
             <div class="comment-item">
