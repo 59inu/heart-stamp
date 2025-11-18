@@ -16,7 +16,7 @@ export interface ExportJob {
   userId: string;
   status: ExportStatus;
   format: ExportFormat;
-  email: string;
+  email?: string; // Optional - not used for in-app downloads
   s3Url?: string;
   expiresAt?: string; // ISO string
   errorMessage?: string;
@@ -29,7 +29,7 @@ export interface ExportJob {
  */
 export interface ExportRequest {
   format: ExportFormat;
-  email: string;
+  email?: string; // Optional - not used for in-app downloads
 }
 
 /**

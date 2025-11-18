@@ -18,7 +18,7 @@ export class ExportJobDatabase {
   /**
    * Create a new export job
    */
-  static async create(userId: string, format: ExportFormat, email: string): Promise<ExportJob> {
+  static async create(userId: string, format: ExportFormat, email?: string): Promise<ExportJob> {
     const now = new Date().toISOString();
     const job: ExportJob = {
       id: uuidv4(),
@@ -33,9 +33,9 @@ export class ExportJobDatabase {
     await pool.query(`
       INSERT INTO export_jobs (id, "userId", status, format, email, "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [job.id, job.userId, job.status, job.format, job.email, job.createdAt, job.updatedAt]);
+    `, [job.id, job.userId, job.status, job.format, job.email || null, job.createdAt, job.updatedAt]);
 
-    console.log(`📝 [ExportDB] Created export job ${job.id} for user ${userId} (format: ${format}, email: ${email})`);
+    console.log(`📝 [ExportDB] Created export job ${job.id} for user ${userId} (format: ${format})`);
     return job;
   }
 

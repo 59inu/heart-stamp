@@ -16,17 +16,11 @@ router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Re
   try {
     const userId = req.userId!;
 
-    const { format, email }: ExportRequest = req.body;
+    const { format }: ExportRequest = req.body;
 
     // Validate format
     if (!format || (format !== 'txt' && format !== 'pdf')) {
       res.status(400).json({ error: 'Invalid format. Must be "txt" or "pdf"' });
-      return;
-    }
-
-    // Validate email
-    if (!email || !email.includes('@')) {
-      res.status(400).json({ error: 'Valid email is required' });
       return;
     }
 
@@ -58,10 +52,10 @@ router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Re
     }
 
     // Create export job
-    const job = await ExportJobDatabase.create(userId, format as ExportFormat, email);
+    const job = await ExportJobDatabase.create(userId, format as ExportFormat);
 
     res.status(202).json({
-      message: '내보내기 요청이 접수되었습니다. 24시간 내에 이메일로 전송됩니다.',
+      message: '내보내기 요청이 접수되었습니다. 24시간 내에 처리됩니다.',
       jobId: job.id,
       status: job.status,
       createdAt: job.createdAt,
