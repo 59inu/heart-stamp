@@ -264,9 +264,11 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        {/* 헤더 */}
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
@@ -428,7 +430,8 @@ export const SettingsScreen: React.FC = () => {
         visible={showNoticeModal}
         onClose={() => setShowNoticeModal(false)}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 };
 

@@ -147,24 +147,29 @@ export const ExportScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={28} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>일기 내보내기</Text>
-          <View style={styles.placeholder} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.settingsIconColor} />
-        </View>
-      </SafeAreaView>
+      <>
+        <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+        <SafeAreaView style={styles.container} edges={['bottom']}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={28} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>일기 내보내기</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.settingsIconColor} />
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
@@ -235,22 +240,28 @@ export const ExportScreen: React.FC = () => {
                   {getStatusBadge(job.status)}
                 </View>
 
-                {job.status === 'completed' && job.s3Url && (
-                  <View style={styles.downloadSection}>
-                    <TouchableOpacity
-                      style={styles.downloadButton}
-                      onPress={() => handleDownload(job)}
-                    >
-                      <Ionicons name="cloud-download-outline" size={20} color="#fff" />
-                      <Text style={styles.downloadButtonText}>다운로드</Text>
-                    </TouchableOpacity>
-                    {job.expiresAt && (
-                      <Text style={styles.expiryText}>
-                        만료일: {formatExpiry(job.expiresAt)}
-                      </Text>
-                    )}
-                  </View>
-                )}
+                {job.status === 'completed' && job.s3Url && (() => {
+                  const isExpired = job.expiresAt ? new Date(job.expiresAt) < new Date() : false;
+                  return (
+                    <View style={styles.downloadSection}>
+                      <TouchableOpacity
+                        style={[styles.downloadButton, isExpired && styles.downloadButtonDisabled]}
+                        onPress={() => !isExpired && handleDownload(job)}
+                        disabled={isExpired}
+                      >
+                        <Ionicons name="cloud-download-outline" size={20} color="#fff" />
+                        <Text style={styles.downloadButtonText}>
+                          {isExpired ? '만료됨' : '다운로드'}
+                        </Text>
+                      </TouchableOpacity>
+                      {job.expiresAt && (
+                        <Text style={[styles.expiryText, isExpired && styles.expiredText]}>
+                          {isExpired ? '만료됨' : `만료일: ${formatExpiry(job.expiresAt)}`}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })()}
 
                 {job.status === 'pending' && (
                   <Text style={styles.pendingText}>
@@ -275,7 +286,8 @@ export const ExportScreen: React.FC = () => {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 };
 
@@ -426,11 +438,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
+  downloadButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
   expiryText: {
     fontSize: 12,
     color: '#999',
     marginTop: 6,
     textAlign: 'center',
+  },
+  expiredText: {
+    color: '#f44336',
+    fontWeight: '600',
   },
   pendingText: {
     fontSize: 13,

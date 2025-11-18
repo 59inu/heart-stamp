@@ -17,6 +17,7 @@ const pool = new Pool({
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  client_encoding: 'UTF8', // 이모지 및 다국어 지원
 });
 
 // Pool error handling

@@ -46,7 +46,7 @@ const CELLS_PER_ROW = Math.floor(AVAILABLE_WIDTH / CELL_WIDTH);
 const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) => {
   // 텍스트를 한 글자씩 분리하고 빈 칸 계산 (useMemo로 최적화)
   const allCells = React.useMemo(() => {
-    const chars = content.split('');
+    const chars = Array.from(content); // 이모지를 올바르게 분리
     const totalCells = chars.length;
     const minCells = CELLS_PER_ROW * 10; // 최소 10줄 보장
 
@@ -587,7 +587,6 @@ const styles = StyleSheet.create({
   manuscriptChar: {
     fontSize: 12,
     color: '#333',
-    fontFamily: 'System',
   },
   aiSection: {
     backgroundColor: '#F0F6FF',
