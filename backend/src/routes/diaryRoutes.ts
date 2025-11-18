@@ -477,6 +477,58 @@ router.get('/admin/diaries',
   }
 );
 
+// [Admin] Get ALL diaries (without userId filter) - for debugging
+router.get('/admin/all-diaries',
+  requireAdminToken,
+  async (req: Request, res: Response) => {
+    try {
+      const allDiaries = DiaryDatabase.getAll();
+
+      // userId별로 그룹화하여 보기 쉽게
+      const groupedByUser = allDiaries.reduce((acc, diary) => {
+        const userId = diary.userId || 'unknown';
+        if (!acc[userId]) {
+          acc[userId] = [];
+        }
+        acc[userId].push({
+          _id: diary._id,
+          date: diary.date,
+          userId: diary.userId,
+          content: diary.content.substring(0, 50) + '...',
+          model: diary.model,
+          importanceScore: diary.importanceScore,
+          hasAiComment: !!diary.aiComment,
+          stampType: diary.stampType,
+          createdAt: diary.createdAt,
+        });
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      res.json({
+        success: true,
+        totalCount: allDiaries.length,
+        userCount: Object.keys(groupedByUser).length,
+        groupedByUser,
+        allDiaries: allDiaries.map(d => ({
+          _id: d._id,
+          userId: d.userId,
+          date: d.date,
+          model: d.model,
+          importanceScore: d.importanceScore,
+          hasAiComment: !!d.aiComment,
+        })),
+      });
+    } catch (error) {
+      console.error('Error fetching all diaries:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch all diaries',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 // [Admin] Get recent AI comments
 router.get('/admin/recent-comments',
   requireAdminToken,
