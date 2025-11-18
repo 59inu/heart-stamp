@@ -462,7 +462,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-label">평균 중요도</span>
-            <span class="stat-value">${stats.averageImportanceScore || 'N/A'}/40</span>
+            <span class="stat-value">${stats.averageImportanceScore ? `${stats.averageImportanceScore}/40` : 'N/A'}</span>
           </div>
           ${stats.sonnetAverageScore ? `
           <div class="stat-item">
