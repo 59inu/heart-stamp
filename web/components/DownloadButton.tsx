@@ -16,7 +16,7 @@ export default function DownloadButton({ className = '', size = 'default' }: Dow
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
 
   const appStoreUrl = 'https://apps.apple.com/app/id6755212868';
-  const isAppLive = false; // 심사 승인 후 true로 변경
+  const isAppLive = true; // 심사 승인 후 true로 변경
   const sheetDBUrl = 'https://sheetdb.io/api/v1/sjcbusuu2zdou';
   const baseCount = 15; // 베이스 카운트 (가짜)
 
