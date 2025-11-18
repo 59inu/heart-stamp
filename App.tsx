@@ -220,9 +220,23 @@ export default function App() {
     // 앱 초기화 실행
     initializeApp();
 
-    // 앱 상태 변경 리스너 (백그라운드 → 포그라운드 전환 시 데이터 새로고침)
+    // 앱 상태 변경 리스너
     const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
       logger.log(`[App] AppState changed: ${appState.current} -> ${nextAppState}`);
+
+      // 포그라운드 → 백그라운드: 로컬 데이터 백업
+      if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+        logger.log('📤 [App] Going to background - syncing local changes to server...');
+        const result = await DiaryStorage.syncWithServer();
+
+        if (result.success) {
+          logger.log('✅ [App] Background backup completed');
+        } else {
+          logger.error('❌ [App] Background backup failed:', result.error);
+        }
+      }
+
+      // 백그라운드 → 포그라운드: 서버 데이터 동기화
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         const now = Date.now();
         const timeSinceLastSync = now - lastSyncTime.current;

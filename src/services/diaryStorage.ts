@@ -123,7 +123,7 @@ export class DiaryStorage {
   }
 
   /**
-   * 서버에서 AI 코멘트 업데이트 동기화
+   * 서버와 양방향 동기화 (LWW - Last Write Wins)
    * 중복 실행 방지 기능 포함
    * @returns { success: boolean, error?: string, alreadySyncing?: boolean }
    */
@@ -135,9 +135,9 @@ export class DiaryStorage {
     }
 
     this.isSyncing = true;
-    logger.log('🔄 [DiaryStorage] syncWithServer started...');
+    logger.log('🔄 [DiaryStorage] LWW bidirectional sync started...');
     try {
-      // 서버에서 전체 일기 목록 가져오기 (한 번의 API 호출로 모든 데이터 획득)
+      // 1. 서버에서 전체 일기 목록 가져오기
       const result = await apiService.getAllDiaries();
 
       if (!result.success) {
@@ -148,68 +148,115 @@ export class DiaryStorage {
       const serverDiaries = result.data;
       logger.log(`📥 [DiaryStorage] Server has ${serverDiaries.length} diaries`);
 
-      // 서버 데이터를 Map으로 변환 (빠른 조회를 위해)
-      const serverDiaryMap = new Map(
-        serverDiaries.map(diary => [diary._id, diary])
-      );
+      // 2. 로컬 일기 목록 가져오기
+      const localDiaries = await this.getAllEntries();
+      logger.log(`📚 [DiaryStorage] Local has ${localDiaries.length} diaries`);
 
-      // 로컬 일기 목록 가져오기
-      const entries = await this.getAllEntries();
-      logger.log(`📚 [DiaryStorage] Total local entries: ${entries.length}`);
+      // 3. Map으로 변환 (빠른 조회)
+      const serverMap = new Map(serverDiaries.map(d => [d._id, d]));
+      const localMap = new Map(localDiaries.map(d => [d._id, d]));
 
-      let updatedCount = 0;
-      let addedCount = 0;
+      let uploadCount = 0;
+      let downloadCount = 0;
+      let mergeCount = 0;
+      let hasLocalUpdates = false;
 
-      // 서버에만 있는 일기 로컬에 추가
-      for (const serverDiary of serverDiaries) {
-        const localEntry = entries.find(e => e._id === serverDiary._id);
-        if (!localEntry) {
-          await this.saveFromServer(serverDiary);
-          addedCount++;
-        }
-      }
+      // 4. 로컬 일기 순회 - 업로드 또는 병합 필요 판단
+      for (let i = 0; i < localDiaries.length; i++) {
+        const local = localDiaries[i];
+        const server = serverMap.get(local._id);
 
-      // 로컬 일기를 서버 데이터와 동기화 (배치 업데이트로 I/O 최적화)
-      let hasUpdates = false;
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        const serverData = serverDiaryMap.get(entry._id);
-
-        if (serverData?.aiComment) {
-          // 서버 데이터가 로컬과 다른 경우에만 업데이트
-          const needsUpdate =
-            entry.aiComment !== serverData.aiComment ||
-            entry.stampType !== serverData.stampType;
-
-          if (needsUpdate) {
-            // 메모리에서만 업데이트 (파일 I/O 없음)
-            // userId는 업데이트하지 않음 - 로컬에서 관리
-            entries[i] = {
-              ...entry,
-              aiComment: serverData.aiComment,
-              stampType: serverData.stampType,
-              // userId는 entry의 기존 값 유지 (serverData.userId 사용 안 함)
+        if (!server) {
+          // 4-1. 서버에 없음 → 업로드
+          const uploadResult = await apiService.uploadDiary(local);
+          if (uploadResult.success) {
+            localDiaries[i] = {
+              ...local,
               syncedWithServer: true,
-              updatedAt: new Date().toISOString(),
             };
-            updatedCount++;
-            hasUpdates = true;
-            logger.log(`✅ [DiaryStorage] Updated diary ${entry._id} with AI comment`);
+            hasLocalUpdates = true;
+            uploadCount++;
+            logger.log(`⬆️ [Sync] Uploaded diary ${local._id}`);
+          }
+        } else {
+          // 4-2. 양쪽 다 있음 → LWW 병합
+          const localTime = new Date(local.updatedAt).getTime();
+          const serverTime = new Date(server.updatedAt).getTime();
+
+          // AI 코멘트는 서버 우선 (서버에서만 생성되므로)
+          const hasNewAIComment = server.aiComment &&
+                                 server.aiComment !== local.aiComment;
+
+          if (hasNewAIComment) {
+            // AI 코멘트를 로컬에 병합
+            localDiaries[i] = {
+              ...localDiaries[i],
+              aiComment: server.aiComment,
+              stampType: server.stampType,
+              syncedWithServer: true,
+            };
+            hasLocalUpdates = true;
+            mergeCount++;
+            logger.log(`🔀 [Sync] Merged AI comment for diary ${local._id}`);
+          }
+
+          // 나머지 필드는 타임스탬프로 판단
+          if (localTime > serverTime) {
+            // 로컬이 더 최신 → 서버 업데이트
+            const uploadResult = await apiService.uploadDiary(localDiaries[i]);
+            if (uploadResult.success) {
+              localDiaries[i] = {
+                ...localDiaries[i],
+                syncedWithServer: true,
+              };
+              hasLocalUpdates = true;
+              uploadCount++;
+              logger.log(`⬆️ [Sync] Uploaded newer local diary ${local._id}`);
+            }
+          } else if (serverTime > localTime) {
+            // 서버가 더 최신 → 로컬 업데이트 (userId 제외)
+            const { userId: _, ...serverDataWithoutUserId } = server;
+            localDiaries[i] = {
+              ...localDiaries[i], // 로컬 userId 보존
+              ...serverDataWithoutUserId,
+              syncedWithServer: true,
+            };
+            hasLocalUpdates = true;
+            mergeCount++;
+            logger.log(`⬇️ [Sync] Updated local diary ${local._id} from server`);
+          } else if (serverTime === localTime) {
+            // 타임스탬프 동일 → 서버 우선
+            const { userId: _, ...serverDataWithoutUserId } = server;
+            localDiaries[i] = {
+              ...localDiaries[i], // 로컬 userId 보존
+              ...serverDataWithoutUserId,
+              syncedWithServer: true,
+            };
+            hasLocalUpdates = true;
+            mergeCount++;
+            logger.log(`🔀 [Sync] Server priority for diary ${local._id} (same timestamp)`);
           }
         }
       }
 
-      // 모든 업데이트를 한 번의 파일 I/O로 저장
-      if (hasUpdates) {
-        await this.saveAllEntries(entries);
+      // 5. 서버에만 있는 일기 → 로컬에 다운로드
+      for (const server of serverDiaries) {
+        if (!localMap.has(server._id)) {
+          // userId 제외하고 로컬에 추가
+          const { userId: _, ...serverDataWithoutUserId } = server;
+          localDiaries.push(serverDataWithoutUserId as DiaryEntry);
+          hasLocalUpdates = true;
+          downloadCount++;
+          logger.log(`⬇️ [Sync] Downloaded diary ${server._id} from server`);
+        }
       }
 
-      if (addedCount > 0 || updatedCount > 0) {
-        logger.log(`🎉 [DiaryStorage] Sync complete: ${addedCount} added, ${updatedCount} updated`);
-      } else {
-        logger.log('✅ [DiaryStorage] All diaries are up to date');
+      // 6. 로컬 변경사항 저장 (배치 업데이트 - 한 번만 저장)
+      if (hasLocalUpdates) {
+        await this.saveAllEntries(localDiaries);
       }
 
+      logger.log(`🎉 [Sync] Complete: ⬆️${uploadCount} ⬇️${downloadCount} 🔀${mergeCount}`);
       return { success: true };
     } catch (error: any) {
       logger.error('❌ [DiaryStorage] Error syncing with server:', error);
