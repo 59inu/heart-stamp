@@ -22,11 +22,11 @@ export class ExportService {
   /**
    * Request data export
    */
-  static async requestExport(email: string, format: 'txt' | 'pdf' = 'txt'): Promise<{ jobId: string }> {
+  static async requestExport(format: 'txt' | 'pdf' = 'txt'): Promise<{ jobId: string }> {
     try {
-      logger.log(`📤 [ExportService] Requesting ${format} export to ${email}...`);
+      logger.log(`📤 [ExportService] Requesting ${format} export...`);
 
-      const response = await apiService.requestExport(format, email);
+      const response = await apiService.requestExport(format);
 
       if (!response.jobId) {
         throw new Error('No jobId in response');

@@ -55,27 +55,17 @@ export const ExportScreen: React.FC = () => {
   };
 
   const handleRequestExport = async () => {
-    Alert.prompt(
+    Alert.alert(
       '일기 내보내기',
-      '이메일 주소를 입력해주세요.\n최대 24시간 이내에 처리됩니다.',
+      '일기를 텍스트 파일로 내보냅니다.\n최대 24시간 이내에 처리됩니다.',
       [
         { text: '취소', style: 'cancel' },
         {
           text: '확인',
-          onPress: async (email) => {
-            if (!email || !email.trim()) {
-              Alert.alert('오류', '이메일 주소를 입력해주세요');
-              return;
-            }
-
-            if (!email.includes('@')) {
-              Alert.alert('오류', '올바른 이메일 주소를 입력해주세요');
-              return;
-            }
-
+          onPress: async () => {
             try {
               setRequesting(true);
-              await ExportService.requestExport(email.trim(), 'txt');
+              await ExportService.requestExport('txt');
               Toast.show({
                 type: 'success',
                 text1: '내보내기 요청 완료',
@@ -92,10 +82,7 @@ export const ExportScreen: React.FC = () => {
             }
           },
         },
-      ],
-      'plain-text',
-      '',
-      'email-address'
+      ]
     );
   };
 
