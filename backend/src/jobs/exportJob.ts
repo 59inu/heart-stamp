@@ -42,7 +42,7 @@ export class ExportJob {
     this.isProcessing = true;
 
     try {
-      const pendingJobs = ExportJobDatabase.getPending();
+      const pendingJobs = await ExportJobDatabase.getPending();
 
       if (pendingJobs.length === 0) {
         console.log('ℹ️  [ExportJob] No pending export jobs');
@@ -58,7 +58,7 @@ export class ExportJob {
           await ExportService.processExportJob(job.id);
 
           // Send notifications on completion
-          const updatedJob = ExportJobDatabase.get(job.id);
+          const updatedJob = await ExportJobDatabase.get(job.id);
           if (updatedJob?.status === 'completed') {
             // Send push notification
             await PushNotificationService.sendNotification(

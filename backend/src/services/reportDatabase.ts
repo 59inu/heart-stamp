@@ -1,83 +1,64 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { Pool } from 'pg';
 import { Report, MoodDistribution } from '../types/report';
 
-const dbPath = path.join(__dirname, '../../diary.db');
-const db = new Database(dbPath);
-
-// WAL 모드 활성화 (성능 및 동시성 향상)
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
-db.pragma('cache_size = -64000');
-db.pragma('busy_timeout = 5000');
+// PostgreSQL connection pool (database.ts와 동일한 pool 사용)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
 
 // 리포트 테이블 생성
-db.exec(`
-  CREATE TABLE IF NOT EXISTS reports (
-    _id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL,
-    period TEXT NOT NULL,
-    year INTEGER NOT NULL,
-    week INTEGER,
-    month INTEGER,
-    startDate TEXT NOT NULL,
-    endDate TEXT NOT NULL,
-    keywords TEXT NOT NULL,
-    moodDistribution TEXT NOT NULL,
-    summary TEXT NOT NULL,
-    insight TEXT NOT NULL,
-    diaryCount INTEGER NOT NULL,
-    createdAt TEXT NOT NULL
-  )
-`);
+async function initializeReportsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS reports (
+        _id TEXT PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        period TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        week INTEGER,
+        month INTEGER,
+        "startDate" TEXT NOT NULL,
+        "endDate" TEXT NOT NULL,
+        keywords TEXT NOT NULL,
+        "moodDistribution" TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        insight TEXT NOT NULL,
+        "diaryCount" INTEGER NOT NULL,
+        "createdAt" TEXT NOT NULL,
+        "updatedAt" TEXT,
+        "deletedAt" TEXT,
+        version INTEGER DEFAULT 1
+      )
+    `);
 
-// 마이그레이션: updatedAt 컬럼 추가
-try {
-  db.exec(`ALTER TABLE reports ADD COLUMN updatedAt TEXT`);
-  // 기존 레코드의 updatedAt을 createdAt으로 초기화
-  db.exec(`UPDATE reports SET updatedAt = createdAt WHERE updatedAt IS NULL`);
-  console.log('✅ Added updatedAt column to reports table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
+    // 인덱스 생성 (빠른 조회)
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_userId_period ON reports("userId", period)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_year_week ON reports(year, week)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_year_month ON reports(year, month)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON reports("deletedAt")`);
+
+    console.log('✅ Reports table and indexes created');
+  } catch (error) {
+    console.error('❌ Error creating reports table:', error);
+  }
 }
 
-// 마이그레이션: deletedAt 컬럼 추가 (소프트 삭제 지원)
-try {
-  db.exec(`ALTER TABLE reports ADD COLUMN deletedAt TEXT`);
-  console.log('✅ Added deletedAt column to reports table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// 마이그레이션: version 컬럼 추가 (충돌 해결 지원)
-try {
-  db.exec(`ALTER TABLE reports ADD COLUMN version INTEGER DEFAULT 1`);
-  console.log('✅ Added version column to reports table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// 인덱스 생성 (빠른 조회)
-try {
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_userId_period ON reports(userId, period)`);
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_year_week ON reports(year, week)`);
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_year_month ON reports(year, month)`);
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON reports(deletedAt)`);
-  console.log('✅ Reports table and indexes created');
-} catch (error) {
-  // 인덱스가 이미 존재하면 무시
-}
+// 초기화 실행
+initializeReportsTable();
 
 export class ReportDatabase {
   // 리포트 저장
-  static create(report: Report): Report {
+  static async create(report: Report): Promise<Report> {
     const now = new Date().toISOString();
-    const stmt = db.prepare(`
-      INSERT INTO reports (_id, userId, period, year, week, month, startDate, endDate, keywords, moodDistribution, summary, insight, diaryCount, createdAt, updatedAt, version)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
 
-    stmt.run(
+    await pool.query(`
+      INSERT INTO reports (_id, "userId", period, year, week, month, "startDate", "endDate", keywords, "moodDistribution", summary, insight, "diaryCount", "createdAt", "updatedAt", version)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    `, [
       report._id,
       report.userId,
       report.period,
@@ -94,20 +75,21 @@ export class ReportDatabase {
       report.createdAt,
       report.updatedAt || now,
       report.version || 1
-    );
+    ]);
 
     return report;
   }
 
   // 주간 리포트 조회 (최신 리포트 반환)
-  static getWeeklyReport(userId: string, year: number, week: number): Report | null {
-    const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND week = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1'
+  static async getWeeklyReport(userId: string, year: number, week: number): Promise<Report | null> {
+    const result = await pool.query(
+      'SELECT * FROM reports WHERE "userId" = $1 AND period = $2 AND year = $3 AND week = $4 AND "deletedAt" IS NULL ORDER BY "createdAt" DESC LIMIT 1',
+      [userId, 'weekly', year, week]
     );
-    const row = stmt.get(userId, 'weekly', year, week) as any;
 
-    if (!row) return null;
+    if (result.rows.length === 0) return null;
 
+    const row = result.rows[0];
     return {
       ...row,
       keywords: JSON.parse(row.keywords),
@@ -116,14 +98,15 @@ export class ReportDatabase {
   }
 
   // 월간 리포트 조회 (최신 리포트 반환)
-  static getMonthlyReport(userId: string, year: number, month: number): Report | null {
-    const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND period = ? AND year = ? AND month = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1'
+  static async getMonthlyReport(userId: string, year: number, month: number): Promise<Report | null> {
+    const result = await pool.query(
+      'SELECT * FROM reports WHERE "userId" = $1 AND period = $2 AND year = $3 AND month = $4 AND "deletedAt" IS NULL ORDER BY "createdAt" DESC LIMIT 1',
+      [userId, 'monthly', year, month]
     );
-    const row = stmt.get(userId, 'monthly', year, month) as any;
 
-    if (!row) return null;
+    if (result.rows.length === 0) return null;
 
+    const row = result.rows[0];
     return {
       ...row,
       keywords: JSON.parse(row.keywords),
@@ -132,13 +115,13 @@ export class ReportDatabase {
   }
 
   // 사용자의 모든 리포트 조회
-  static getAllByUserId(userId: string): Report[] {
-    const stmt = db.prepare(
-      'SELECT * FROM reports WHERE userId = ? AND deletedAt IS NULL ORDER BY year DESC, week DESC, month DESC'
+  static async getAllByUserId(userId: string): Promise<Report[]> {
+    const result = await pool.query(
+      'SELECT * FROM reports WHERE "userId" = $1 AND "deletedAt" IS NULL ORDER BY year DESC, week DESC, month DESC',
+      [userId]
     );
-    const rows = stmt.all(userId) as any[];
 
-    return rows.map((row) => ({
+    return result.rows.map((row) => ({
       ...row,
       keywords: JSON.parse(row.keywords),
       moodDistribution: JSON.parse(row.moodDistribution),
@@ -146,13 +129,12 @@ export class ReportDatabase {
   }
 
   // 리포트 삭제 (소프트 삭제)
-  static delete(id: string): void {
+  static async delete(id: string): Promise<void> {
     const now = new Date().toISOString();
-    const stmt = db.prepare(`
+    await pool.query(`
       UPDATE reports
-      SET deletedAt = ?, updatedAt = ?, version = version + 1
-      WHERE _id = ? AND deletedAt IS NULL
-    `);
-    stmt.run(now, now, id);
+      SET "deletedAt" = $1, "updatedAt" = $2, version = version + 1
+      WHERE _id = $3 AND "deletedAt" IS NULL
+    `, [now, now, id]);
   }
 }

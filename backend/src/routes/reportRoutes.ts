@@ -55,7 +55,7 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
 
     // 일기 개수 확인
     const { DiaryDatabase } = await import('../services/database');
-    const allDiaries = DiaryDatabase.getAllByUserId(userId);
+    const allDiaries = await DiaryDatabase.getAllByUserId(userId);
 
     console.log(`  Total diaries for GET: ${allDiaries.length}`);
 
@@ -75,7 +75,7 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
 
     // 기존 리포트 조회만
     const { ReportDatabase } = await import('../services/reportDatabase');
-    const existingReport = ReportDatabase.getWeeklyReport(userId, year, week);
+    const existingReport = await ReportDatabase.getWeeklyReport(userId, year, week);
 
     if (existingReport) {
       return res.json({
@@ -257,10 +257,10 @@ router.delete('/reports/weekly/:year/:week', async (req: Request, res: Response)
     }
 
     const { ReportDatabase } = await import('../services/reportDatabase');
-    const existingReport = ReportDatabase.getWeeklyReport(userId, year, week);
+    const existingReport = await ReportDatabase.getWeeklyReport(userId, year, week);
 
     if (existingReport) {
-      ReportDatabase.delete(existingReport._id);
+      await ReportDatabase.delete(existingReport._id);
     }
 
     res.json({
@@ -297,10 +297,10 @@ router.delete('/reports/monthly/:year/:month', async (req: Request, res: Respons
     }
 
     const { ReportDatabase } = await import('../services/reportDatabase');
-    const existingReport = ReportDatabase.getMonthlyReport(userId, year, month);
+    const existingReport = await ReportDatabase.getMonthlyReport(userId, year, month);
 
     if (existingReport) {
-      ReportDatabase.delete(existingReport._id);
+      await ReportDatabase.delete(existingReport._id);
     }
 
     res.json({

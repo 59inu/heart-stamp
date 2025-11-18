@@ -196,10 +196,10 @@ app.post('/api/jobs/trigger-analysis', adminLimiter, requireAdminToken, async (r
 });
 
 // 어제 일기의 AI 코멘트 초기화 (재생성용 - 관리 리미터 + 토큰 인증)
-app.post('/api/admin/reset-yesterday-comments', adminLimiter, requireAdminToken, (req, res) => {
+app.post('/api/admin/reset-yesterday-comments', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     const { DiaryDatabase } = require('./services/database');
-    const count = DiaryDatabase.resetYesterdayComments();
+    const count = await DiaryDatabase.resetYesterdayComments();
 
     res.json({
       success: true,
@@ -232,6 +232,69 @@ app.post('/api/jobs/trigger-backup', adminLimiter, requireAdminToken, async (req
   }
 });
 
+// SQLite 데이터 전체 백업 (PostgreSQL 마이그레이션용 임시 엔드포인트)
+app.get('/api/admin/export-all-sqlite-data', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    const { DiaryDatabase, PushTokenDatabase } = require('./services/database');
+    const { ReportDatabase } = require('./services/reportDatabase');
+    const { ExportJobDatabase } = require('./services/exportDatabase');
+
+    console.log('📦 [SQLite Export] Starting full data export...');
+
+    // 모든 데이터 조회
+    const diaries = await DiaryDatabase.getAll();
+    const pushTokens = await PushTokenDatabase.getAll();
+
+    // 사용자 ID 목록 추출
+    const userIds = [...new Set(diaries.map((d: any) => d.userId))];
+
+    // 각 사용자의 리포트 조회
+    const allReports = [];
+    for (const userId of userIds) {
+      const reports = await ReportDatabase.getAllByUserId(userId);
+      allReports.push(...reports);
+    }
+
+    // 모든 export job 조회
+    const allExportJobs = [];
+    for (const userId of userIds) {
+      const jobs = await ExportJobDatabase.getAllForUser(userId);
+      allExportJobs.push(...jobs);
+    }
+
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      stats: {
+        totalDiaries: diaries.length,
+        totalUsers: userIds.length,
+        totalReports: allReports.length,
+        totalPushTokens: pushTokens.length,
+        totalExportJobs: allExportJobs.length,
+      },
+      data: {
+        diaries,
+        reports: allReports,
+        pushTokens,
+        exportJobs: allExportJobs,
+      },
+    };
+
+    console.log('✅ [SQLite Export] Export completed:', exportData.stats);
+
+    res.json({
+      success: true,
+      ...exportData,
+    });
+  } catch (error) {
+    console.error('❌ [SQLite Export] Export failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export SQLite data',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 // List backups endpoint (관리 리미터 + 토큰 인증)
 app.get('/api/jobs/backups', adminLimiter, requireAdminToken, (req, res) => {
   try {
@@ -251,13 +314,13 @@ app.get('/api/jobs/backups', adminLimiter, requireAdminToken, (req, res) => {
 });
 
 // 최근 AI 코멘트 조회 (관리 리미터 + 토큰 인증)
-app.get('/api/admin/recent-comments', adminLimiter, requireAdminToken, (req, res) => {
+app.get('/api/admin/recent-comments', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     const { DiaryDatabase } = require('./services/database');
     const limit = parseInt(req.query.limit as string) || 10;
 
     // 최근 AI 코멘트가 생성된 일기 조회
-    const recentComments = DiaryDatabase.getRecentAIComments(limit);
+    const recentComments = await DiaryDatabase.getRecentAIComments(limit);
 
     res.json({
       success: true,
@@ -317,10 +380,10 @@ app.post('/api/admin/test-importance', adminLimiter, requireAdminToken, async (r
 });
 
 // DB 통계 조회 (관리 리미터 + 토큰 인증)
-app.get('/api/admin/db-stats', adminLimiter, requireAdminToken, (req, res) => {
+app.get('/api/admin/db-stats', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     const { DiaryDatabase } = require('./services/database');
-    const stats = DiaryDatabase.getStats();
+    const stats = await DiaryDatabase.getStats();
 
     res.json({
       success: true,
@@ -336,10 +399,10 @@ app.get('/api/admin/db-stats', adminLimiter, requireAdminToken, (req, res) => {
 });
 
 // 모델 사용 통계 조회 (관리 리미터 + 토큰 인증)
-app.get('/api/admin/model-stats', adminLimiter, requireAdminToken, (req, res) => {
+app.get('/api/admin/model-stats', adminLimiter, requireAdminToken, async (req, res) => {
   try {
     const { DiaryDatabase } = require('./services/database');
-    const stats = DiaryDatabase.getModelStats();
+    const stats = await DiaryDatabase.getModelStats();
 
     res.json({
       success: true,

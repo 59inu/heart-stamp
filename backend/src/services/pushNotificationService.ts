@@ -17,7 +17,7 @@ export class PushNotificationService {
     body: string,
     data?: any
   ): Promise<boolean> {
-    const token = PushTokenDatabase.get(userId);
+    const token = await PushTokenDatabase.get(userId);
     if (!token) {
       console.log(`⚠️ No push token found for user ${userId}`);
       return false;
@@ -76,7 +76,7 @@ export class PushNotificationService {
    * 모든 사용자에게 일반 Push 알림 전송
    */
   static async sendNotificationToAll(title: string, body: string, data?: any): Promise<void> {
-    const tokens = PushTokenDatabase.getAll();
+    const tokens = await PushTokenDatabase.getAll();
     console.log(`📤 Sending push notification to ${tokens.length} users...`);
 
     for (const { userId } of tokens) {

@@ -44,9 +44,9 @@ router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Re
     }
 
     // Check if there's already a pending or processing job
-    const existingJobs = ExportJobDatabase.getAllForUser(userId);
+    const existingJobs = await ExportJobDatabase.getAllForUser(userId);
     const activeJob = existingJobs.find(
-      (job) => job.status === 'pending' || job.status === 'processing'
+      (job: any) => job.status === 'pending' || job.status === 'processing'
     );
 
     if (activeJob) {
@@ -58,7 +58,7 @@ router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Re
     }
 
     // Create export job
-    const job = ExportJobDatabase.create(userId, format as ExportFormat, email);
+    const job = await ExportJobDatabase.create(userId, format as ExportFormat, email);
 
     res.status(202).json({
       message: '내보내기 요청이 접수되었습니다. 24시간 내에 이메일로 전송됩니다.',
@@ -82,7 +82,7 @@ router.get('/export/status/:jobId', requireFirebaseAuth, async (req: Request, re
     const userId = req.userId!;
     const { jobId } = req.params;
 
-    const job = ExportJobDatabase.get(jobId);
+    const job = await ExportJobDatabase.get(jobId);
 
     if (!job) {
       res.status(404).json({ error: 'Export job not found' });
@@ -120,10 +120,10 @@ router.get('/export/jobs', requireFirebaseAuth, async (req: Request, res: Respon
   try {
     const userId = req.userId!;
 
-    const jobs = ExportJobDatabase.getAllForUser(userId);
+    const jobs = await ExportJobDatabase.getAllForUser(userId);
 
     res.json({
-      jobs: jobs.map((job) => ({
+      jobs: jobs.map((job: any) => ({
         id: job.id,
         status: job.status,
         format: job.format,
@@ -153,7 +153,7 @@ router.delete('/export/delete-all', requireFirebaseAuth, async (req: Request, re
     const deletedDiaries = await DiaryDatabase.deleteAllForUser(userId);
 
     // Delete all export jobs
-    const deletedJobs = ExportJobDatabase.deleteAllForUser(userId);
+    const deletedJobs = await ExportJobDatabase.deleteAllForUser(userId);
 
     console.log(
       `🗑️  [ExportRoutes] Deleted all data for user ${userId}: ${deletedDiaries} diaries, ${deletedJobs} export jobs`

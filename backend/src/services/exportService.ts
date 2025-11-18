@@ -20,7 +20,7 @@ export class ExportService {
   static async processExportJob(jobId: string): Promise<void> {
     console.log(`🚀 [ExportService] Starting export job ${jobId}`);
 
-    const job = ExportJobDatabase.get(jobId);
+    const job = await ExportJobDatabase.get(jobId);
     if (!job) {
       console.error(`❌ [ExportService] Job ${jobId} not found`);
       return;
@@ -32,7 +32,7 @@ export class ExportService {
     }
 
     // Update status to processing
-    ExportJobDatabase.updateStatus(jobId, 'processing');
+    await ExportJobDatabase.updateStatus(jobId, 'processing');
 
     try {
       // Get all diary entries for user
@@ -64,7 +64,7 @@ export class ExportService {
       const s3Url = await S3Service.uploadBackupFile(zipPath, s3Key);
 
       // Update job status to completed
-      ExportJobDatabase.updateStatus(jobId, 'completed', {
+      await ExportJobDatabase.updateStatus(jobId, 'completed', {
         s3Url,
         expiresAt: expiresAt.toISOString(),
       });
@@ -77,7 +77,7 @@ export class ExportService {
     } catch (error: any) {
       console.error(`❌ [ExportService] Export job ${jobId} failed:`, error);
 
-      ExportJobDatabase.updateStatus(jobId, 'failed', {
+      await ExportJobDatabase.updateStatus(jobId, 'failed', {
         errorMessage: error.message || 'Unknown error',
       });
     }
@@ -212,7 +212,7 @@ export class ExportService {
 
     try {
       // Delete expired job records from database
-      const deletedJobsCount = ExportJobDatabase.deleteExpired();
+      const deletedJobsCount = await ExportJobDatabase.deleteExpired();
 
       // Clean up S3 files older than retention period
       const deletedS3Count = await S3Service.cleanOldBackups(
