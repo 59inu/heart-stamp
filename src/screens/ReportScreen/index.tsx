@@ -144,9 +144,11 @@ export const ReportScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* 헤더 */}
-      <ReportHeader onBack={() => navigation.goBack()} />
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        {/* 헤더 */}
+        <ReportHeader onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 기간 네비게이션 */}
@@ -223,7 +225,8 @@ export const ReportScreen: React.FC = () => {
         period={period}
         onClose={() => setShowInfoModal(false)}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 };
 

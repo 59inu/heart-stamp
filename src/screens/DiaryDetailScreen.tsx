@@ -44,32 +44,49 @@ const CELLS_PER_ROW = Math.floor(AVAILABLE_WIDTH / CELL_WIDTH);
 
 // 원고지 스타일 컴포넌트 (FlatList로 가상화하여 성능 최적화)
 const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) => {
-  // 텍스트를 한 글자씩 분리하고 빈 칸 계산 (useMemo로 최적화)
+  // 텍스트를 한 글자씩 분리하고 줄바꿈 처리 (useMemo로 최적화)
   const allCells = React.useMemo(() => {
     const chars = Array.from(content); // 이모지를 올바르게 분리
-    const totalCells = chars.length;
-    const minCells = CELLS_PER_ROW * 10; // 최소 10줄 보장
+    const cells: Array<{ char: string; isEmpty: boolean; index: number }> = [];
+    let cellIndex = 0;
 
-    // 최소 줄 수를 보장하기 위한 빈 칸 계산
-    let emptyCellsNeeded = 0;
-    if (totalCells < minCells) {
-      // 10줄보다 적으면 10줄까지 채움
-      emptyCellsNeeded = minCells - totalCells;
-    } else {
-      // 10줄 이상이면 마지막 줄만 채움
-      const lastRowCells = totalCells % CELLS_PER_ROW;
-      emptyCellsNeeded = lastRowCells > 0 ? CELLS_PER_ROW - lastRowCells : 0;
+    for (let i = 0; i < chars.length; i++) {
+      const char = chars[i];
+
+      if (char === '\n') {
+        // 줄바꿈: 현재 줄의 나머지 칸을 빈 칸으로 채움
+        const currentColumn = cellIndex % CELLS_PER_ROW;
+        const paddingNeeded = currentColumn === 0 ? 0 : CELLS_PER_ROW - currentColumn;
+
+        for (let j = 0; j < paddingNeeded; j++) {
+          cells.push({ char: ' ', isEmpty: true, index: cellIndex++ });
+        }
+      } else {
+        // 일반 문자
+        cells.push({ char, isEmpty: false, index: cellIndex++ });
+      }
     }
 
-    // 모든 셀을 하나의 배열로 통합
-    const cells = [
-      ...chars.map((char, index) => ({ char, isEmpty: false, index })),
-      ...Array.from({ length: emptyCellsNeeded }).map((_, index) => ({
-        char: ' ',
-        isEmpty: true,
-        index: chars.length + index,
-      })),
-    ];
+    // 최소 10줄 보장
+    const minCells = CELLS_PER_ROW * 10;
+    const currentCells = cells.length;
+
+    if (currentCells < minCells) {
+      // 10줄보다 적으면 10줄까지 채움
+      const emptyCellsNeeded = minCells - currentCells;
+      for (let i = 0; i < emptyCellsNeeded; i++) {
+        cells.push({ char: ' ', isEmpty: true, index: cellIndex++ });
+      }
+    } else {
+      // 10줄 이상이면 마지막 줄만 채움
+      const lastRowCells = currentCells % CELLS_PER_ROW;
+      if (lastRowCells > 0) {
+        const emptyCellsNeeded = CELLS_PER_ROW - lastRowCells;
+        for (let i = 0; i < emptyCellsNeeded; i++) {
+          cells.push({ char: ' ', isEmpty: true, index: cellIndex++ });
+        }
+      }
+    }
 
     return cells;
   }, [content]);
@@ -77,7 +94,7 @@ const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) 
   const renderItem = useCallback(
     ({ item }: { item: { char: string; isEmpty: boolean; index: number } }) => (
       <View style={styles.manuscriptCell}>
-        <Text style={styles.manuscriptChar}>{item.char === '\n' ? '' : item.char}</Text>
+        <Text style={styles.manuscriptChar}>{item.char}</Text>
       </View>
     ),
     []

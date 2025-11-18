@@ -332,6 +332,11 @@ export const DiaryListScreen: React.FC = () => {
             setCurrentDate(new Date(date.year, date.month - 1, 1));
           }}
           onHeaderPress={() => setShowMonthPicker(true)}
+          onTodayPress={() => {
+            const today = new Date();
+            setCurrentDate(today);
+            setSelectedDate(format(today, 'yyyy-MM-dd'));
+          }}
         />
 
         <SelectedDateSection

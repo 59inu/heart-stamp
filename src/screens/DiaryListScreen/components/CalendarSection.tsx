@@ -12,6 +12,7 @@ interface CalendarSectionProps {
   onDateSelect: (date: DateData) => void;
   onMonthChange: (date: DateData) => void;
   onHeaderPress: () => void;
+  onTodayPress: () => void;
 }
 
 export const CalendarSection: React.FC<CalendarSectionProps> = ({
@@ -20,9 +21,16 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
   onDateSelect,
   onMonthChange,
   onHeaderPress,
+  onTodayPress,
 }) => {
+  // 현재 보고 있는 월이 오늘 날짜와 같은 달인지 확인
+  const today = new Date();
+  const isCurrentMonth =
+    currentDate.getMonth() === today.getMonth() &&
+    currentDate.getFullYear() === today.getFullYear();
   return (
     <Calendar
+      key={format(currentDate, 'yyyy-MM')}
       current={format(currentDate, 'yyyy-MM-dd')}
       markedDates={markedDates}
       onDayPress={onDateSelect}
@@ -40,12 +48,27 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
       renderHeader={(date: any) => {
         const monthYear = format(new Date(date), 'yyyy년 MM월', { locale: ko });
         return (
-          <TouchableOpacity
-            style={styles.calendarHeader}
-            onPress={onHeaderPress}
-          >
-            <Text style={styles.calendarHeaderText}>{monthYear}</Text>
-          </TouchableOpacity>
+          <View style={styles.calendarHeaderContainer}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity
+                style={styles.calendarHeader}
+                onPress={onHeaderPress}
+              >
+                <Text style={styles.calendarHeaderText}>{monthYear}</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.todayButton}
+              onPress={onTodayPress}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name="refresh"
+                size={20}
+                color={isCurrentMonth ? '#ccc' : COLORS.settingsIconColor}
+              />
+            </TouchableOpacity>
+          </View>
         );
       }}
       theme={{
@@ -94,17 +117,38 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  calendarHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
   calendarHeader: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
     gap: 6,
   },
   calendarHeaderText: {
     fontSize: 17,
     fontWeight: 'bold',
     color: '#333',
+  },
+  todayButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  todayButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.settingsIconColor,
+  },
+  todayButtonTextDisabled: {
+    color: '#ccc',
   },
   calendarArrowButton: {
     width: 36,
