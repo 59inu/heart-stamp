@@ -194,6 +194,8 @@ router.post('/diaries/:id/analyze',
       await DiaryDatabase.update(id, {
         aiComment: analysis.comment,
         stampType: analysis.stampType,
+        model: analysis.model,
+        importanceScore: analysis.importanceScore,
         syncedWithServer: true,
       });
 
