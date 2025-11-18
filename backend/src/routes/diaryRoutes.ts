@@ -55,11 +55,10 @@ router.post('/diaries',
       // 기존 일기가 있으면 업데이트, 없으면 생성
       const existing = DiaryDatabase.getById(diaryEntry._id);
       if (existing) {
-        // update 시 X-User-Id 헤더의 userId를 명시적으로 전달하여 덮어쓰기
-        await DiaryDatabase.update(diaryEntry._id, {
-          ...diaryEntry,
-          userId, // X-User-Id 헤더의 userId 강제 적용
-        });
+        // update 시 userId는 변경하지 않음 (기존 userId 유지)
+        // 다른 디바이스에서 같은 일기를 업로드해도 원래 userId 보존
+        const { userId: _, ...updateData } = diaryEntry;
+        await DiaryDatabase.update(diaryEntry._id, updateData);
       } else {
         await DiaryDatabase.create(diaryEntry);
       }
