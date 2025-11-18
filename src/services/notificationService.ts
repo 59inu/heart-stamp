@@ -40,21 +40,22 @@ export class NotificationService {
     }
 
     try {
-      // 알림 권한 요청
+      // 알림 권한 확인
       logger.log('📱 [registerForPushNotifications] Checking existing permission...');
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       logger.log('📱 [registerForPushNotifications] Existing status:', existingStatus);
       let finalStatus = existingStatus;
 
-      if (existingStatus !== 'granted') {
-        logger.log('📱 [registerForPushNotifications] Requesting permission...');
+      // 최초 1회만 권한 요청 (undetermined 상태에서만)
+      if (existingStatus === 'undetermined') {
+        logger.log('📱 [registerForPushNotifications] Requesting permission (first time)...');
         const { status } = await Notifications.requestPermissionsAsync();
         logger.log('📱 [registerForPushNotifications] Request result:', status);
         finalStatus = status;
       }
 
       if (finalStatus !== 'granted') {
-        logger.log('⚠️ 푸시 알림 권한이 거부되었습니다. Final status:', finalStatus);
+        logger.log('⚠️ 푸시 알림 권한이 없습니다. Final status:', finalStatus);
         return { success: false, reason: 'permission_denied' };
       }
 

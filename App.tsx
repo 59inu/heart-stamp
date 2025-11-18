@@ -126,47 +126,29 @@ export default function App() {
 
       // 푸시 알림 등록 및 리스너 설정
       const initPushNotifications = async () => {
-      // ⚠️ IMPORTANT: 항상 권한을 요청해야 iOS 설정에 알림 항목이 생성됨
-      // 권한 상태와 무관하게 최소 한 번은 요청해야 함
-      logger.log('📱 [App] Requesting notification permission...');
+      logger.log('📱 [App] Initializing push notifications...');
 
       // 푸시 토큰 등록 (권한 요청 포함)
       const result = await NotificationService.registerForPushNotifications();
 
-      // 실패 시 사용자에게 알림
+      // 실패 시 로그만 출력 (Alert 제거 - 설정 화면에서만 안내)
       if (!result.success) {
-        let title = '알림 설정 실패';
-        let message = '';
-
         switch (result.reason) {
           case 'permission_denied':
-            title = '알림 권한 필요';
-            message = '일기에 대한 AI 코멘트 알림을 받으려면 알림 권한이 필요해요.\n\n설정 > 하트스탬프에서 알림을 허용해주세요.';
+            logger.log('ℹ️ [App] Push permission denied - user can enable in Settings');
             break;
           case 'network_error':
-            title = '네트워크 연결 실패';
-            const maxRetries = 3;
-            if (result.retriedCount === maxRetries) {
-              // 최대 재시도 횟수 도달
-              message = `서버에 연결할 수 없어요.\n${maxRetries}번 재시도했지만 실패했습니다.\n\n다음 앱 실행 시 자동으로 재시도됩니다.\nWi-Fi나 데이터 연결을 확인해주세요.`;
-            } else {
-              // 재시도 없이 바로 실패 (첫 시도 실패)
-              message = '서버에 연결할 수 없어요.\n\n다음 앱 실행 시 자동으로 재시도됩니다.\nWi-Fi나 데이터 연결을 확인해주세요.';
-            }
+            logger.log(`⚠️ [App] Network error - will retry on next launch (retried ${result.retriedCount || 0} times)`);
             break;
           case 'not_device':
-            // 시뮬레이터에서는 알림 안 띄움
-            logger.log('ℹ️ Running on simulator - push notifications disabled');
-            return;
+            logger.log('ℹ️ [App] Running on simulator - push notifications disabled');
+            break;
           default:
-            message = '알림 설정 중 문제가 발생했어요.\n\n다음 앱 실행 시 자동으로 재시도됩니다.';
+            logger.log(`⚠️ [App] Push notification registration failed: ${result.reason}`);
         }
-
-        // 첫 실행 시 사용자가 앱 UI를 보기 전 다이얼로그가 뜨는 것 방지
-        // 2초 딜레이 후 표시
-        setTimeout(() => {
-          Alert.alert(title, message, [{ text: '확인' }]);
-        }, 2000);
+        // Alert 제거 - 더 이상 사용자를 방해하지 않음
+      } else {
+        logger.log('✅ [App] Push notification registration succeeded');
       }
 
       // 알림 리스너 설정 - AI 코멘트 완료 알림 수신 시 동기화
