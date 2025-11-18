@@ -1,5 +1,4 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { Pool, PoolClient } from 'pg';
 import { DiaryEntry } from '../types/diary';
 import {
   DatabaseError,
@@ -11,216 +10,129 @@ import {
 import { sleep } from '../utils/retry';
 import { encryptFields, decryptFields } from './encryptionService';
 
-const dbPath = path.join(__dirname, '../../diary.db');
-const db = new Database(dbPath);
+// PostgreSQL Connection Pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
 
-// WAL 모드 활성화 (성능 및 동시성 향상)
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL'); // WAL과 함께 사용 시 안전하면서도 빠름
-db.pragma('cache_size = -64000'); // 64MB 캐시 (성능 향상)
-db.pragma('busy_timeout = 5000'); // 5초 대기 후 타임아웃
-console.log('✅ WAL mode enabled for better-sqlite3');
+// Pool error handling
+pool.on('error', (err) => {
+  console.error('❌ Unexpected error on idle PostgreSQL client', err);
+  process.exit(-1);
+});
 
-// 테이블 생성
-db.exec(`
-  CREATE TABLE IF NOT EXISTS diaries (
-    _id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL,
-    date TEXT NOT NULL,
-    content TEXT NOT NULL,
-    weather TEXT,
-    mood TEXT,
-    moodTag TEXT,
-    aiComment TEXT,
-    stampType TEXT,
-    createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL,
-    syncedWithServer INTEGER DEFAULT 0
-  )
-`);
+// 테이블 생성 및 초기화
+async function initializeDatabase() {
+  try {
+    // diaries 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS diaries (
+        _id TEXT PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        date TEXT NOT NULL,
+        content TEXT NOT NULL,
+        weather TEXT,
+        mood TEXT,
+        "moodTag" TEXT,
+        "aiComment" TEXT,
+        "stampType" TEXT,
+        "createdAt" TEXT NOT NULL,
+        "updatedAt" TEXT NOT NULL,
+        "syncedWithServer" BOOLEAN DEFAULT FALSE,
+        "deletedAt" TEXT,
+        version INTEGER DEFAULT 1,
+        model TEXT,
+        "importanceScore" INTEGER
+      )
+    `);
 
-// 마이그레이션: 기존 테이블에 컬럼 추가 (이미 존재하면 무시)
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN userId TEXT NOT NULL DEFAULT 'unknown'`);
-  console.log('✅ Added userId column to existing database');
-} catch (error) {
-  // 컬럼이 이미 존재하면 에러 발생 (무시)
+    // 인덱스 생성
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries("userId")`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON diaries("deletedAt")`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_date ON diaries(date)`);
+
+    // push_tokens 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_tokens (
+        "userId" TEXT PRIMARY KEY,
+        token TEXT NOT NULL,
+        "createdAt" TEXT NOT NULL,
+        "updatedAt" TEXT NOT NULL,
+        "deletedAt" TEXT,
+        version INTEGER DEFAULT 1
+      )
+    `);
+
+    // export_jobs 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS export_jobs (
+        id TEXT PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        status TEXT NOT NULL,
+        format TEXT NOT NULL,
+        email TEXT NOT NULL,
+        "s3Url" TEXT,
+        "expiresAt" TEXT,
+        "errorMessage" TEXT,
+        "createdAt" TEXT NOT NULL,
+        "updatedAt" TEXT NOT NULL
+      )
+    `);
+
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_export_userId ON export_jobs("userId")`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_export_status ON export_jobs(status)`);
+
+    console.log('✅ PostgreSQL database initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize PostgreSQL database:', error);
+    throw error;
+  }
 }
 
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN weather TEXT`);
-  console.log('✅ Added weather column to existing database');
-} catch (error) {
-  // 컬럼이 이미 존재하면 에러 발생 (무시)
-}
-
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN mood TEXT`);
-  console.log('✅ Added mood column to existing database');
-} catch (error) {
-  // 컬럼이 이미 존재하면 에러 발생 (무시)
-}
-
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN moodTag TEXT`);
-  console.log('✅ Added moodTag column to existing database');
-} catch (error) {
-  // 컬럼이 이미 존재하면 에러 발생 (무시)
-}
-
-// 마이그레이션: deleted_at 컬럼 추가 (소프트 삭제 지원)
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN deletedAt TEXT`);
-  console.log('✅ Added deletedAt column to diaries table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// 마이그레이션: version 컬럼 추가 (충돌 해결 지원)
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN version INTEGER DEFAULT 1`);
-  console.log('✅ Added version column to diaries table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// 마이그레이션: model 컬럼 추가 (AI 모델 추적용)
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN model TEXT`);
-  console.log('✅ Added model column to diaries table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// 마이그레이션: importanceScore 컬럼 추가 (중요도 점수 추적용)
-try {
-  db.exec(`ALTER TABLE diaries ADD COLUMN importanceScore INTEGER`);
-  console.log('✅ Added importanceScore column to diaries table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// userId 인덱스 생성 (성능 향상)
-try {
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries(userId)`);
-  console.log('✅ Created userId index');
-} catch (error) {
-  // 인덱스가 이미 존재하면 무시
-}
-
-// deletedAt 인덱스 생성 (소프트 삭제 쿼리 성능 향상)
-try {
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON diaries(deletedAt)`);
-  console.log('✅ Created deletedAt index on diaries table');
-} catch (error) {
-  // 인덱스가 이미 존재하면 무시
-}
-
-// Push Token 테이블 생성
-db.exec(`
-  CREATE TABLE IF NOT EXISTS push_tokens (
-    userId TEXT PRIMARY KEY,
-    token TEXT NOT NULL,
-    createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
-  )
-`);
-
-// 마이그레이션: push_tokens에 deletedAt 컬럼 추가
-try {
-  db.exec(`ALTER TABLE push_tokens ADD COLUMN deletedAt TEXT`);
-  console.log('✅ Added deletedAt column to push_tokens table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// 마이그레이션: push_tokens에 version 컬럼 추가
-try {
-  db.exec(`ALTER TABLE push_tokens ADD COLUMN version INTEGER DEFAULT 1`);
-  console.log('✅ Added version column to push_tokens table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-// Export Jobs 테이블 생성
-db.exec(`
-  CREATE TABLE IF NOT EXISTS export_jobs (
-    id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL,
-    status TEXT NOT NULL,
-    format TEXT NOT NULL,
-    email TEXT NOT NULL,
-    s3Url TEXT,
-    expiresAt TEXT,
-    errorMessage TEXT,
-    createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
-  )
-`);
-
-// userId 인덱스 생성 (export jobs 조회 성능 향상)
-try {
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_export_userId ON export_jobs(userId)`);
-  console.log('✅ Created userId index on export_jobs table');
-} catch (error) {
-  // 인덱스가 이미 존재하면 무시
-}
-
-// status 인덱스 생성 (pending jobs 조회 성능 향상)
-try {
-  db.exec(`CREATE INDEX IF NOT EXISTS idx_export_status ON export_jobs(status)`);
-  console.log('✅ Created status index on export_jobs table');
-} catch (error) {
-  // 인덱스가 이미 존재하면 무시
-}
-
-// 마이그레이션: export_jobs에 email 컬럼 추가
-try {
-  db.exec(`ALTER TABLE export_jobs ADD COLUMN email TEXT`);
-  console.log('✅ Added email column to export_jobs table');
-} catch (error) {
-  // 컬럼이 이미 존재하면 무시
-}
-
-console.log('✅ SQLite database initialized');
+// 초기화 실행
+initializeDatabase().catch(console.error);
 
 export class DiaryDatabase {
   /**
-   * SQLite 에러 처리
+   * PostgreSQL 에러 처리
    */
   private static handleDatabaseError(error: any, operation: string): never {
     const err = error as any;
 
-    // SQLite 에러 코드별 처리
-    if (err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    // PostgreSQL 에러 코드별 처리
+    if (err.code === '23505') { // unique_violation
       throw new DuplicateKeyError(
         `Duplicate entry in ${operation}`,
         { originalError: err.message }
       );
     }
 
-    if (err.code === 'SQLITE_FULL') {
+    if (err.code === '53100' || err.code === '53200' || err.code === '53300') { // disk_full
       throw new DiskFullError(
         'Database disk is full',
         { originalError: err.message }
       );
     }
 
-    if (err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_LOCKED') {
+    if (err.code === '55P03' || err.code === '40P01') { // lock_not_available or deadlock_detected
       throw new DatabaseLockError(
-        'Database is locked or busy',
+        'Database is locked or deadlocked',
         { originalError: err.message }
       );
     }
 
-    if (err.code === 'SQLITE_CORRUPT' || err.code === 'SQLITE_NOTADB') {
+    if (err.code === '08000' || err.code === '08003' || err.code === '08006') { // connection errors
       throw new DatabaseCorruptError(
-        'Database file is corrupted',
+        'Database connection error',
         { originalError: err.message }
       );
     }
 
-    // 기타 SQLite 에러
+    // 기타 PostgreSQL 에러
     throw new DatabaseError(
       `Database error in ${operation}: ${err.message}`,
       err.code,
@@ -229,59 +141,58 @@ export class DiaryDatabase {
   }
 
   /**
-   * SQLITE_BUSY 재시도 로직
+   * 재시도 로직 (deadlock 등)
    */
-  private static async retryOnBusy<T>(
-    fn: () => T,
+  private static async retryOnError<T>(
+    fn: () => Promise<T>,
     maxRetries: number = 3
   ): Promise<T> {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        return fn();
+        return await fn();
       } catch (error: any) {
         if (
-          (error.code === 'SQLITE_BUSY' || error.code === 'SQLITE_LOCKED') &&
+          (error.code === '40P01' || error.code === '55P03') && // deadlock or lock timeout
           attempt < maxRetries
         ) {
           const delay = 100 * (attempt + 1); // 100ms, 200ms, 300ms
-          console.warn(`⚠️  Database busy, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          console.warn(`⚠️  Database error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
           await sleep(delay);
           continue;
         }
         throw error;
       }
     }
-    throw new DatabaseLockError('Database busy timeout exceeded');
+    throw new DatabaseLockError('Database retry timeout exceeded');
   }
 
   // 일기 저장
   static async create(diary: DiaryEntry): Promise<DiaryEntry> {
     try {
-      return await this.retryOnBusy(() => {
+      return await this.retryOnError(async () => {
         // 암호화: content, moodTag, aiComment
         const encrypted = encryptFields(diary);
 
-        const stmt = db.prepare(`
-          INSERT INTO diaries (_id, userId, date, content, weather, mood, moodTag, aiComment, stampType, model, importanceScore, createdAt, updatedAt, syncedWithServer, version)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        stmt.run(
-          encrypted._id,
-          encrypted.userId || 'unknown',
-          encrypted.date,
-          encrypted.content,
-          encrypted.weather || null,
-          encrypted.mood || null,
-          encrypted.moodTag || null,
-          encrypted.aiComment || null,
-          encrypted.stampType || null,
-          encrypted.model || null,
-          encrypted.importanceScore || null,
-          encrypted.createdAt,
-          encrypted.updatedAt,
-          encrypted.syncedWithServer ? 1 : 0,
-          encrypted.version || 1 // 초기 버전은 1
+        await pool.query(
+          `INSERT INTO diaries (_id, "userId", date, content, weather, mood, "moodTag", "aiComment", "stampType", model, "importanceScore", "createdAt", "updatedAt", "syncedWithServer", version)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          [
+            encrypted._id,
+            encrypted.userId || 'unknown',
+            encrypted.date,
+            encrypted.content,
+            encrypted.weather || null,
+            encrypted.mood || null,
+            encrypted.moodTag || null,
+            encrypted.aiComment || null,
+            encrypted.stampType || null,
+            encrypted.model || null,
+            encrypted.importanceScore || null,
+            encrypted.createdAt,
+            encrypted.updatedAt,
+            encrypted.syncedWithServer || false,
+            encrypted.version || 1,
+          ]
         );
 
         return diary; // 원본 반환 (평문)
@@ -294,70 +205,70 @@ export class DiaryDatabase {
   // 일기 업데이트
   static async update(id: string, updates: Partial<DiaryEntry>): Promise<void> {
     try {
-      await this.retryOnBusy(() => {
+      await this.retryOnError(async () => {
         // 암호화: content, moodTag, aiComment
         const encrypted = encryptFields(updates);
 
         const fields: string[] = [];
         const values: any[] = [];
+        let paramIndex = 1;
 
-        // updates 객체의 키를 확인 (encrypted는 undefined 값이 사라질 수 있음)
+        // updates 객체의 키를 확인
         if ('userId' in updates) {
-          fields.push('userId = ?');
+          fields.push(`"userId" = $${paramIndex++}`);
           values.push(encrypted.userId ?? null);
         }
         if ('content' in updates) {
-          fields.push('content = ?');
+          fields.push(`content = $${paramIndex++}`);
           values.push(encrypted.content ?? null);
         }
         if ('weather' in updates) {
-          fields.push('weather = ?');
+          fields.push(`weather = $${paramIndex++}`);
           values.push(encrypted.weather ?? null);
         }
         if ('mood' in updates) {
-          fields.push('mood = ?');
+          fields.push(`mood = $${paramIndex++}`);
           values.push(encrypted.mood ?? null);
         }
         if ('moodTag' in updates) {
-          fields.push('moodTag = ?');
+          fields.push(`"moodTag" = $${paramIndex++}`);
           values.push(encrypted.moodTag ?? null);
         }
         if ('aiComment' in updates) {
-          fields.push('aiComment = ?');
+          fields.push(`"aiComment" = $${paramIndex++}`);
           values.push(encrypted.aiComment ?? null);
         }
         if ('stampType' in updates) {
-          fields.push('stampType = ?');
+          fields.push(`"stampType" = $${paramIndex++}`);
           values.push(encrypted.stampType ?? null);
         }
         if ('model' in updates) {
-          fields.push('model = ?');
+          fields.push(`model = $${paramIndex++}`);
           values.push(encrypted.model ?? null);
         }
         if ('importanceScore' in updates) {
-          fields.push('importanceScore = ?');
+          fields.push(`"importanceScore" = $${paramIndex++}`);
           values.push(encrypted.importanceScore ?? null);
         }
         if ('syncedWithServer' in updates) {
-          fields.push('syncedWithServer = ?');
-          values.push(encrypted.syncedWithServer ? 1 : 0);
+          fields.push(`"syncedWithServer" = $${paramIndex++}`);
+          values.push(encrypted.syncedWithServer || false);
         }
 
-        fields.push('updatedAt = ?');
+        fields.push(`"updatedAt" = $${paramIndex++}`);
         values.push(new Date().toISOString());
 
-        // 버전 증가 (Last-Write-Wins 충돌 해결)
-        fields.push('version = version + 1');
+        // 버전 증가
+        fields.push(`version = version + 1`);
 
         values.push(id);
 
-        const stmt = db.prepare(`
-          UPDATE diaries
-          SET ${fields.join(', ')}
-          WHERE _id = ? AND deletedAt IS NULL
-        `);
-
-        stmt.run(...values);
+        await pool.query(
+          `UPDATE diaries
+           SET ${fields.join(', ')}
+           WHERE _id = $${paramIndex} AND "deletedAt" IS NULL`,
+          values
+        );
       });
     } catch (error) {
       this.handleDatabaseError(error, 'update');
@@ -365,16 +276,19 @@ export class DiaryDatabase {
   }
 
   // 일기 조회 (ID)
-  static getById(id: string): DiaryEntry | null {
+  static async getById(id: string): Promise<DiaryEntry | null> {
     try {
-      const stmt = db.prepare('SELECT * FROM diaries WHERE _id = ? AND deletedAt IS NULL');
-      const row = stmt.get(id) as any;
+      const result = await pool.query(
+        'SELECT * FROM diaries WHERE _id = $1 AND "deletedAt" IS NULL',
+        [id]
+      );
 
-      if (!row) return null;
+      if (result.rows.length === 0) return null;
 
+      const row = result.rows[0];
       const entry = {
         ...row,
-        syncedWithServer: row.syncedWithServer === 1,
+        syncedWithServer: row.syncedWithServer === true,
       };
 
       // 복호화: content, moodTag, aiComment
@@ -385,258 +299,277 @@ export class DiaryDatabase {
   }
 
   // 특정 사용자의 모든 일기 조회
-  static getAllByUserId(userId: string): DiaryEntry[] {
-    const stmt = db.prepare('SELECT * FROM diaries WHERE userId = ? AND deletedAt IS NULL ORDER BY date DESC');
-    const rows = stmt.all(userId) as any[];
+  static async getAllByUserId(userId: string): Promise<DiaryEntry[]> {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM diaries WHERE "userId" = $1 AND "deletedAt" IS NULL ORDER BY date DESC',
+        [userId]
+      );
 
-    return rows.map(row => {
-      const entry = {
-        ...row,
-        syncedWithServer: row.syncedWithServer === 1,
-      };
-      // 복호화: content, moodTag, aiComment
-      return decryptFields(entry);
-    });
+      return result.rows.map(row => {
+        const entry = {
+          ...row,
+          syncedWithServer: row.syncedWithServer === true,
+        };
+        return decryptFields(entry);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getAllByUserId');
+    }
   }
 
   // 모든 일기 조회 (관리용)
-  static getAll(): DiaryEntry[] {
-    const stmt = db.prepare('SELECT * FROM diaries WHERE deletedAt IS NULL ORDER BY date DESC');
-    const rows = stmt.all() as any[];
+  static async getAll(): Promise<DiaryEntry[]> {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM diaries WHERE "deletedAt" IS NULL ORDER BY date DESC'
+      );
 
-    return rows.map(row => {
-      const entry = {
-        ...row,
-        syncedWithServer: row.syncedWithServer === 1,
-      };
-      // 복호화: content, moodTag, aiComment
-      return decryptFields(entry);
-    });
+      return result.rows.map(row => {
+        const entry = {
+          ...row,
+          syncedWithServer: row.syncedWithServer === true,
+        };
+        return decryptFields(entry);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getAll');
+    }
   }
 
   // AI 코멘트 없는 일기 조회 (전날 작성된 일기만)
-  // 배치 작업이 새벽에 실행되므로, 전날 작성된 일기에 코멘트를 달아야 함
-  static getPending(): DiaryEntry[] {
-    // 어제 날짜 계산 (로컬 타임존 기준)
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const year = yesterday.getFullYear();
-    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const day = String(yesterday.getDate()).padStart(2, '0');
-    const yesterdayStr = `${year}-${month}-${day}`; // "2025-11-02"
+  static async getPending(): Promise<DiaryEntry[]> {
+    try {
+      // 어제 날짜 계산
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const day = String(yesterday.getDate()).padStart(2, '0');
+      const yesterdayStr = `${year}-${month}-${day}`;
 
-    console.log(`📅 [DiaryDatabase] 배치 작업 대상 날짜: ${yesterdayStr}`);
+      console.log(`📅 [DiaryDatabase] 배치 작업 대상 날짜: ${yesterdayStr}`);
 
-    // 어제 날짜(00:00:00 ~ 23:59:59)에 작성된 일기 중 AI 코멘트 없는 것만 조회 (소프트 삭제 제외)
-    const stmt = db.prepare('SELECT * FROM diaries WHERE aiComment IS NULL AND date LIKE ? AND deletedAt IS NULL ORDER BY date DESC');
-    const rows = stmt.all(`${yesterdayStr}%`) as any[];
+      const result = await pool.query(
+        'SELECT * FROM diaries WHERE "aiComment" IS NULL AND date LIKE $1 AND "deletedAt" IS NULL ORDER BY date DESC',
+        [`${yesterdayStr}%`]
+      );
 
-    console.log(`📋 [DiaryDatabase] ${yesterdayStr} 날짜 일기 중 AI 코멘트 대기: ${rows.length}개`);
+      console.log(`📋 [DiaryDatabase] ${yesterdayStr} 날짜 일기 중 AI 코멘트 대기: ${result.rows.length}개`);
 
-    return rows.map(row => {
-      const entry = {
-        ...row,
-        syncedWithServer: row.syncedWithServer === 1,
-      };
-      // 복호화: content, moodTag (AI 분석용)
-      return decryptFields(entry);
-    });
+      return result.rows.map(row => {
+        const entry = {
+          ...row,
+          syncedWithServer: row.syncedWithServer === true,
+        };
+        return decryptFields(entry);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getPending');
+    }
   }
 
   // 일기 삭제 (소프트 삭제)
   static async delete(id: string): Promise<void> {
     try {
-      await this.retryOnBusy(() => {
+      await this.retryOnError(async () => {
         const now = new Date().toISOString();
-        const stmt = db.prepare(`
-          UPDATE diaries
-          SET deletedAt = ?, updatedAt = ?, version = version + 1
-          WHERE _id = ? AND deletedAt IS NULL
-        `);
-        stmt.run(now, now, id);
+        await pool.query(
+          `UPDATE diaries
+           SET "deletedAt" = $1, "updatedAt" = $2, version = version + 1
+           WHERE _id = $3 AND "deletedAt" IS NULL`,
+          [now, now, id]
+        );
       });
     } catch (error) {
       this.handleDatabaseError(error, 'delete');
     }
   }
 
-  // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회 (중복 제거)
-  static getUsersWithAICommentYesterday(): string[] {
-    // 어제 날짜 계산 (로컬 타임존 기준)
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const year = yesterday.getFullYear();
-    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const day = String(yesterday.getDate()).padStart(2, '0');
-    const yesterdayStr = `${year}-${month}-${day}`; // "2025-11-02"
+  // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회
+  static async getUsersWithAICommentYesterday(): Promise<string[]> {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const day = String(yesterday.getDate()).padStart(2, '0');
+      const yesterdayStr = `${year}-${month}-${day}`;
 
-    console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기`);
+      console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기`);
 
-    // 어제 날짜에 작성되고 AI 코멘트가 있는 일기의 userId 조회 (중복 제거, 소프트 삭제 제외)
-    const stmt = db.prepare('SELECT DISTINCT userId FROM diaries WHERE date LIKE ? AND aiComment IS NOT NULL AND deletedAt IS NULL');
-    const rows = stmt.all(`${yesterdayStr}%`) as Array<{ userId: string }>;
+      const result = await pool.query(
+        'SELECT DISTINCT "userId" FROM diaries WHERE date LIKE $1 AND "aiComment" IS NOT NULL AND "deletedAt" IS NULL',
+        [`${yesterdayStr}%`]
+      );
 
-    const userIds = rows.map(row => row.userId);
-    console.log(`👥 [DiaryDatabase] ${yesterdayStr} 일기 AI 코멘트 받은 사용자: ${userIds.length}명`);
+      const userIds = result.rows.map(row => row.userId);
+      console.log(`👥 [DiaryDatabase] ${yesterdayStr} 일기 AI 코멘트 받은 사용자: ${userIds.length}명`);
 
-    return userIds;
+      return userIds;
+    } catch (error) {
+      this.handleDatabaseError(error, 'getUsersWithAICommentYesterday');
+    }
   }
 
   // 최근 AI 코멘트 조회 (관리자용)
-  static getRecentAIComments(limit: number = 10): any[] {
-    console.log(`📋 [DiaryDatabase] 최근 AI 코멘트 ${limit}개 조회`);
+  static async getRecentAIComments(limit: number = 10): Promise<any[]> {
+    try {
+      console.log(`📋 [DiaryDatabase] 최근 AI 코멘트 ${limit}개 조회`);
 
-    // AI 코멘트가 있는 최근 일기 조회 (updatedAt 기준 정렬)
-    const stmt = db.prepare(`
-      SELECT
-        _id,
-        userId,
-        date,
-        content,
-        moodTag,
-        aiComment,
-        model,
-        importanceScore,
-        stampType,
-        createdAt,
-        updatedAt
-      FROM diaries
-      WHERE aiComment IS NOT NULL
-        AND deletedAt IS NULL
-      ORDER BY updatedAt DESC
-      LIMIT ?
-    `);
-    const rows = stmt.all(limit) as any[];
+      const result = await pool.query(
+        `SELECT
+          _id,
+          "userId",
+          date,
+          content,
+          "moodTag",
+          "aiComment",
+          model,
+          "importanceScore",
+          "stampType",
+          "createdAt",
+          "updatedAt"
+        FROM diaries
+        WHERE "aiComment" IS NOT NULL
+          AND "deletedAt" IS NULL
+        ORDER BY "updatedAt" DESC
+        LIMIT $1`,
+        [limit]
+      );
 
-    console.log(`✅ [DiaryDatabase] ${rows.length}개의 AI 코멘트 조회 완료`);
+      console.log(`✅ [DiaryDatabase] ${result.rows.length}개의 AI 코멘트 조회 완료`);
 
-    return rows.map(row => {
-      const entry = {
-        ...row,
-        syncedWithServer: row.syncedWithServer === 1,
-      };
-      // 복호화: content, moodTag, aiComment
-      return decryptFields(entry);
-    });
+      return result.rows.map(row => {
+        const entry = {
+          ...row,
+          syncedWithServer: row.syncedWithServer === true,
+        };
+        return decryptFields(entry);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getRecentAIComments');
+    }
   }
 
   // DB 통계 조회 (관리자용)
-  static getStats(): any {
-    console.log(`📊 [DiaryDatabase] DB 통계 조회`);
+  static async getStats(): Promise<any> {
+    try {
+      console.log(`📊 [DiaryDatabase] DB 통계 조회`);
 
-    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE deletedAt IS NULL');
-    const total = (totalStmt.get() as any).count;
+      const totalResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE "deletedAt" IS NULL');
+      const total = parseInt(totalResult.rows[0].count);
 
-    const withCommentStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND deletedAt IS NULL');
-    const withComment = (withCommentStmt.get() as any).count;
+      const withCommentResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL');
+      const withComment = parseInt(withCommentResult.rows[0].count);
 
-    const withoutCommentStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NULL AND deletedAt IS NULL');
-    const withoutComment = (withoutCommentStmt.get() as any).count;
+      const withoutCommentResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NULL AND "deletedAt" IS NULL');
+      const withoutComment = parseInt(withoutCommentResult.rows[0].count);
 
-    const deletedStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE deletedAt IS NOT NULL');
-    const deleted = (deletedStmt.get() as any).count;
+      const deletedResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE "deletedAt" IS NOT NULL');
+      const deleted = parseInt(deletedResult.rows[0].count);
 
-    const usersStmt = db.prepare('SELECT COUNT(DISTINCT userId) as count FROM diaries WHERE deletedAt IS NULL');
-    const uniqueUsers = (usersStmt.get() as any).count;
+      const usersResult = await pool.query('SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL');
+      const uniqueUsers = parseInt(usersResult.rows[0].count);
 
-    const stats = {
-      totalDiaries: total,
-      diariesWithAIComment: withComment,
-      diariesWithoutAIComment: withoutComment,
-      deletedDiaries: deleted,
-      uniqueUsers: uniqueUsers,
-    };
+      const stats = {
+        totalDiaries: total,
+        diariesWithAIComment: withComment,
+        diariesWithoutAIComment: withoutComment,
+        deletedDiaries: deleted,
+        uniqueUsers: uniqueUsers,
+      };
 
-    console.log(`✅ [DiaryDatabase] 통계:`, stats);
+      console.log(`✅ [DiaryDatabase] 통계:`, stats);
 
-    return stats;
+      return stats;
+    } catch (error) {
+      this.handleDatabaseError(error, 'getStats');
+    }
   }
 
   // 모델 사용 통계 조회 (관리자용)
-  static getModelStats(): any {
-    console.log(`📊 [DiaryDatabase] 모델 사용 통계 조회`);
+  static async getModelStats(): Promise<any> {
+    try {
+      console.log(`📊 [DiaryDatabase] 모델 사용 통계 조회`);
 
-    // 전체 AI 코멘트 수
-    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND deletedAt IS NULL');
-    const total = (totalStmt.get() as any).count;
+      const totalResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL');
+      const total = parseInt(totalResult.rows[0].count);
 
-    // Sonnet 사용 횟수
-    const sonnetStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE model = ? AND deletedAt IS NULL');
-    const sonnetCount = (sonnetStmt.get('sonnet') as any).count;
+      const sonnetResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE model = $1 AND "deletedAt" IS NULL', ['sonnet']);
+      const sonnetCount = parseInt(sonnetResult.rows[0].count);
 
-    // Haiku 사용 횟수
-    const haikuStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE model = ? AND deletedAt IS NULL');
-    const haikuCount = (haikuStmt.get('haiku') as any).count;
+      const haikuResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE model = $1 AND "deletedAt" IS NULL', ['haiku']);
+      const haikuCount = parseInt(haikuResult.rows[0].count);
 
-    // 모델 정보 없는 코멘트 (마이그레이션 전 데이터)
-    const unknownStmt = db.prepare('SELECT COUNT(*) as count FROM diaries WHERE aiComment IS NOT NULL AND model IS NULL AND deletedAt IS NULL');
-    const unknownCount = (unknownStmt.get() as any).count;
+      const unknownResult = await pool.query('SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NOT NULL AND model IS NULL AND "deletedAt" IS NULL');
+      const unknownCount = parseInt(unknownResult.rows[0].count);
 
-    // 평균 중요도 점수
-    const avgScoreStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE importanceScore IS NOT NULL AND deletedAt IS NULL');
-    const avgScore = (avgScoreStmt.get() as any).avg;
+      const avgScoreResult = await pool.query('SELECT AVG("importanceScore") as avg FROM diaries WHERE "importanceScore" IS NOT NULL AND "deletedAt" IS NULL');
+      const avgScore = avgScoreResult.rows[0].avg ? parseFloat(avgScoreResult.rows[0].avg) : null;
 
-    // Sonnet 평균 중요도
-    const sonnetAvgStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE model = ? AND deletedAt IS NULL');
-    const sonnetAvgScore = (sonnetAvgStmt.get('sonnet') as any).avg;
+      const sonnetAvgResult = await pool.query('SELECT AVG("importanceScore") as avg FROM diaries WHERE model = $1 AND "deletedAt" IS NULL', ['sonnet']);
+      const sonnetAvgScore = sonnetAvgResult.rows[0].avg ? parseFloat(sonnetAvgResult.rows[0].avg) : null;
 
-    // Haiku 평균 중요도
-    const haikuAvgStmt = db.prepare('SELECT AVG(importanceScore) as avg FROM diaries WHERE model = ? AND deletedAt IS NULL');
-    const haikuAvgScore = (haikuAvgStmt.get('haiku') as any).avg;
+      const haikuAvgResult = await pool.query('SELECT AVG("importanceScore") as avg FROM diaries WHERE model = $1 AND "deletedAt" IS NULL', ['haiku']);
+      const haikuAvgScore = haikuAvgResult.rows[0].avg ? parseFloat(haikuAvgResult.rows[0].avg) : null;
 
-    // 모델 정보가 있는 코멘트 수 (unknown 제외)
-    const totalWithModel = sonnetCount + haikuCount;
+      const totalWithModel = sonnetCount + haikuCount;
 
-    const stats = {
-      totalComments: total,
-      sonnetCount: sonnetCount,
-      haikuCount: haikuCount,
-      unknownCount: unknownCount,
-      sonnetPercentage: totalWithModel > 0 ? Math.round((sonnetCount / totalWithModel) * 100) : 0,
-      haikuPercentage: totalWithModel > 0 ? Math.round((haikuCount / totalWithModel) * 100) : 0,
-      averageImportanceScore: avgScore ? Math.round(avgScore * 10) / 10 : null,
-      sonnetAverageScore: sonnetAvgScore ? Math.round(sonnetAvgScore * 10) / 10 : null,
-      haikuAverageScore: haikuAvgScore ? Math.round(haikuAvgScore * 10) / 10 : null,
-    };
+      const stats = {
+        totalComments: total,
+        sonnetCount: sonnetCount,
+        haikuCount: haikuCount,
+        unknownCount: unknownCount,
+        sonnetPercentage: totalWithModel > 0 ? Math.round((sonnetCount / totalWithModel) * 100) : 0,
+        haikuPercentage: totalWithModel > 0 ? Math.round((haikuCount / totalWithModel) * 100) : 0,
+        averageImportanceScore: avgScore ? Math.round(avgScore * 10) / 10 : null,
+        sonnetAverageScore: sonnetAvgScore ? Math.round(sonnetAvgScore * 10) / 10 : null,
+        haikuAverageScore: haikuAvgScore ? Math.round(haikuAvgScore * 10) / 10 : null,
+      };
 
-    console.log(`✅ [DiaryDatabase] 모델 통계:`, stats);
+      console.log(`✅ [DiaryDatabase] 모델 통계:`, stats);
 
-    return stats;
+      return stats;
+    } catch (error) {
+      this.handleDatabaseError(error, 'getModelStats');
+    }
   }
 
-  // 어제 일기의 AI 코멘트 초기화 (관리자용 - 재생성용)
-  static resetYesterdayComments(): number {
-    // 어제 날짜 계산
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const year = yesterday.getFullYear();
-    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const day = String(yesterday.getDate()).padStart(2, '0');
-    const yesterdayStr = `${year}-${month}-${day}`;
+  // 어제 일기의 AI 코멘트 초기화 (관리자용)
+  static async resetYesterdayComments(): Promise<number> {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const day = String(yesterday.getDate()).padStart(2, '0');
+      const yesterdayStr = `${year}-${month}-${day}`;
 
-    console.log(`🔄 [DiaryDatabase] ${yesterdayStr} 날짜 일기의 AI 코멘트 초기화`);
+      console.log(`🔄 [DiaryDatabase] ${yesterdayStr} 날짜 일기의 AI 코멘트 초기화`);
 
-    // 어제 날짜 일기의 aiComment와 stampType을 NULL로 설정
-    const stmt = db.prepare(`
-      UPDATE diaries
-      SET aiComment = NULL, stampType = NULL, syncedWithServer = 0
-      WHERE date LIKE ? AND deletedAt IS NULL
-    `);
-    const result = stmt.run(`${yesterdayStr}%`);
+      const result = await pool.query(
+        `UPDATE diaries
+         SET "aiComment" = NULL, "stampType" = NULL, "syncedWithServer" = FALSE
+         WHERE date LIKE $1 AND "deletedAt" IS NULL`,
+        [`${yesterdayStr}%`]
+      );
 
-    console.log(`✅ [DiaryDatabase] ${result.changes}개 일기의 AI 코멘트 초기화 완료`);
+      console.log(`✅ [DiaryDatabase] ${result.rowCount}개 일기의 AI 코멘트 초기화 완료`);
 
-    return result.changes;
+      return result.rowCount || 0;
+    } catch (error) {
+      this.handleDatabaseError(error, 'resetYesterdayComments');
+    }
   }
 
   // 사용자의 모든 일기 삭제 (하드 삭제)
   static async deleteAllForUser(userId: string): Promise<number> {
     try {
-      return await this.retryOnBusy(() => {
-        const stmt = db.prepare('DELETE FROM diaries WHERE userId = ?');
-        const result = stmt.run(userId);
-        console.log(`🗑️  [DiaryDatabase] Deleted ${result.changes} diaries for user ${userId}`);
-        return result.changes;
+      return await this.retryOnError(async () => {
+        const result = await pool.query('DELETE FROM diaries WHERE "userId" = $1', [userId]);
+        console.log(`🗑️  [DiaryDatabase] Deleted ${result.rowCount} diaries for user ${userId}`);
+        return result.rowCount || 0;
       });
     } catch (error) {
       this.handleDatabaseError(error, 'deleteAllForUser');
@@ -646,37 +579,37 @@ export class DiaryDatabase {
 
 export class PushTokenDatabase {
   /**
-   * SQLite 에러 처리 (DiaryDatabase와 동일)
+   * PostgreSQL 에러 처리
    */
   private static handleDatabaseError(error: any, operation: string): never {
     return DiaryDatabase['handleDatabaseError'](error, `PushToken.${operation}`);
   }
 
   /**
-   * SQLITE_BUSY 재시도 로직
+   * 재시도 로직
    */
-  private static async retryOnBusy<T>(
-    fn: () => T,
+  private static async retryOnError<T>(
+    fn: () => Promise<T>,
     maxRetries: number = 3
   ): Promise<T> {
-    return DiaryDatabase['retryOnBusy'](fn, maxRetries);
+    return DiaryDatabase['retryOnError'](fn, maxRetries);
   }
 
   // Push Token 저장/업데이트
   static async upsert(userId: string, token: string): Promise<void> {
     try {
-      await this.retryOnBusy(() => {
+      await this.retryOnError(async () => {
         const now = new Date().toISOString();
-        const stmt = db.prepare(`
-          INSERT INTO push_tokens (userId, token, createdAt, updatedAt, version)
-          VALUES (?, ?, ?, ?, 1)
-          ON CONFLICT(userId) DO UPDATE SET
-            token = excluded.token,
-            updatedAt = excluded.updatedAt,
-            version = version + 1,
-            deletedAt = NULL
-        `);
-        stmt.run(userId, token, now, now);
+        await pool.query(
+          `INSERT INTO push_tokens ("userId", token, "createdAt", "updatedAt", version)
+           VALUES ($1, $2, $3, $4, 1)
+           ON CONFLICT ("userId") DO UPDATE SET
+             token = EXCLUDED.token,
+             "updatedAt" = EXCLUDED."updatedAt",
+             version = push_tokens.version + 1,
+             "deletedAt" = NULL`,
+          [userId, token, now, now]
+        );
       });
     } catch (error) {
       this.handleDatabaseError(error, 'upsert');
@@ -684,21 +617,25 @@ export class PushTokenDatabase {
   }
 
   // Push Token 조회
-  static get(userId: string): string | null {
+  static async get(userId: string): Promise<string | null> {
     try {
-      const stmt = db.prepare('SELECT token FROM push_tokens WHERE userId = ? AND deletedAt IS NULL');
-      const row = stmt.get(userId) as any;
-      return row ? row.token : null;
+      const result = await pool.query(
+        'SELECT token FROM push_tokens WHERE "userId" = $1 AND "deletedAt" IS NULL',
+        [userId]
+      );
+      return result.rows.length > 0 ? result.rows[0].token : null;
     } catch (error) {
       this.handleDatabaseError(error, 'get');
     }
   }
 
   // 모든 Push Token 조회
-  static getAll(): Array<{ userId: string; token: string }> {
+  static async getAll(): Promise<Array<{ userId: string; token: string }>> {
     try {
-      const stmt = db.prepare('SELECT userId, token FROM push_tokens WHERE deletedAt IS NULL');
-      return stmt.all() as Array<{ userId: string; token: string }>;
+      const result = await pool.query(
+        'SELECT "userId", token FROM push_tokens WHERE "deletedAt" IS NULL'
+      );
+      return result.rows.map(row => ({ userId: row.userId, token: row.token }));
     } catch (error) {
       this.handleDatabaseError(error, 'getAll');
     }
@@ -707,14 +644,14 @@ export class PushTokenDatabase {
   // Push Token 삭제 (소프트 삭제)
   static async delete(userId: string): Promise<void> {
     try {
-      await this.retryOnBusy(() => {
+      await this.retryOnError(async () => {
         const now = new Date().toISOString();
-        const stmt = db.prepare(`
-          UPDATE push_tokens
-          SET deletedAt = ?, updatedAt = ?, version = version + 1
-          WHERE userId = ? AND deletedAt IS NULL
-        `);
-        stmt.run(now, now, userId);
+        await pool.query(
+          `UPDATE push_tokens
+           SET "deletedAt" = $1, "updatedAt" = $2, version = version + 1
+           WHERE "userId" = $3 AND "deletedAt" IS NULL`,
+          [now, now, userId]
+        );
       });
     } catch (error) {
       this.handleDatabaseError(error, 'delete');
@@ -722,4 +659,5 @@ export class PushTokenDatabase {
   }
 }
 
-export default db;
+export { pool };
+export default pool;

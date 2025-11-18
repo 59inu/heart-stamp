@@ -1,11 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import archiver from 'archiver';
-import Database from 'better-sqlite3';
 import { S3Service } from './s3Service';
 
+const execAsync = promisify(exec);
+
 const BACKUP_DIR = path.join(__dirname, '../../backups');
-const DB_PATH = path.join(__dirname, '../../diary.db');
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 const RETENTION_DAYS = 7; // 7일치 백업 보관
 
@@ -21,18 +23,21 @@ export class BackupService {
   }
 
   /**
-   * SQLite 데이터베이스 백업 (VACUUM INTO 사용)
+   * PostgreSQL 데이터베이스 백업 (pg_dump 사용)
    */
   private static async performDatabaseBackup(timestamp: string): Promise<{ path: string; size: number }> {
     try {
-      const backupPath = path.join(BACKUP_DIR, `${timestamp}_diary.db`);
+      const backupPath = path.join(BACKUP_DIR, `${timestamp}_diary_backup.sql`);
 
       console.log('📦 [Backup] Starting database backup...');
 
-      // VACUUM INTO: 원자적 백업 + WAL 통합 + 압축
-      const db = new Database(DB_PATH, { readonly: true });
-      db.exec(`VACUUM INTO '${backupPath}'`);
-      db.close();
+      // pg_dump를 사용하여 SQL 백업 생성
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) {
+        throw new Error('DATABASE_URL not configured');
+      }
+
+      await execAsync(`pg_dump "${databaseUrl}" > "${backupPath}"`);
 
       const stats = fs.statSync(backupPath);
       const sizeMB = (stats.size / 1024 / 1024).toFixed(2);

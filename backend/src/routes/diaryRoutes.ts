@@ -53,7 +53,7 @@ router.post('/diaries',
       };
 
       // 기존 일기가 있으면 업데이트, 없으면 생성
-      const existing = DiaryDatabase.getById(diaryEntry._id);
+      const existing = await DiaryDatabase.getById(diaryEntry._id);
       if (existing) {
         // update 시 userId는 변경하지 않음 (기존 userId 유지)
         // 다른 디바이스에서 같은 일기를 업로드해도 원래 userId 보존
@@ -101,7 +101,7 @@ router.get('/diaries/:id/ai-comment',
       }
 
       const { id } = req.params;
-      const diary = DiaryDatabase.getById(id);
+      const diary = await DiaryDatabase.getById(id);
 
       if (!diary) {
         return res.status(404).json({
@@ -160,7 +160,7 @@ router.post('/diaries/:id/analyze',
       }
 
       const { id } = req.params;
-      const diary = DiaryDatabase.getById(id);
+      const diary = await DiaryDatabase.getById(id);
 
       if (!diary) {
         return res.status(404).json({
@@ -227,7 +227,7 @@ router.get('/diaries', async (req: Request, res: Response) => {
       });
     }
 
-    const userDiaries = DiaryDatabase.getAllByUserId(userId);
+    const userDiaries = await DiaryDatabase.getAllByUserId(userId);
 
     res.json({
       success: true,
@@ -245,7 +245,7 @@ router.get('/diaries', async (req: Request, res: Response) => {
 // Get all diaries that need AI analysis (관리용)
 router.get('/diaries/pending', requireAdminToken, async (req: Request, res: Response) => {
   try {
-    const pendingDiaries = DiaryDatabase.getPending();
+    const pendingDiaries = await DiaryDatabase.getPending();
 
     res.json({
       success: true,
@@ -272,7 +272,7 @@ router.delete('/diaries/:id', async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const diary = DiaryDatabase.getById(id);
+    const diary = await DiaryDatabase.getById(id);
 
     if (!diary) {
       return res.status(404).json({
@@ -324,8 +324,8 @@ router.post('/admin/generate-comment',
       const { userId, date } = req.body;
 
       // Find diary by userId and date
-      const allDiaries = DiaryDatabase.getAllByUserId(userId);
-      const diary = allDiaries.find(d => d.date.startsWith(date));
+      const allDiaries = await DiaryDatabase.getAllByUserId(userId);
+      const diary = allDiaries.find((d: any) => d.date.startsWith(date));
 
       if (!diary) {
         return res.status(404).json({
@@ -401,8 +401,8 @@ router.delete('/admin/delete-comment',
       const { userId, date } = req.body;
 
       // Find diary by userId and date
-      const allDiaries = DiaryDatabase.getAllByUserId(userId);
-      const diary = allDiaries.find(d => d.date.startsWith(date));
+      const allDiaries = await DiaryDatabase.getAllByUserId(userId);
+      const diary = allDiaries.find((d: any) => d.date.startsWith(date));
 
       if (!diary) {
         return res.status(404).json({
@@ -460,7 +460,7 @@ router.get('/admin/diaries',
         });
       }
 
-      const userDiaries = DiaryDatabase.getAllByUserId(userId);
+      const userDiaries = await DiaryDatabase.getAllByUserId(userId);
 
       res.json({
         success: true,
@@ -482,10 +482,10 @@ router.get('/admin/all-diaries',
   requireAdminToken,
   async (req: Request, res: Response) => {
     try {
-      const allDiaries = DiaryDatabase.getAll();
+      const allDiaries = await DiaryDatabase.getAll();
 
       // userId별로 그룹화하여 보기 쉽게
-      const groupedByUser = allDiaries.reduce((acc, diary) => {
+      const groupedByUser = allDiaries.reduce((acc: any, diary: any) => {
         const userId = diary.userId || 'unknown';
         if (!acc[userId]) {
           acc[userId] = [];
@@ -509,7 +509,7 @@ router.get('/admin/all-diaries',
         totalCount: allDiaries.length,
         userCount: Object.keys(groupedByUser).length,
         groupedByUser,
-        allDiaries: allDiaries.map(d => ({
+        allDiaries: allDiaries.map((d: any) => ({
           _id: d._id,
           userId: d.userId,
           date: d.date,
@@ -535,7 +535,7 @@ router.get('/admin/recent-comments',
   async (req: Request, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const comments = DiaryDatabase.getRecentAIComments(limit);
+      const comments = await DiaryDatabase.getRecentAIComments(limit);
 
       res.json({
         success: true,
@@ -558,8 +558,8 @@ router.get('/admin/stats',
   requireAdminToken,
   async (req: Request, res: Response) => {
     try {
-      const stats = DiaryDatabase.getStats();
-      const modelStats = DiaryDatabase.getModelStats();
+      const stats = await DiaryDatabase.getStats();
+      const modelStats = await DiaryDatabase.getModelStats();
 
       res.json({
         success: true,

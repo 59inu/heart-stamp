@@ -164,7 +164,7 @@ JSON 형식 (키워드는 2-3개 정도):
     endDate?: Date
   ): Promise<Report> {
     // 해당 기간의 일기 조회
-    const allDiaries = DiaryDatabase.getAllByUserId(userId);
+    const allDiaries = await DiaryDatabase.getAllByUserId(userId);
 
     if (!startDate || !endDate) {
       throw new Error('startDate and endDate are required');
@@ -208,7 +208,7 @@ JSON 형식 (키워드는 2-3개 정도):
     };
 
     // DB에 저장
-    ReportDatabase.create(report);
+    await ReportDatabase.create(report);
 
     return report;
   }
@@ -222,7 +222,7 @@ JSON 형식 (키워드는 2-3개 정도):
     endDate: Date
   ): Promise<Report> {
     // 기존 리포트 확인
-    const existing = ReportDatabase.getWeeklyReport(userId, year, week);
+    const existing = await ReportDatabase.getWeeklyReport(userId, year, week);
     if (existing) {
       return existing;
     }
@@ -240,7 +240,7 @@ JSON 형식 (키워드는 2-3개 정도):
     endDate: Date
   ): Promise<Report> {
     // 기존 리포트 확인
-    const existing = ReportDatabase.getMonthlyReport(userId, year, month);
+    const existing = await ReportDatabase.getMonthlyReport(userId, year, month);
     if (existing) {
       return existing;
     }

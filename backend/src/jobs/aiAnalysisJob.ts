@@ -29,7 +29,7 @@ export class AIAnalysisJob {
       console.log(`⏰ Time: ${new Date().toISOString()}`);
 
       // 어제 날짜 일기 중 AI 코멘트를 받은 사용자 목록 조회
-      const userIds = DiaryDatabase.getUsersWithAICommentYesterday();
+      const userIds = await DiaryDatabase.getUsersWithAICommentYesterday();
 
       console.log(`👥 Target users: ${userIds.length}`);
 
@@ -89,7 +89,7 @@ export class AIAnalysisJob {
     try {
       // Get all diaries without AI comments
       console.log('🔍 [BATCH] Getting pending diaries from database...');
-      const pendingDiaries = DiaryDatabase.getPending();
+      const pendingDiaries = await DiaryDatabase.getPending();
       const total = pendingDiaries.length;
 
       console.log(`📊 Total diaries to analyze: ${total}`);
