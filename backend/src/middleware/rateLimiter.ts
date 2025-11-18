@@ -25,10 +25,10 @@ export const aiAnalysisLimiter = rateLimit({
   },
 });
 
-// 관리 엔드포인트: IP당 분당 5회
+// 관리 엔드포인트: IP당 분당 30회
 export const adminLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1분
-  max: 5,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
