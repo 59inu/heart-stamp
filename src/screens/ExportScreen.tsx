@@ -230,15 +230,19 @@ export const ExportScreen: React.FC = () => {
               <Text style={styles.emptyText}>내보내기 기록이 없습니다</Text>
             </View>
           ) : (
-            exportJobs.map((job) => (
-              <View key={job.id} style={styles.jobCard}>
-                <View style={styles.jobHeader}>
-                  <View>
-                    <Text style={styles.jobDate}>요청일: {formatDate(job.createdAt)}</Text>
-                    <Text style={styles.jobEmail}>{job.email}</Text>
+            exportJobs.map((job) => {
+              // pending/processing: 요청일, completed/failed: 생성일(updatedAt)
+              const dateLabel = (job.status === 'pending' || job.status === 'processing') ? '요청일' : '생성일';
+              const dateValue = (job.status === 'pending' || job.status === 'processing') ? job.createdAt : job.updatedAt;
+
+              return (
+                <View key={job.id} style={styles.jobCard}>
+                  <View style={styles.jobHeader}>
+                    <View>
+                      <Text style={styles.jobDate}>{dateLabel}: {formatDate(dateValue)}</Text>
+                    </View>
+                    {getStatusBadge(job.status)}
                   </View>
-                  {getStatusBadge(job.status)}
-                </View>
 
                 {job.status === 'completed' && job.s3Url && (() => {
                   const isExpired = job.expiresAt ? new Date(job.expiresAt) < new Date() : false;
@@ -279,8 +283,9 @@ export const ExportScreen: React.FC = () => {
                 {job.status === 'failed' && job.errorMessage && (
                   <Text style={styles.errorText}>{job.errorMessage}</Text>
                 )}
-              </View>
-            ))
+                </View>
+              );
+            })
           )}
         </View>
 
