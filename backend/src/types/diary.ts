@@ -2,6 +2,8 @@ export type StampType = 'excellent' | 'good' | 'nice' | 'keep_going';
 export type WeatherType = 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'stormy';
 export type MoodType = 'red' | 'yellow' | 'green';
 
+export type ImageGenerationStatus = 'pending' | 'generating' | 'completed' | 'failed';
+
 export interface DiaryEntry {
   _id: string;
   userId?: string;
@@ -11,6 +13,7 @@ export interface DiaryEntry {
   mood?: MoodType;
   moodTag?: string;
   imageUri?: string;
+  imageGenerationStatus?: ImageGenerationStatus; // 이미지 생성 상태
   aiComment?: string;
   stampType?: StampType;
   model?: 'haiku' | 'sonnet'; // AI 모델 종류 (통계용)

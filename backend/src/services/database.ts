@@ -39,6 +39,8 @@ async function initializeDatabase() {
         weather TEXT,
         mood TEXT,
         "moodTag" TEXT,
+        "imageUri" TEXT,
+        "imageGenerationStatus" TEXT,
         "aiComment" TEXT,
         "stampType" TEXT,
         "createdAt" TEXT NOT NULL,
@@ -55,6 +57,15 @@ async function initializeDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_userId ON diaries("userId")`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_deletedAt ON diaries("deletedAt")`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_date ON diaries(date)`);
+
+    // 마이그레이션: imageUri, imageGenerationStatus 컬럼 추가 (이미 존재하면 무시)
+    try {
+      await pool.query(`ALTER TABLE diaries ADD COLUMN IF NOT EXISTS "imageUri" TEXT`);
+      await pool.query(`ALTER TABLE diaries ADD COLUMN IF NOT EXISTS "imageGenerationStatus" TEXT`);
+      console.log('✅ Migration: imageUri and imageGenerationStatus columns added');
+    } catch (error) {
+      console.log('ℹ️  Migration: columns already exist or migration not needed');
+    }
 
     // push_tokens 테이블 생성
     await pool.query(`
@@ -174,9 +185,12 @@ export class DiaryDatabase {
         // 암호화: content, moodTag, aiComment
         const encrypted = encryptFields(diary);
 
+        console.log('🔍 [DB Create] diary.imageGenerationStatus:', diary.imageGenerationStatus);
+        console.log('🔍 [DB Create] encrypted.imageGenerationStatus:', encrypted.imageGenerationStatus);
+
         await pool.query(
-          `INSERT INTO diaries (_id, "userId", date, content, weather, mood, "moodTag", "aiComment", "stampType", model, "importanceScore", "createdAt", "updatedAt", "syncedWithServer", version)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          `INSERT INTO diaries (_id, "userId", date, content, weather, mood, "moodTag", "imageUri", "imageGenerationStatus", "aiComment", "stampType", model, "importanceScore", "createdAt", "updatedAt", "syncedWithServer", version)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
           [
             encrypted._id,
             encrypted.userId || 'unknown',
@@ -185,6 +199,8 @@ export class DiaryDatabase {
             encrypted.weather || null,
             encrypted.mood || null,
             encrypted.moodTag || null,
+            encrypted.imageUri || null,
+            encrypted.imageGenerationStatus || null,
             encrypted.aiComment || null,
             encrypted.stampType || null,
             encrypted.model || null,
@@ -234,6 +250,16 @@ export class DiaryDatabase {
         if ('moodTag' in updates) {
           fields.push(`"moodTag" = $${paramIndex++}`);
           values.push(encrypted.moodTag ?? null);
+        }
+        if ('imageUri' in updates) {
+          fields.push(`"imageUri" = $${paramIndex++}`);
+          values.push(encrypted.imageUri ?? null);
+        }
+        if ('imageGenerationStatus' in updates) {
+          console.log('🔍 [DB Update] updates.imageGenerationStatus:', updates.imageGenerationStatus);
+          console.log('🔍 [DB Update] encrypted.imageGenerationStatus:', encrypted.imageGenerationStatus);
+          fields.push(`"imageGenerationStatus" = $${paramIndex++}`);
+          values.push(encrypted.imageGenerationStatus ?? null);
         }
         if ('aiComment' in updates) {
           fields.push(`"aiComment" = $${paramIndex++}`);

@@ -13,10 +13,11 @@ import path from 'path';
 import cron from 'node-cron';
 import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
 import { requireFirebaseAuth, requireAdminToken } from './middleware/auth';
-import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
+import diaryRoutes, { initializeClaudeService, initializeImageGenerationService } from './routes/diaryRoutes';
 import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
 import exportRoutes from './routes/exportRoutes';
+import nanobananaRoutes from './routes/nanobananaRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
@@ -99,6 +100,9 @@ app.use('/api', generalApiLimiter, reportRoutes);
 app.use('/api', generalApiLimiter, imageRoutes);
 app.use('/api', generalApiLimiter, exportRoutes);
 
+// Nanobanana callback (레이트리미트 없음 - 외부 API 호출)
+app.use('/api', nanobananaRoutes);
+
 // Initialize Encryption Service FIRST
 initializeEncryption();
 
@@ -114,6 +118,22 @@ if (!process.env.CLAUDE_API_KEY) {
 initializeClaudeService(CLAUDE_API_KEY);
 initializeReportService(CLAUDE_API_KEY);
 const claudeService = new ClaudeService(CLAUDE_API_KEY);
+
+// Initialize Image Generation Service
+const NANOBANANA_API_KEY = process.env.NANOBANANA_API_KEY;
+const NANOBANANA_REFERENCE_IMAGE_URL = process.env.NANOBANANA_REFERENCE_IMAGE_URL;
+const NANOBANANA_CALLBACK_URL = process.env.NANOBANANA_CALLBACK_URL;
+if (NANOBANANA_API_KEY) {
+  initializeImageGenerationService(CLAUDE_API_KEY, NANOBANANA_API_KEY, NANOBANANA_REFERENCE_IMAGE_URL, NANOBANANA_CALLBACK_URL);
+  console.log('✅ Image Generation Service enabled');
+  if (NANOBANANA_REFERENCE_IMAGE_URL) {
+    console.log(`🖼️  Reference image: ${NANOBANANA_REFERENCE_IMAGE_URL}`);
+  } else {
+    console.log('⚠️  No reference image URL configured');
+  }
+} else {
+  console.log('⚠️  NANOBANANA_API_KEY not set - Image generation disabled');
+}
 
 // Start AI Analysis Job
 const aiAnalysisJob = new AIAnalysisJob(claudeService);

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { ClaudeService } from '../services/claudeService';
+import { ImageGenerationService } from '../services/imageGenerationService';
 import { DiaryEntry } from '../types/diary';
 import { DiaryDatabase } from '../services/database';
 import { aiAnalysisLimiter } from '../middleware/rateLimiter';
@@ -10,9 +11,23 @@ const router = Router();
 
 // Claude service instance
 let claudeService: ClaudeService;
+let imageGenerationService: ImageGenerationService | null = null;
 
 export function initializeClaudeService(apiKey: string) {
   claudeService = new ClaudeService(apiKey);
+}
+
+export function initializeImageGenerationService(
+  claudeApiKey: string,
+  nanobananaApiKey: string,
+  referenceImageUrl?: string,
+  callbackUrl?: string
+) {
+  imageGenerationService = new ImageGenerationService(claudeApiKey, nanobananaApiKey, referenceImageUrl, callbackUrl);
+  console.log('✅ ImageGenerationService initialized');
+  if (callbackUrl) {
+    console.log('🔔 Callback URL configured:', callbackUrl);
+  }
 }
 
 // Upload diary from mobile app
@@ -26,6 +41,7 @@ router.post('/diaries',
   body('moodTag').optional().isString().trim().isLength({ max: 100 }),
   body('createdAt').isISO8601(),
   body('updatedAt').isISO8601(),
+  body('generateImage').optional().isBoolean().withMessage('generateImage must be a boolean'),
   async (req: Request, res: Response) => {
     // Check validation errors
     const errors = validationResult(req);
@@ -47,20 +63,37 @@ router.post('/diaries',
         });
       }
 
+      const { generateImage, ...diaryData } = req.body;
+
       const diaryEntry: DiaryEntry = {
-        ...req.body,
+        ...diaryData,
         userId, // X-User-Id 헤더의 userId로 설정
+        // 이미지 생성 요청이 있으면 상태를 pending으로 초기화
+        imageGenerationStatus: generateImage ? 'pending' : undefined,
       };
 
       // 기존 일기가 있으면 업데이트, 없으면 생성
       const existing = await DiaryDatabase.getById(diaryEntry._id);
       if (existing) {
-        // update 시 userId는 변경하지 않음 (기존 userId 유지)
-        // 다른 디바이스에서 같은 일기를 업로드해도 원래 userId 보존
-        const { userId: _, ...updateData } = diaryEntry;
+        // update 시 userId와 imageGenerationStatus는 변경하지 않음
+        // - userId: 원래 userId 보존
+        // - imageGenerationStatus: 이미지 생성 상태는 백그라운드 프로세스가 관리
+        const { userId: _, imageGenerationStatus: __, ...updateData } = diaryEntry;
         await DiaryDatabase.update(diaryEntry._id, updateData);
       } else {
         await DiaryDatabase.create(diaryEntry);
+      }
+
+      // 그림일기 생성 요청 시 백그라운드로 이미지 생성
+      // DEV: 개발 중에는 수정 모드에서도 이미지 생성 허용
+      if (generateImage && imageGenerationService) {
+        console.log(`🎨 [Diary Upload] Triggering image generation for diary ${diaryEntry._id}...`);
+        // 백그라운드로 실행 (await 하지 않음)
+        imageGenerationService
+          .generateImageForDiary(diaryEntry._id, diaryEntry.content)
+          .catch((error) => {
+            console.error(`❌ [Background] Image generation failed for ${diaryEntry._id}:`, error);
+          });
       }
 
       res.status(201).json({

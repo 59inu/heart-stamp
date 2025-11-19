@@ -310,4 +310,59 @@ ${diaryContent}`,
     };
   }
 
+  /**
+   * 일기 내용에서 그림으로 표현할 핵심 장면 추출
+   * @param diaryContent 일기 내용
+   * @returns 단순화된 장면 설명
+   */
+  async extractKeyScene(diaryContent: string): Promise<string> {
+    console.log('🎨 [Scene Extraction] Extracting key scene from diary...');
+
+    try {
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: 'claude-haiku-4-5', // Haiku 사용 (빠르고 저렴)
+          max_tokens: 200,
+          temperature: 0.5,
+          messages: [
+            {
+              role: 'user',
+              content: `당신은 일기를 읽고 그림일기로 표현할 핵심 장면을 추출하는 전문가입니다.
+
+아래 일기를 읽고, 가장 중요하고 그림으로 표현하기 좋은 한 장면을 선택해 단순하게 설명해주세요.
+
+규칙:
+- 구체적인 장면 하나만 선택 (예: "친구와 카페에서 이야기하는 모습", "공원에서 산책하는 모습")
+- 어린이 그림일기 스타일로 표현 가능하도록 단순화
+- 불필요한 세부사항 제거
+- 1-2문장으로 간결하게
+- 표현해야하는 감정이나 분위기 형용
+- **사람 이름을 절대 표기하지 마세요** (예: "지연이" → "friend", "엄마" → "family member")
+- **성별을 모호하게 표현하세요** (예: "a person", "someone", "a friend" 등 성별 중립적 표현 사용)
+- 영어로 응답하세요 (이미지 생성 API용)
+
+일기:
+${diaryContent}`,
+            },
+          ],
+        }),
+        15000 // 15초 타임아웃
+      );
+
+      const content = response.content[0];
+      if (content.type === 'text') {
+        const scene = content.text.trim();
+        console.log(`✅ [Scene Extraction] Extracted scene: ${scene}`);
+        return scene;
+      }
+
+      throw new Error('Invalid response format from Claude API');
+    } catch (error: any) {
+      console.error('❌ [Scene Extraction] Failed:', error);
+      // Fallback: 일기의 첫 문장 사용
+      const firstSentence = diaryContent.split(/[.!?。！？\n]+/)[0].substring(0, 100);
+      return `A simple illustration of: ${firstSentence}`;
+    }
+  }
+
 }
