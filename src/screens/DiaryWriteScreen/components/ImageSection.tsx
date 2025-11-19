@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { logger } from '../../../utils/logger';
 import { COLORS } from '../../../constants/colors';
 
@@ -25,6 +26,8 @@ interface ImageSectionProps {
   onLoadStart: () => void;
   onLoad: () => void;
   onError: (error: any) => void;
+  isEditMode?: boolean;
+  onAIGenerate?: () => void;
 }
 
 export const ImageSection: React.FC<ImageSectionProps> = ({
@@ -37,60 +40,80 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
   onLoadStart,
   onLoad,
   onError,
+  isEditMode = false,
+  onAIGenerate,
 }) => {
+  // 이미지가 있을 때
+  if (imageUri) {
+    return (
+      <TouchableOpacity
+        style={[styles.imageContainer, { height: IMAGE_HEIGHT }]}
+        onPress={onImagePick}
+        activeOpacity={0.7}
+        disabled={uploadingImage}
+      >
+        {loadingEntry ? (
+          <View style={styles.uploadingOverlay}>
+            <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.diaryImage}
+            contentFit="contain"
+            transition={200}
+            placeholder={require('../../../../assets/image-placeholder.png')}
+            placeholderContentFit="contain"
+            cachePolicy="memory-disk"
+            priority="high"
+          />
+        )}
+        {uploadingImage && (
+          <View style={styles.uploadingOverlay}>
+            <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
+            <Text style={styles.uploadingText}>업로드 중...</Text>
+          </View>
+        )}
+        {!uploadingImage && (
+          <TouchableOpacity
+            style={styles.imageDeleteButton}
+            onPress={onImageRemove}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.imageDeleteIcon}>×</Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  // 이미지가 없을 때
   return (
-    <TouchableOpacity
-      style={[
-        styles.imageContainer,
-        { height: imageUri ? IMAGE_HEIGHT : PLACEHOLDER_HEIGHT }
-      ]}
-      onPress={onImagePick}
-      activeOpacity={0.7}
-      disabled={uploadingImage}
-    >
-      {loadingEntry ? (
-        <View style={styles.uploadingOverlay}>
-          <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
-        </View>
-      ) : imageUri ? (
-        <Image
-          source={{ uri: imageUri }}
-          style={styles.diaryImage}
-          contentFit="contain"
-          transition={200}
-          placeholder={require('../../../../assets/image-placeholder.png')}
-          placeholderContentFit="contain"
-          cachePolicy="memory-disk"
-          priority="high"
-        />
-      ) : (
-        <Image
-          source={require('../../../../assets/image-placeholder.png')}
-          style={[styles.diaryImage, styles.placeholderImage]}
-          contentFit="contain"
-        />
+    <View style={[styles.buttonContainer, { height: PLACEHOLDER_HEIGHT }]}>
+      {!isEditMode && onAIGenerate && (
+        <>
+          <TouchableOpacity
+            style={[styles.button, styles.aiButton]}
+            onPress={onAIGenerate}
+            activeOpacity={0.7}
+            disabled={uploadingImage}
+          >
+            <Ionicons name="sparkles" size={28} color={COLORS.emotionPositive} style={styles.buttonIcon} />
+            <Text style={styles.buttonText}>AI 이미지 생성</Text>
+          </TouchableOpacity>
+          <View style={styles.buttonSpacer} />
+        </>
       )}
-      {uploadingImage && (
-        <View style={styles.uploadingOverlay}>
-          <ActivityIndicator size="large" color={COLORS.buttonSecondaryBackground} />
-          <Text style={styles.uploadingText}>업로드 중...</Text>
-        </View>
-      )}
-      {!imageUri && !uploadingImage && (
-        <View style={styles.imagePlaceholderOverlay}>
-          <Text style={styles.imagePlaceholderText}>탭하여 사진 추가</Text>
-        </View>
-      )}
-      {imageUri && !uploadingImage && (
-        <TouchableOpacity
-          style={styles.imageDeleteButton}
-          onPress={onImageRemove}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.imageDeleteIcon}>×</Text>
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.button, styles.galleryButton, isEditMode && styles.fullWidth]}
+        onPress={onImagePick}
+        activeOpacity={0.7}
+        disabled={uploadingImage}
+      >
+        <Ionicons name="images" size={28} color={COLORS.secondary} style={styles.buttonIcon} />
+        <Text style={styles.buttonText}>갤러리에서 선택</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
@@ -106,25 +129,43 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  placeholderImage: {
-    opacity: 0.4,
-    width: 100,
-    height: 100,
+  buttonContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  imagePlaceholderOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  button: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    paddingVertical: 20,
   },
-  imagePlaceholderText: {
+  buttonSpacer: {
+    width: 8,
+  },
+  aiButton: {
+    backgroundColor: COLORS.emotionPositiveLight,
+    borderColor: COLORS.emotionPositiveStrong,
+  },
+  galleryButton: {
+    backgroundColor: COLORS.secondaryLight,
+    borderColor: COLORS.secondary,
+  },
+  fullWidth: {
+    flex: 1,
+  },
+  buttonIcon: {
+    marginBottom: 8,
+  },
+  buttonText: {
     fontSize: 13,
     color: '#666',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   imageDeleteButton: {
     position: 'absolute',
