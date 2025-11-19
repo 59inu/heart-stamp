@@ -14,7 +14,12 @@ const router = express.Router();
  */
 router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.userId!;
+    // 클라이언트가 보낸 userId 사용 (로컬 UUID)
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(400).json({ error: 'User ID is required' });
+      return;
+    }
 
     const { format }: ExportRequest = req.body;
 
@@ -73,7 +78,12 @@ router.post('/export/request', requireFirebaseAuth, async (req: Request, res: Re
  */
 router.get('/export/status/:jobId', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.userId!;
+    // 클라이언트가 보낸 userId 사용 (로컬 UUID)
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(400).json({ error: 'User ID is required' });
+      return;
+    }
     const { jobId } = req.params;
 
     const job = await ExportJobDatabase.get(jobId);
@@ -112,7 +122,12 @@ router.get('/export/status/:jobId', requireFirebaseAuth, async (req: Request, re
  */
 router.get('/export/jobs', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.userId!;
+    // 클라이언트가 보낸 userId 사용 (로컬 UUID)
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(400).json({ error: 'User ID is required' });
+      return;
+    }
 
     const jobs = await ExportJobDatabase.getAllForUser(userId);
 
@@ -141,7 +156,12 @@ router.get('/export/jobs', requireFirebaseAuth, async (req: Request, res: Respon
  */
 router.delete('/export/delete-all', requireFirebaseAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.userId!;
+    // 클라이언트가 보낸 userId 사용 (로컬 UUID)
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      res.status(400).json({ error: 'User ID is required' });
+      return;
+    }
 
     // Delete all diaries
     const deletedDiaries = await DiaryDatabase.deleteAllForUser(userId);
