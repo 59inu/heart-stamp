@@ -30,7 +30,7 @@ export class NanobananaService {
         type: 'IMAGETOIAMGE', // 레퍼런스 이미지 사용
         image_size: '3:2',
         imageUrls: this.referenceImageUrl ? [this.referenceImageUrl] : [null],
-        watermark: 'Heart Stamp',
+        watermark: 'HeartStamp',
         callBackUrl: this.callbackUrl, // 콜백 URL 추가
       };
 
@@ -88,6 +88,7 @@ Match the look of a kid's hand-drawn doodle:
 Make it feel easy and innocent like a child's drawing.
 Use the attached image as reference for style only.
 Do NOT copy the exact characters or composition.
+IGNORE any watermarks or text in the reference image.
 
 IMPORTANT - Gender and Identity:
 - Draw all people with gender-neutral features (simple round heads, no distinct gender characteristics)
