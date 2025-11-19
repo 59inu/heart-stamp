@@ -1,4 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
+import { Agent as HttpsAgent } from 'https';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
@@ -13,13 +15,21 @@ import fs from 'fs';
  * - S3_BUCKET_NAME
  */
 
-// S3 클라이언트 초기화
+// S3 클라이언트 초기화 (타임아웃 및 연결 설정 추가)
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'ap-northeast-2',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
   },
+  requestHandler: new NodeHttpHandler({
+    requestTimeout: 30000, // 30초 타임아웃
+    httpsAgent: new HttpsAgent({
+      keepAlive: true, // HTTP keep-alive 활성화 (연결 재사용)
+      maxSockets: 50, // 최대 동시 연결 수
+    }),
+  }),
+  maxAttempts: 3, // 최대 3회 재시도
 });
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || '';
