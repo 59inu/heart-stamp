@@ -141,8 +141,8 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                   <ViewShot
                     ref={viewShotRef}
                     options={{
-                      format: 'png',
-                      quality: 1.0,
+                      format: 'jpg',
+                      quality: 0.95,
                       width: CAPTURE_WIDTH,
                     }}
                     style={styles.viewShot}
@@ -292,8 +292,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   shareableContent: {
-    backgroundColor: '#faf8f3',
-    paddingTop: 8,
+    backgroundColor: 'transparent',
+    paddingTop: 0,
     paddingHorizontal: 0,
     width: CAPTURE_WIDTH,
   },
@@ -303,7 +303,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 0,
     paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 8,
+    backgroundColor: '#faf8f3',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
