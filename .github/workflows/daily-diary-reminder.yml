@@ -1,0 +1,56 @@
+name: Daily Diary Reminder Wake-up
+
+on:
+  schedule:
+    # 매일 저녁 8시 55분 (KST) = UTC 11:55
+    - cron: '55 11 * * *'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  wake-server-for-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up server before diary reminder
+        run: |
+          echo "⏰ Waking up server at $(date) for diary reminder at 9:00 PM KST"
+
+          # 브랜치에 따라 환경 선택
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            RAILWAY_URL="${{ secrets.RAILWAY_PROD_URL }}"
+            ENV_NAME="Production"
+          else
+            RAILWAY_URL="${{ secrets.RAILWAY_DEV_URL }}"
+            ENV_NAME="Development"
+          fi
+
+          echo "Environment: $ENV_NAME"
+          echo "Branch: ${{ github.ref_name }}"
+
+          # RAILWAY_URL 검증
+          if [ -z "$RAILWAY_URL" ]; then
+            echo "❌ Error: RAILWAY_URL secret is not set for $ENV_NAME"
+            echo "Please set RAILWAY_PROD_URL or RAILWAY_DEV_URL in GitHub Secrets"
+            exit 1
+          fi
+
+          # curl 실패 시 바로 종료
+          set -e
+
+          response=$(curl -s -w "\n%{http_code}" "$RAILWAY_URL/health" || {
+            echo "❌ Error: Failed to connect to Railway server ($ENV_NAME)"
+            exit 3
+          })
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Server is awake and ready for diary reminder cron job ($ENV_NAME)"
+            exit 0
+          else
+            echo "❌ Error: Server responded with status $http_code ($ENV_NAME)"
+            exit 1
+          fi

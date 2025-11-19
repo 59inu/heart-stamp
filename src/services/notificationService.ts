@@ -271,15 +271,24 @@ export class NotificationService {
 
   /**
    * 일기 작성 알림 설정 상태 불러오기
+   * 권한이 없으면 자동으로 false 반환
    */
   static async getDailyReminderEnabled(): Promise<boolean> {
     try {
+      // 권한 체크
+      const hasPermission = await this.checkPushPermission();
+      if (!hasPermission) {
+        // 권한 없으면 설정도 false로 동기화
+        await AsyncStorage.setItem(DAILY_REMINDER_KEY, 'false');
+        return false;
+      }
+
       const value = await AsyncStorage.getItem(DAILY_REMINDER_KEY);
       // 기본값은 true (처음 설치 시 알림 활성화)
       return value === null ? true : value === 'true';
     } catch (error) {
       logger.error('❌ Failed to get daily reminder setting:', error);
-      return true; // 오류 시 기본값 반환
+      return false; // 오류 시 false 반환
     }
   }
 
@@ -288,9 +297,13 @@ export class NotificationService {
    */
   static async setDailyReminderEnabled(enabled: boolean): Promise<void> {
     try {
-      await AsyncStorage.setItem(DAILY_REMINDER_KEY, String(enabled));
-
       if (enabled) {
+        // 권한 확인
+        const hasPermission = await this.checkPushPermission();
+        if (!hasPermission) {
+          throw new Error('Push notification permission denied');
+        }
+
         // 알림 활성화: 매일 저녁 9시로 예약
         await this.scheduleDailyReminder(21, 0);
       } else {
@@ -298,6 +311,7 @@ export class NotificationService {
         await this.cancelDailyReminder();
       }
 
+      await AsyncStorage.setItem(DAILY_REMINDER_KEY, String(enabled));
       logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       logger.error('❌ Failed to set daily reminder setting:', error);

@@ -413,6 +413,27 @@ export class DiaryDatabase {
     }
   }
 
+  // 특정 사용자가 오늘 일기를 작성했는지 확인
+  static async hasUserWrittenToday(userId: string): Promise<boolean> {
+    try {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      const result = await pool.query(
+        'SELECT COUNT(*) as count FROM diaries WHERE "userId" = $1 AND date LIKE $2 AND "deletedAt" IS NULL',
+        [userId, `${todayStr}%`]
+      );
+
+      return parseInt(result.rows[0].count) > 0;
+    } catch (error) {
+      this.handleDatabaseError(error, 'hasUserWrittenToday');
+      return false; // 에러 시 false 반환 (안전하게)
+    }
+  }
+
   // 최근 AI 코멘트 조회 (관리자용)
   static async getRecentAIComments(limit: number = 10): Promise<any[]> {
     try {

@@ -110,9 +110,12 @@ export const SettingsScreen: React.FC = () => {
           setNotificationEnabled(false);
         }
 
-        // 현재 설정 값 다시 로드
+        // 현재 설정 값 다시 로드 (두 알림 모두)
         const teacherCommentSetting = await NotificationService.getTeacherCommentNotificationEnabled();
         setNotificationEnabled(teacherCommentSetting);
+
+        const dailyReminderSetting = await NotificationService.getDailyReminderEnabled();
+        setDailyReminderEnabled(dailyReminderSetting);
       }
     });
 
@@ -242,11 +245,26 @@ export const SettingsScreen: React.FC = () => {
     } catch (error) {
       logger.error('Failed to toggle daily reminder:', error);
       // 실패 시 원래 상태로 복구
-      setDailyReminderEnabled(!value);
-      Alert.alert(
-        '알림 설정 실패',
-        '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
-      );
+      setDailyReminderEnabled(previousState);
+
+      // 에러 메시지 파싱
+      const errorMessage = error instanceof Error ? error.message : '';
+
+      if (errorMessage.includes('permission denied')) {
+        Alert.alert(
+          '알림 권한 필요',
+          '일기 작성 알림을 받으려면 알림 권한이 필요합니다.\n\n설정에서 알림을 허용해주세요.',
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '설정으로 이동', onPress: handleOpenSettings },
+          ]
+        );
+      } else {
+        Alert.alert(
+          '알림 설정 실패',
+          '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
+        );
+      }
     }
   };
 

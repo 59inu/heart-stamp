@@ -10,6 +10,7 @@ printEnvironmentInfo();
 import express, { Application } from 'express';
 import cors from 'cors';
 import path from 'path';
+import cron from 'node-cron';
 import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
 import { requireFirebaseAuth, requireAdminToken } from './middleware/auth';
 import diaryRoutes, { initializeClaudeService } from './routes/diaryRoutes';
@@ -125,6 +126,60 @@ backupJob.start();
 // Start Export Job
 ExportJob.start();
 ExportJob.startCleanup();
+
+// 일기 작성 알림 Cron Job (매일 저녁 9시 KST = UTC 12:00)
+cron.schedule('0 12 * * *', async () => {
+  try {
+    console.log('📅 [Daily Reminder] Starting daily diary reminder job...');
+
+    const { DiaryDatabase, PushTokenDatabase } = require('./services/database');
+    const tokens = await PushTokenDatabase.getAll();
+
+    console.log(`👥 [Daily Reminder] Checking ${tokens.length} users for diary reminder...`);
+
+    let sentCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    for (const { userId, token } of tokens) {
+      try {
+        // 오늘 일기 작성 여부 확인
+        const hasWrittenToday = await DiaryDatabase.hasUserWrittenToday(userId);
+
+        if (!hasWrittenToday) {
+          // 일기 안 쓴 사용자에게만 알림 전송
+          const success = await PushNotificationService.sendNotification(
+            userId,
+            '오늘의 일기를 써볼까요? 📝',
+            '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요'
+          );
+
+          if (success) {
+            sentCount++;
+          } else {
+            failedCount++;
+          }
+        } else {
+          skippedCount++;
+        }
+
+        // Rate limiting: 약간의 지연
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`❌ [Daily Reminder] Error sending notification to user ${userId}:`, error);
+        failedCount++;
+      }
+    }
+
+    console.log(`✅ [Daily Reminder] Job completed: ${sentCount} sent, ${skippedCount} skipped (already written), ${failedCount} failed`);
+  } catch (error) {
+    console.error('❌ [Daily Reminder] Job failed:', error);
+  }
+}, {
+  timezone: 'Asia/Seoul'
+});
+
+console.log('✅ Daily diary reminder cron job scheduled (9:00 PM KST)');
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
