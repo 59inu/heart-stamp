@@ -1,11 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -13,11 +12,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { DateData } from 'react-native-calendars';
 import { format } from 'date-fns';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import MaskedView from '@react-native-masked-view/masked-view';
 import { RootStackParamList } from '../../navigation/types';
 import { OnboardingService } from '../../services/onboardingService';
 import { FirstVisitGuide } from '../../components/FirstVisitGuide';
 import { SyncStatusBar } from '../../components/SyncStatusBar';
+import { AnimatedHeartIcon } from '../../components/AnimatedHeartIcon';
 import { COLORS } from '../../constants/colors';
 import { diaryEvents, EVENTS } from '../../services/eventEmitter';
 import { logger } from '../../utils/logger';
@@ -39,10 +38,6 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-
-  // 하트 애니메이션
-  const heartShake = useRef(new Animated.Value(0)).current;
-  const heartScale = useRef(new Animated.Value(1)).current;
 
   // Custom hooks
   const {
@@ -161,124 +156,16 @@ export const DiaryListScreen: React.FC = () => {
   }, [currentDate, navigation]);
 
   const handleHeartPress = useCallback(() => {
-    // 흔들림 + 통통 튀는 애니메이션
-    Animated.sequence([
-      // 커지면서
-      Animated.timing(heartScale, {
-        toValue: 1.2,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      // 흔들리기
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(heartShake, {
-            toValue: 10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(heartShake, {
-            toValue: -10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(heartShake, {
-            toValue: 10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(heartShake, {
-            toValue: -10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(heartShake, {
-            toValue: 0,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-        ]),
-        // 크기는 원래대로
-        Animated.timing(heartScale, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  }, [heartShake, heartScale]);
+    // TODO: 연간 감정 흐름 화면으로 이동
+    navigation.navigate('YearlyEmotionFlow');
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerLeft} onPress={handleHeartPress} activeOpacity={0.8}>
-          <Animated.View
-            style={{
-              transform: [
-                { rotate: heartShake.interpolate({
-                  inputRange: [-10, 10],
-                  outputRange: ['-10deg', '10deg'],
-                })},
-                { scale: heartScale },
-              ],
-            }}
-          >
-            {/* 동그라미 3개 겹쳐진 하트 */}
-            <MaskedView
-              maskElement={
-                <Ionicons name="heart" size={28} color="#fff" />
-              }
-            >
-              <View style={{ width: 28, height: 28, position: 'relative' }}>
-                {/* 베이지 원 - 왼쪽 위 */}
-                <View style={{
-                  position: 'absolute',
-                  width: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: '#F5EFE5',
-                  left: 2,
-                  top: 3,
-                  opacity: 1,
-                }} />
-                {/* 핑크 원 - 오른쪽 위 (조금 작게) */}
-                <View style={{
-                  position: 'absolute',
-                  width: 16,
-                  height: 16,
-                  borderRadius: 8,
-                  backgroundColor: '#F19392',
-                  right: -2,
-                  top: 3,
-                  opacity: 1,
-                }} />
-
-                  {/* 블루 원 - 아래 좌측 */}
-                <View style={{
-                  position: 'absolute',
-                  width: 20,
-                  height: 18,
-                  borderRadius: 10,
-                  backgroundColor: '#87A6D1',
-                  left: 5,
-                  bottom: -2,
-                  opacity: 1,
-                }} />
-                                {/* 민트 작은 점 */}
-                <View style={{
-                  position: 'absolute',
-                  width: 15,
-                  height: 8,
-                  borderRadius: 5,
-                  backgroundColor: '#9DD2B6',
-                  left: 0,
-                  bottom: 10,
-                  opacity: 1,
-                }} />
-              </View>
-            </MaskedView>
-          </Animated.View>
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <AnimatedHeartIcon onPress={handleHeartPress} />
+        </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.iconButton}

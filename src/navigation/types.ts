@@ -9,4 +9,5 @@ export type RootStackParamList = {
   Settings: undefined;
   StampCollection: { year: number; month: number };
   Export: undefined;
+  YearlyEmotionFlow: undefined;
 };
