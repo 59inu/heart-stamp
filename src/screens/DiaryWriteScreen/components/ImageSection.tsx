@@ -14,7 +14,7 @@ import { COLORS } from '../../../constants/colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const IMAGE_HEIGHT = (SCREEN_WIDTH * 3) / 5; // 3:5 비율
-const PLACEHOLDER_HEIGHT = 120; // 플레이스홀더 높이 (작게)
+const PLACEHOLDER_HEIGHT = 80; // 플레이스홀더 높이 (작게)
 
 interface ImageSectionProps {
   imageUri: string | null;
@@ -98,7 +98,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
             activeOpacity={0.7}
             disabled={uploadingImage}
           >
-            <Ionicons name="sparkles" size={28} color={COLORS.emotionPositive} style={styles.buttonIcon} />
+            <Ionicons name="sparkles" size={20} color={COLORS.emotionPositive} style={styles.buttonIcon} />
             <Text style={styles.buttonText}>AI 이미지 생성</Text>
           </TouchableOpacity>
           <View style={styles.buttonSpacer} />
@@ -110,7 +110,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
         activeOpacity={0.7}
         disabled={uploadingImage}
       >
-        <Ionicons name="images" size={28} color={COLORS.secondary} style={styles.buttonIcon} />
+        <Ionicons name="images" size={20} color={COLORS.secondary} style={styles.buttonIcon} />
         <Text style={styles.buttonText}>갤러리에서 선택</Text>
       </TouchableOpacity>
     </View>
@@ -133,17 +133,17 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   button: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#e0e0e0',
-    paddingVertical: 20,
+    paddingVertical: 12,
   },
   buttonSpacer: {
     width: 8,
@@ -160,12 +160,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttonIcon: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
   buttonText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   imageDeleteButton: {
     position: 'absolute',
