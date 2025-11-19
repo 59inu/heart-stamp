@@ -11,7 +11,7 @@
  * 설치 방법: npm install @react-native-firebase/app @react-native-firebase/analytics
  */
 
-// import analytics from '@react-native-firebase/analytics';
+import analytics from '@react-native-firebase/analytics';
 import { Platform } from 'react-native';
 import { UserService } from './userService';
 import { DiaryEntry } from '../models/DiaryEntry';
@@ -19,8 +19,7 @@ import { logger } from '../utils/logger';
 import { ANALYTICS_CONFIG } from '../config/analytics';
 
 // 환경별 자동 조절: 개발 모드에서는 MOCK, 프로덕션에서는 실제 Firebase
-// Firebase 설치 전까지는 항상 true로 유지하거나, 아래처럼 __DEV__로 변경
-const FIREBASE_INSTALLED = false;  // Firebase 설치 후 true로 변경
+const FIREBASE_INSTALLED = true;  // Firebase Analytics 설치됨
 const MOCK_MODE = FIREBASE_INSTALLED ? __DEV__ : true;
 
 export class AnalyticsService {
@@ -51,9 +50,9 @@ export class AnalyticsService {
 
       if (!MOCK_MODE && this.shouldTrack()) {
         // 프로덕션 모드: Firebase로 전송
-        // await analytics().setUserId(userId);
-        // await analytics().setUserProperty('platform', Platform.OS);
-        // await analytics().setUserProperty('app_version', '1.0.0');
+        await analytics().setUserId(userId);
+        await analytics().setUserProperty('platform', Platform.OS);
+        await analytics().setUserProperty('app_version', '1.0.0');
       }
 
       this.isInitialized = true;
@@ -83,7 +82,7 @@ export class AnalyticsService {
 
       // 실제 Firebase 전송 (프로덕션만)
       if (!MOCK_MODE && this.shouldTrack()) {
-        // await analytics().logEvent(eventName, params);
+        await analytics().logEvent(eventName, params);
       }
     } catch (error) {
       logger.error(`❌ Failed to log event ${eventName}:`, error);
@@ -105,7 +104,7 @@ export class AnalyticsService {
 
       // 실제 Firebase 전송 (프로덕션만)
       if (!MOCK_MODE && this.shouldTrack()) {
-        // await analytics().setUserProperty(name, value);
+        await analytics().setUserProperty(name, value);
       }
     } catch (error) {
       logger.error(`❌ Failed to set user property ${name}:`, error);
