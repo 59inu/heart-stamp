@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
   ScrollView,
+  Switch,
 } from 'react-native';
 import { Image } from 'expo-image';
 import ViewShot from 'react-native-view-shot';
@@ -42,6 +43,7 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
   const [isSaving, setIsSaving] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [viewShotHeight, setViewShotHeight] = useState<number | null>(null);
+  const [includeComment, setIncludeComment] = useState(true);
 
   const getScaledTransform = () => {
     if (!viewShotHeight) {
@@ -113,6 +115,19 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
         <View style={styles.modalContent}>
           {/* 상단 헤더 영역 */}
           <View style={styles.modalHeader}>
+            <View style={styles.headerContent}>
+              <View style={styles.toggleContainer}>
+                <Text style={styles.toggleLabel}>선생님 코멘트</Text>
+                <Switch
+                  value={includeComment}
+                  onValueChange={setIncludeComment}
+                  trackColor={{ false: '#d1d5db', true: COLORS.secondary }}
+                  thumbColor="#fff"
+                  ios_backgroundColor="#d1d5db"
+                  style={styles.toggleSwitch}
+                />
+              </View>
+            </View>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Ionicons name="close" size={28} color="#666" />
             </TouchableOpacity>
@@ -162,18 +177,20 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                             </View>
 
                             {/* 이미지 섹션 */}
-                            {diary.imageUri && diary.imageGenerationStatus === 'completed' && (
-                              <View style={styles.imageSection}>
-                                <Image
-                                  source={{ uri: diary.imageUri }}
-                                  style={styles.diaryImage}
-                                  contentFit="contain"
-                                  cachePolicy="memory-disk"
-                                  priority="high"
-                                  transition={0}
-                                />
-                              </View>
-                            )}
+                            {diary.imageUri &&
+                              diary.imageGenerationStatus !== 'generating' &&
+                              diary.imageGenerationStatus !== 'pending' && (
+                                <View style={styles.imageSection}>
+                                  <Image
+                                    source={{ uri: diary.imageUri }}
+                                    style={styles.diaryImage}
+                                    contentFit="contain"
+                                    cachePolicy="memory-disk"
+                                    priority="high"
+                                    transition={0}
+                                  />
+                                </View>
+                              )}
 
                             {/* 본문 - 원고지 스타일 */}
                             <View style={styles.contentSection}>
@@ -181,7 +198,7 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                             </View>
 
                             {/* 선생님 코멘트 */}
-                            {diary.aiComment && (
+                            {includeComment && diary.aiComment && (
                               <View style={styles.commentSection}>
                                 <View style={styles.commentHeader}>
                                   <View style={styles.emojiCircle}>
@@ -195,7 +212,19 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
 
                             {/* 도장 오버레이 */}
                             {diary.stampType && (
-                              <View style={styles.stampOverlay}>
+                              <View
+                                style={[
+                                  styles.stampOverlay,
+                                  {
+                                    top:
+                                      diary.imageUri &&
+                                      diary.imageGenerationStatus !== 'generating' &&
+                                      diary.imageGenerationStatus !== 'pending'
+                                        ? '45%' // 이미지 있을 때
+                                        : '15%', // 이미지 없을 때
+                                  },
+                                ]}
+                              >
                                 <Image
                                   source={getStampImage(diary.stampType)}
                                   style={[
@@ -267,11 +296,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   modalHeader: {
-    height: 48,
+    height: 56,
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'relative',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  headerContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  toggleSwitch: {
+    transform: [{ scale: 0.8 }],
   },
   closeButton: {
     position: 'absolute',
@@ -348,7 +397,6 @@ const styles = StyleSheet.create({
   },
   stampOverlay: {
     position: 'absolute',
-    top: '25%',
     right: -80,
     zIndex: 10,
   },
