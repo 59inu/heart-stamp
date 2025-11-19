@@ -141,21 +141,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
     paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   buttonSpacer: {
     width: 8,
   },
-  aiButton: {
-    backgroundColor: COLORS.emotionPositiveLight,
-    borderColor: COLORS.emotionPositiveStrong,
-  },
-  galleryButton: {
-    backgroundColor: COLORS.secondaryLight,
-    borderColor: COLORS.secondary,
-  },
+  aiButton: {},
+  galleryButton: {},
   fullWidth: {
     flex: 1,
   },
