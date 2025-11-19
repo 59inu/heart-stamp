@@ -13,6 +13,8 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { StampCollectionScreen } from '../screens/StampCollectionScreen';
 import { ExportScreen } from '../screens/ExportScreen';
 import { YearlyEmotionFlowScreen } from '../screens/YearlyEmotionFlowScreen';
+import { MailboxScreen } from '../screens/MailboxScreen';
+import { LetterDetailScreen } from '../screens/LetterDetailScreen';
 import { COLORS } from '../constants/colors';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { logger } from '../utils/logger';
@@ -150,6 +152,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ onNavigationStateCha
           {() => (
             <ErrorBoundary level="screen">
               <YearlyEmotionFlowScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="Mailbox">
+          {() => (
+            <ErrorBoundary level="screen">
+              <MailboxScreen />
+            </ErrorBoundary>
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="LetterDetail">
+          {() => (
+            <ErrorBoundary level="screen">
+              <LetterDetailScreen />
             </ErrorBoundary>
           )}
         </Stack.Screen>

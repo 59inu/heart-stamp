@@ -20,6 +20,7 @@ import { AnimatedHeartIcon } from '../../components/AnimatedHeartIcon';
 import { COLORS } from '../../constants/colors';
 import { diaryEvents, EVENTS } from '../../services/eventEmitter';
 import { logger } from '../../utils/logger';
+import { apiService } from '../../services/apiService';
 import { useDiaryManagement } from './hooks/useDiaryManagement';
 import { useCalendarMarking } from './hooks/useCalendarMarking';
 import { useMoodStats } from './hooks/useMoodStats';
@@ -38,6 +39,7 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
   // Custom hooks
   const {
@@ -47,6 +49,18 @@ export const DiaryListScreen: React.FC = () => {
     handleRefresh,
     handleHeaderTap,
   } = useDiaryManagement();
+
+  // 읽지 않은 편지 개수 로드
+  const loadUnreadLetterCount = useCallback(async () => {
+    try {
+      const result = await apiService.getUnreadLetterCount();
+      if (result.success) {
+        setHasUnreadMessages(result.data > 0);
+      }
+    } catch (error) {
+      logger.error('Error loading unread letter count:', error);
+    }
+  }, []);
 
   // 오늘 날짜를 한 번만 계산 (성능 최적화)
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -74,6 +88,7 @@ export const DiaryListScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadDiaries();
+      loadUnreadLetterCount();
 
       // 첫 방문 온보딩 체크
       const checkOnboarding = async () => {
@@ -83,7 +98,7 @@ export const DiaryListScreen: React.FC = () => {
         }
       };
       checkOnboarding();
-    }, [loadDiaries])
+    }, [loadDiaries, loadUnreadLetterCount])
   );
 
   // AI 코멘트 수신 시 자동 새로고침
@@ -151,6 +166,10 @@ export const DiaryListScreen: React.FC = () => {
     navigation.navigate('YearlyEmotionFlow');
   }, [navigation]);
 
+  const handleMailboxPress = useCallback(() => {
+    navigation.navigate('Mailbox');
+  }, [navigation]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -158,6 +177,13 @@ export const DiaryListScreen: React.FC = () => {
           <AnimatedHeartIcon onPress={handleHeartPress} />
         </View>
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.mailboxButton}
+            onPress={handleMailboxPress}
+          >
+            <MaterialCommunityIcons name="mailbox" size={24} color="#4B5563" />
+            {hasUnreadMessages && <View style={styles.unreadBadge} />}
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate('Report')}
@@ -257,6 +283,22 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  mailboxButton: {
+    padding: 0,
+    position: 'relative',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
   headerRight: {
     flexDirection: 'row',

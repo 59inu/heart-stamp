@@ -3,7 +3,7 @@ import { DiaryDatabase } from '../services/database';
 
 const router = express.Router();
 
-const MONTHLY_LIMIT = 3;
+const MONTHLY_LIMIT = 5;
 
 /**
  * 월별 그림일기 크레딧 조회

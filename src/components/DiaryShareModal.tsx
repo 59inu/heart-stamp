@@ -146,7 +146,7 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                   styles.scaleWrapper,
                   viewShotHeight
                     ? {
-                        height: Math.round(viewShotHeight * SCALE_RATIO),
+                        height: Math.round(viewShotHeight * Math.round(SCALE_RATIO)),
                         overflow: 'hidden',
                       }
                     : undefined,
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: MODAL_WIDTH + 32,
+    minHeight: 500,
     maxHeight: 660,
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     width: CAPTURE_WIDTH,
   },
   captureRoot: {
-    backgroundColor: '#faf8f3',
+    backgroundColor: '#fffef8',
     width: CAPTURE_WIDTH,
     paddingBottom: 16,
   },

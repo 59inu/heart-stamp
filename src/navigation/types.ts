@@ -10,4 +10,6 @@ export type RootStackParamList = {
   StampCollection: { year: number; month: number };
   Export: undefined;
   YearlyEmotionFlow: undefined;
+  Mailbox: undefined;
+  LetterDetail: { letterId: string };
 };

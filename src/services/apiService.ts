@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { DiaryEntry } from '../models/DiaryEntry';
 import { Report } from '../models/Report';
+import { Letter } from '../models/Letter';
 import { UserService } from './userService';
 import { AuthService } from './authService';
 import { API_BASE_URL, ENV } from '../config/environment';
@@ -526,6 +527,61 @@ export class ApiService {
       return { success: false, error: '크레딧 정보를 불러올 수 없습니다' };
     } catch (error: any) {
       logger.error('Error getting image generation credit:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
+    }
+  }
+
+  // Letter methods
+  async getLetters(): Promise<ApiResult<Letter[]>> {
+    try {
+      const response = await this.axiosInstance.get('/letters');
+      if (response.data.letters) {
+        return { success: true, data: response.data.letters };
+      }
+      return { success: false, error: '편지 목록을 불러올 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error getting letters:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
+    }
+  }
+
+  async getUnreadLetterCount(): Promise<ApiResult<number>> {
+    try {
+      const response = await this.axiosInstance.get('/letters/unread-count');
+      if (response.data.unreadCount !== undefined) {
+        return { success: true, data: response.data.unreadCount };
+      }
+      return { success: false, error: '읽지 않은 편지 개수를 불러올 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error getting unread letter count:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
+    }
+  }
+
+  async markLetterAsRead(letterId: string): Promise<ApiResult<boolean>> {
+    try {
+      const response = await this.axiosInstance.post(`/letters/${letterId}/read`);
+      if (response.data.success) {
+        return { success: true, data: true };
+      }
+      return { success: false, error: '편지 읽음 처리에 실패했습니다' };
+    } catch (error: any) {
+      logger.error('Error marking letter as read:', error);
       const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
       return {
         success: false,

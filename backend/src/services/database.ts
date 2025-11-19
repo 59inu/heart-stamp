@@ -98,6 +98,25 @@ async function initializeDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_export_userId ON export_jobs("userId")`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_export_status ON export_jobs(status)`);
 
+    // letters 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS letters (
+        id TEXT PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        "isRead" BOOLEAN DEFAULT FALSE,
+        "createdAt" TEXT NOT NULL,
+        "readAt" TEXT
+      )
+    `);
+
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_letters_userId ON letters("userId")`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_letters_isRead ON letters("isRead")`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_letters_year_month ON letters(year, month)`);
+
     console.log('✅ PostgreSQL database initialized');
   } catch (error) {
     console.error('❌ Failed to initialize PostgreSQL database:', error);

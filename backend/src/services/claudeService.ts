@@ -104,7 +104,7 @@ export class ClaudeService {
       importanceScore = await this.analyzeImportance(diaryContent);
 
       // 📊 중요도에 따라 모델 선택
-      const IMPORTANCE_THRESHOLD = 30;
+      const IMPORTANCE_THRESHOLD = 25;
       useSonnet = importanceScore.total >= IMPORTANCE_THRESHOLD;
       selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
 
@@ -362,6 +362,43 @@ ${diaryContent}`,
       // Fallback: 일기의 첫 문장 사용
       const firstSentence = diaryContent.split(/[.!?。！？\n]+/)[0].substring(0, 100);
       return `A simple illustration of: ${firstSentence}`;
+    }
+  }
+
+  /**
+   * 범용 텍스트 생성 (편지 생성 등에 사용)
+   * @param prompt 생성할 텍스트에 대한 프롬프트
+   * @param model 사용할 모델 ('sonnet' 또는 'haiku')
+   * @returns 생성된 텍스트
+   */
+  async generateText(prompt: string, model: 'sonnet' | 'haiku' = 'haiku'): Promise<string> {
+    try {
+      const modelName = model === 'sonnet' ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
+
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: modelName,
+          max_tokens: 1500,
+          temperature: 1.0,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        }),
+        30000 // 30초 타임아웃
+      );
+
+      const content = response.content[0];
+      if (content.type === 'text') {
+        return content.text.trim();
+      }
+
+      throw new Error('Invalid response format from Claude API');
+    } catch (error: any) {
+      console.error('❌ [GenerateText] Failed:', error);
+      throw error;
     }
   }
 

@@ -32,10 +32,7 @@ const getColorForValue = (value: number): string => {
 
 type PeriodType = 'year' | 'half' | 'quarter' | 'month';
 
-export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
-  diaries,
-  year,
-}) => {
+export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({ diaries, year }) => {
   // 현재 날짜 기반 기본값 계산
   const getCurrentPeriod = (type: PeriodType): number => {
     const now = new Date();
@@ -191,7 +188,12 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
                 setSelectedPeriod(0);
               }}
             >
-              <Text style={[styles.periodButtonText, periodType === 'year' && styles.periodButtonTextActive]}>
+              <Text
+                style={[
+                  styles.periodButtonText,
+                  periodType === 'year' && styles.periodButtonTextActive,
+                ]}
+              >
                 전체
               </Text>
             </TouchableOpacity>
@@ -204,7 +206,12 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
                 setSelectedPeriod(getCurrentPeriod(newType));
               }}
             >
-              <Text style={[styles.periodButtonText, periodType === 'quarter' && styles.periodButtonTextActive]}>
+              <Text
+                style={[
+                  styles.periodButtonText,
+                  periodType === 'quarter' && styles.periodButtonTextActive,
+                ]}
+              >
                 분기
               </Text>
             </TouchableOpacity>
@@ -217,7 +224,12 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
                 setSelectedPeriod(getCurrentPeriod(newType));
               }}
             >
-              <Text style={[styles.periodButtonText, periodType === 'month' && styles.periodButtonTextActive]}>
+              <Text
+                style={[
+                  styles.periodButtonText,
+                  periodType === 'month' && styles.periodButtonTextActive,
+                ]}
+              >
                 월
               </Text>
             </TouchableOpacity>
@@ -230,11 +242,13 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
                 style={styles.arrowButton}
                 onPress={() => {
                   const maxPeriod = periodType === 'quarter' ? 3 : 11;
-                  setSelectedPeriod(prev => Math.max(0, prev - 1));
+                  setSelectedPeriod((prev) => Math.max(0, prev - 1));
                 }}
                 disabled={selectedPeriod === 0}
               >
-                <Text style={[styles.arrowText, selectedPeriod === 0 && styles.arrowTextDisabled]}>◀</Text>
+                <Text style={[styles.arrowText, selectedPeriod === 0 && styles.arrowTextDisabled]}>
+                  ◀
+                </Text>
               </TouchableOpacity>
 
               <Text style={styles.selectedPeriodText}>{getPeriodLabel()}</Text>
@@ -243,11 +257,19 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
                 style={styles.arrowButton}
                 onPress={() => {
                   const maxPeriod = periodType === 'quarter' ? 3 : 11;
-                  setSelectedPeriod(prev => Math.min(maxPeriod, prev + 1));
+                  setSelectedPeriod((prev) => Math.min(maxPeriod, prev + 1));
                 }}
                 disabled={selectedPeriod >= (periodType === 'quarter' ? 3 : 11)}
               >
-                <Text style={[styles.arrowText, selectedPeriod >= (periodType === 'quarter' ? 3 : 11) && styles.arrowTextDisabled]}>▶</Text>
+                <Text
+                  style={[
+                    styles.arrowText,
+                    selectedPeriod >= (periodType === 'quarter' ? 3 : 11) &&
+                      styles.arrowTextDisabled,
+                  ]}
+                >
+                  ▶
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -275,11 +297,7 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
       <View style={styles.chartCard}>
         <Text style={styles.subtitle}>
           총 {filteredDiaries.length}개의 일기 • 평균 감정:{' '}
-          {averageValue > 0.3
-            ? '긍정'
-            : averageValue < -0.3
-            ? '부정'
-            : '중립'}
+          {averageValue > 0.3 ? '긍정' : averageValue < -0.3 ? '부정' : '중립'}
         </Text>
 
         <Svg width={chartWidth} height={chartHeight} style={styles.chart}>
@@ -344,9 +362,10 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
             if (periodType === 'month') {
               // 월별 뷰: 일(day) 표시
               const daysInMonth = new Date(year, selectedPeriod + 1, 0).getDate();
-              const dayLabels = periodType === 'month' && daysInMonth <= 28
-                ? [1, 7, 14, 21, daysInMonth]
-                : [1, 10, 20, daysInMonth];
+              const dayLabels =
+                periodType === 'month' && daysInMonth <= 28
+                  ? [1, 7, 14, 21, daysInMonth]
+                  : [1, 10, 20, daysInMonth];
 
               return dayLabels.map((day) => {
                 const x = padding.left + ((day - 1) / (daysInMonth - 1)) * innerWidth;
@@ -504,7 +523,7 @@ const styles = StyleSheet.create({
   navigationButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 0,
   },
   arrowButton: {
     width: 32,

@@ -19,10 +19,12 @@ import imageRoutes from './routes/imageRoutes';
 import exportRoutes from './routes/exportRoutes';
 import nanobananaRoutes from './routes/nanobananaRoutes';
 import imageGenerationRoutes from './routes/imageGenerationRoutes';
+import letterRoutes from './routes/letterRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
 import { ExportJob } from './jobs/exportJob';
+import { LetterJob } from './jobs/letterJob';
 import { PushNotificationService } from './services/pushNotificationService';
 import { initialize as initializeEncryption } from './services/encryptionService';
 
@@ -101,6 +103,7 @@ app.use('/api', generalApiLimiter, reportRoutes);
 app.use('/api', generalApiLimiter, imageRoutes);
 app.use('/api', generalApiLimiter, exportRoutes);
 app.use('/api', generalApiLimiter, imageGenerationRoutes);
+app.use('/api/letters', generalApiLimiter, letterRoutes);
 
 // Nanobanana callback (레이트리미트 없음 - 외부 API 호출)
 app.use('/api', nanobananaRoutes);
@@ -148,6 +151,10 @@ backupJob.start();
 // Start Export Job
 ExportJob.start();
 ExportJob.startCleanup();
+
+// Start Letter Job (with ClaudeService for AI letter generation)
+LetterJob.initialize(claudeService);
+LetterJob.start();
 
 // 일기 작성 알림 Cron Job (매일 저녁 9시 KST = UTC 12:00)
 cron.schedule('0 12 * * *', async () => {
@@ -310,6 +317,52 @@ app.post('/api/jobs/trigger-backup', adminLimiter, requireAdminToken, async (req
     res.status(500).json({
       success: false,
       message: 'Failed to trigger backup',
+    });
+  }
+});
+
+// Manual letter generation trigger endpoint (관리 리미터 + 토큰 인증)
+app.post('/api/jobs/trigger-letters', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    const { year, month } = req.body;
+
+    if (year && month) {
+      console.log(`🧪 [TEST] Manually triggering monthly letter generation for ${year}-${month}...`);
+      await LetterJob.generateMonthlyLetters(year, month);
+    } else {
+      console.log('🧪 [TEST] Manually triggering monthly letter generation (previous month)...');
+      await LetterJob.generateMonthlyLetters();
+    }
+
+    res.json({
+      success: true,
+      message: 'Monthly letter generation triggered successfully',
+    });
+  } catch (error) {
+    console.error('Error triggering letter generation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to trigger letter generation',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// Manual letter notification trigger endpoint (관리 리미터 + 토큰 인증)
+app.post('/api/jobs/trigger-letter-notifications', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    console.log('🧪 [TEST] Manually triggering letter notifications...');
+    await LetterJob.sendLetterNotifications();
+    res.json({
+      success: true,
+      message: 'Letter notifications triggered successfully',
+    });
+  } catch (error) {
+    console.error('Error triggering letter notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to trigger letter notifications',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
