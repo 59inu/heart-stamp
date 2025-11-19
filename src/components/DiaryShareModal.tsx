@@ -1,0 +1,402 @@
+import React, { useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+} from 'react-native';
+import { Image } from 'expo-image';
+import ViewShot from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import { Ionicons } from '@expo/vector-icons';
+import { DiaryEntry } from '../models/DiaryEntry';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { getStampImage, getStampColor } from '../utils/stampUtils';
+import { ManuscriptPaper } from './ManuscriptPaper';
+import { COLORS } from '../constants/colors';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// 실제 캡처할 이미지 크기 (디테일 화면과 동일)
+const CAPTURE_WIDTH = SCREEN_WIDTH;
+
+// 모달 미리보기 크기 (작게 표시)
+const MODAL_WIDTH = SCREEN_WIDTH - 100;
+const SCALE_RATIO = MODAL_WIDTH / CAPTURE_WIDTH;
+
+interface DiaryShareModalProps {
+  visible: boolean;
+  diary: DiaryEntry;
+  onClose: () => void;
+}
+
+export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary, onClose }) => {
+  const viewShotRef = useRef<ViewShot>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [viewShotHeight, setViewShotHeight] = useState<number | null>(null);
+
+  const getScaledTransform = () => {
+    if (!viewShotHeight) {
+      return [{ scale: SCALE_RATIO }];
+    }
+
+    const delta = viewShotHeight * (1 - SCALE_RATIO);
+    return [
+      { translateY: -(delta / 2) }, // 위로 반만 당기기 → top 맞추기
+      { scale: SCALE_RATIO },
+    ];
+  };
+
+  const handleSaveToGallery = async () => {
+    try {
+      setIsSaving(true);
+
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('권한 필요', '갤러리에 저장하려면 사진 접근 권한이 필요합니다.');
+        return;
+      }
+
+      if (!viewShotRef.current?.capture) throw new Error('ViewShot이 준비되지 않았습니다.');
+      const uri = await viewShotRef.current.capture();
+      if (!uri) throw new Error('이미지 캡처 실패');
+
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('저장 완료', '갤러리에 저장되었습니다.');
+      onClose();
+    } catch (error) {
+      console.error('Save error:', error);
+      Alert.alert('저장 실패', '이미지 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      setIsSharing(true);
+
+      if (!viewShotRef.current?.capture) throw new Error('ViewShot이 준비되지 않았습니다.');
+      const uri = await viewShotRef.current.capture();
+      if (!uri) throw new Error('이미지 캡처 실패');
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('공유 불가', '이 기기에서는 공유 기능을 사용할 수 없습니다.');
+        return;
+      }
+
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error('Share error:', error);
+      Alert.alert('공유 실패', '공유 중 오류가 발생했습니다.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const formattedDate = format(new Date(diary.date), 'yyyy년 M월 d일 EEEE', {
+    locale: ko,
+  });
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          {/* 상단 헤더 영역 */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={28} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          {/* 스크롤 가능한 프리뷰 영역 */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.previewContainer}>
+              {/* 축소 + 마스크 래퍼 */}
+              <View
+                style={[
+                  styles.scaleWrapper,
+                  viewShotHeight
+                    ? {
+                        height: Math.round(viewShotHeight * SCALE_RATIO),
+                        overflow: 'hidden',
+                      }
+                    : undefined,
+                ]}
+              >
+                <View style={{ transform: getScaledTransform() }}>
+                  <ViewShot
+                    ref={viewShotRef}
+                    options={{
+                      format: 'png',
+                      quality: 1.0,
+                      width: CAPTURE_WIDTH,
+                    }}
+                    style={styles.viewShot}
+                    onLayout={(e) => {
+                      setViewShotHeight(e.nativeEvent.layout.height);
+                    }}
+                  >
+                    <View style={styles.captureRoot}>
+                      <View style={styles.shareableContent}>
+                        {/* 캡처 루트: 전체 배경 + 하단 여유 */}
+                        <View style={styles.captureRoot}>
+                          <View style={styles.shareableContent}>
+                            {/* 날짜와 워터마크 */}
+                            <View style={styles.dateContainer}>
+                              <Text style={styles.dateText}>{formattedDate}</Text>
+                              <Text style={styles.watermark}>하트스탬프 일기장</Text>
+                            </View>
+
+                            {/* 본문 - 원고지 스타일 */}
+                            <View style={styles.contentSection}>
+                              <ManuscriptPaper content={diary.content} />
+                            </View>
+
+                            {/* 선생님 코멘트 */}
+                            {diary.aiComment && (
+                              <View style={styles.commentSection}>
+                                <View style={styles.commentHeader}>
+                                  <View style={styles.emojiCircle}>
+                                    <Ionicons name="sparkles" size={12} color="#fff" />
+                                  </View>
+                                  <Text style={styles.commentLabel}>선생님 코멘트</Text>
+                                </View>
+                                <Text style={styles.commentText}>{diary.aiComment}</Text>
+                              </View>
+                            )}
+
+                            {/* 도장 오버레이 */}
+                            {diary.stampType && (
+                              <View style={styles.stampOverlay}>
+                                <Image
+                                  source={getStampImage(diary.stampType)}
+                                  style={[
+                                    styles.stampImageLarge,
+                                    { tintColor: getStampColor(diary._id) },
+                                  ]}
+                                  contentFit="contain"
+                                  cachePolicy="memory-disk"
+                                  priority="high"
+                                  transition={0}
+                                />
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  </ViewShot>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* 버튼들 */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton]}
+              onPress={handleSaveToGallery}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="download-outline" size={22} color="#fff" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.shareButton]}
+              onPress={handleShare}
+              disabled={isSharing}
+            >
+              {isSharing ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="share-social-outline" size={22} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: MODAL_WIDTH + 32,
+    maxHeight: 660,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingBottom: 4,
+    paddingHorizontal: 8,
+  },
+  modalHeader: {
+    height: 48,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    padding: 8,
+  },
+  scrollView: {},
+  scrollContent: {
+    paddingTop: 0,
+    paddingBottom: 0,
+    flexGrow: 0,
+  },
+  previewContainer: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    width: '100%',
+    paddingTop: 8,
+  },
+  scaleWrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  viewShot: {
+    backgroundColor: '#faf8f3',
+    width: CAPTURE_WIDTH,
+  },
+  captureRoot: {
+    backgroundColor: '#faf8f3',
+    width: CAPTURE_WIDTH,
+    paddingBottom: 16,
+  },
+  shareableContent: {
+    backgroundColor: '#faf8f3',
+    paddingTop: 8,
+    paddingHorizontal: 0,
+    width: CAPTURE_WIDTH,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  watermark: {
+    fontSize: 11,
+    color: '#999',
+  },
+  contentSection: {
+    backgroundColor: '#fffef8',
+    paddingVertical: 20,
+    marginBottom: 12,
+  },
+  stampOverlay: {
+    position: 'absolute',
+    top: '25%',
+    right: -80,
+    zIndex: 10,
+  },
+  stampImageLarge: {
+    width: 300,
+    height: 300,
+    opacity: 0.65,
+  },
+  commentSection: {
+    backgroundColor: '#F0F6FF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    marginHorizontal: 16,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 6,
+  },
+  emojiCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#60A5FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commentLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2563EB',
+    flex: 1,
+  },
+  stampImage: {
+    width: 72,
+    height: 72,
+  },
+  commentText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#333',
+  },
+  commentDisclaimer: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 20,
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  button: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  saveButton: {
+    backgroundColor: COLORS.secondary,
+  },
+  shareButton: {
+    backgroundColor: COLORS.secondary,
+  },
+});

@@ -8,7 +8,6 @@ import {
   Alert,
   Dimensions,
   RefreshControl,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -29,98 +28,14 @@ import { logger } from '../utils/logger';
 import { COLORS } from '../constants/colors';
 import { diaryEvents, EVENTS } from '../services/eventEmitter';
 import { AnalyticsService } from '../services/analyticsService';
+import { DiaryShareModal } from '../components/DiaryShareModal';
+import { ManuscriptPaper } from '../components/ManuscriptPaper';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const IMAGE_HEIGHT = (SCREEN_WIDTH * 3) / 5; // 3:5 비율
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryDetail'>;
 type DiaryDetailRouteProp = RouteProp<RootStackParamList, 'DiaryDetail'>;
-
-// 원고지 계산 상수 (한 번만 계산)
-const CELL_WIDTH = 22;
-const HORIZONTAL_PADDING = 0; // 패딩 없음 (전체 화면 너비 사용)
-const AVAILABLE_WIDTH = SCREEN_WIDTH - HORIZONTAL_PADDING;
-const CELLS_PER_ROW = Math.floor(AVAILABLE_WIDTH / CELL_WIDTH);
-
-// 원고지 스타일 컴포넌트 (FlatList로 가상화하여 성능 최적화)
-const ManuscriptPaper: React.FC<{ content: string }> = React.memo(({ content }) => {
-  // 텍스트를 한 글자씩 분리하고 줄바꿈 처리 (useMemo로 최적화)
-  const allCells = React.useMemo(() => {
-    const chars = Array.from(content); // 이모지를 올바르게 분리
-    const cells: Array<{ char: string; isEmpty: boolean; index: number }> = [];
-    let cellIndex = 0;
-
-    for (let i = 0; i < chars.length; i++) {
-      const char = chars[i];
-
-      if (char === '\n') {
-        // 줄바꿈: 현재 줄의 나머지 칸을 빈 칸으로 채움
-        const currentColumn = cellIndex % CELLS_PER_ROW;
-        const paddingNeeded = currentColumn === 0 ? 0 : CELLS_PER_ROW - currentColumn;
-
-        for (let j = 0; j < paddingNeeded; j++) {
-          cells.push({ char: ' ', isEmpty: true, index: cellIndex++ });
-        }
-      } else {
-        // 일반 문자
-        cells.push({ char, isEmpty: false, index: cellIndex++ });
-      }
-    }
-
-    // 최소 10줄 보장
-    const minCells = CELLS_PER_ROW * 10;
-    const currentCells = cells.length;
-
-    if (currentCells < minCells) {
-      // 10줄보다 적으면 10줄까지 채움
-      const emptyCellsNeeded = minCells - currentCells;
-      for (let i = 0; i < emptyCellsNeeded; i++) {
-        cells.push({ char: ' ', isEmpty: true, index: cellIndex++ });
-      }
-    } else {
-      // 10줄 이상이면 마지막 줄만 채움
-      const lastRowCells = currentCells % CELLS_PER_ROW;
-      if (lastRowCells > 0) {
-        const emptyCellsNeeded = CELLS_PER_ROW - lastRowCells;
-        for (let i = 0; i < emptyCellsNeeded; i++) {
-          cells.push({ char: ' ', isEmpty: true, index: cellIndex++ });
-        }
-      }
-    }
-
-    return cells;
-  }, [content]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: { char: string; isEmpty: boolean; index: number } }) => (
-      <View style={styles.manuscriptCell}>
-        <Text style={styles.manuscriptChar}>{item.char}</Text>
-      </View>
-    ),
-    []
-  );
-
-  const keyExtractor = useCallback(
-    (item: { char: string; isEmpty: boolean; index: number }) =>
-      `${content.substring(0, 10)}-${item.isEmpty ? 'empty' : 'char'}-${item.index}`,
-    [content]
-  );
-
-  return (
-    <FlatList
-      data={allCells}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      numColumns={CELLS_PER_ROW}
-      scrollEnabled={false}
-      contentContainerStyle={styles.manuscriptContainer}
-      initialNumToRender={50}
-      maxToRenderPerBatch={50}
-      windowSize={5}
-      removeClippedSubviews={true}
-    />
-  );
-});
 
 export const DiaryDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -129,6 +44,7 @@ export const DiaryDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [imageLoadStatus, setImageLoadStatus] = useState<string>('pending');
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -336,31 +252,40 @@ export const DiaryDetailScreen: React.FC = () => {
       </View>
 
       <View style={styles.dateContainer}>
-        <View style={styles.dateWithWeather}>
-          <Text style={styles.dateText}>
-            {format(new Date(entry.date), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
-          </Text>
-          {entry.weather && (
-            <Text style={styles.weatherIcon}>
-              {WeatherService.getWeatherEmoji(entry.weather)}
+        <View style={styles.dateInfo}>
+          <View style={styles.dateWithWeather}>
+            <Text style={styles.dateText}>
+              {format(new Date(entry.date), 'yyyy년 MM월 dd일 (E)', { locale: ko })}
             </Text>
-          )}
-        </View>
-        {entry.mood && (
-          <View style={styles.moodContainer}>
-            <View
-              style={[
-                styles.moodIndicator,
-                entry.mood === 'red' && styles.moodRed,
-                entry.mood === 'yellow' && styles.moodYellow,
-                entry.mood === 'green' && styles.moodGreen,
-              ]}
-            />
-            {entry.moodTag && (
-              <Text style={styles.moodTagText}>{entry.moodTag}</Text>
+            {entry.weather && (
+              <Text style={styles.weatherIcon}>
+                {WeatherService.getWeatherEmoji(entry.weather)}
+              </Text>
             )}
           </View>
-        )}
+          {entry.mood && (
+            <View style={styles.moodContainer}>
+              <View
+                style={[
+                  styles.moodIndicator,
+                  entry.mood === 'red' && styles.moodRed,
+                  entry.mood === 'yellow' && styles.moodYellow,
+                  entry.mood === 'green' && styles.moodGreen,
+                ]}
+              />
+              {entry.moodTag && (
+                <Text style={styles.moodTagText}>{entry.moodTag}</Text>
+              )}
+            </View>
+          )}
+        </View>
+        {/* 공유 버튼 */}
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={() => setShowShareModal(true)}
+        >
+          <Ionicons name="share-outline" size={20} color="#666" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -456,6 +381,15 @@ export const DiaryDetailScreen: React.FC = () => {
           return null;
         })()}
       </ScrollView>
+
+      {/* 공유 모달 */}
+      {entry && (
+        <DiaryShareModal
+          visible={showShareModal}
+          diary={entry}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -516,6 +450,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
     paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  dateInfo: {
+    flex: 1,
   },
   dateWithWeather: {
     flexDirection: 'row',
@@ -580,29 +520,21 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 18,
     backgroundColor: '#fffef8',
+    position: 'relative',
+  },
+  shareButton: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   contentText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#333',
-  },
-  manuscriptContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: '#fffef8',
-    justifyContent: 'center',
-  },
-  manuscriptCell: {
-    width: 22,
-    height: 20,
-    borderWidth: 0.5,
-    borderColor: '#e0d5c7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fffef8',
-  },
-  manuscriptChar: {
-    fontSize: 12,
     color: '#333',
   },
   aiSection: {

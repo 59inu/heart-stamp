@@ -53,8 +53,10 @@
     "expo-image-picker": "~17.0.8",
     "expo-linear-gradient": "~15.0.7",
     "expo-location": "~19.0.7",
+    "expo-media-library": "~18.2.0",
     "expo-notifications": "~0.32.12",
     "expo-secure-store": "~15.0.7",
+    "expo-sharing": "~14.0.7",
     "expo-splash-screen": "~31.0.10",
     "expo-status-bar": "~3.0.8",
     "expo-updates": "~29.0.12",
@@ -70,6 +72,7 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-toast-message": "^2.3.3",
+    "react-native-view-shot": "4.0.3",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
