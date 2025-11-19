@@ -129,11 +129,12 @@ export class ExportService {
       content += diary.content + '\n';
       content += '\n';
 
-      if (diary.aiComment) {
-        content += '선생님 코멘트:\n';
-        content += diary.aiComment + '\n';
-        content += '\n';
-      }
+      // 선생님 코멘트는 내보내기에 포함하지 않음
+      // if (diary.aiComment) {
+      //   content += '선생님 코멘트:\n';
+      //   content += diary.aiComment + '\n';
+      //   content += '\n';
+      // }
 
       if (diary.stampType) {
         content += `도장: ${this.getStampEmoji(diary.stampType)}\n`;
