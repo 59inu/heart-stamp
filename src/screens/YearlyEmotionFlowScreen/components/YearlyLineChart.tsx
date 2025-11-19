@@ -273,7 +273,6 @@ export const YearlyLineChart: React.FC<YearlyLineChartProps> = ({
       </View>
 
       <View style={styles.chartCard}>
-        <Text style={styles.title}>감정 흐름 - {getPeriodLabel()}</Text>
         <Text style={styles.subtitle}>
           총 {filteredDiaries.length}개의 일기 • 평균 감정:{' '}
           {averageValue > 0.3
@@ -534,12 +533,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
