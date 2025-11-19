@@ -64,7 +64,7 @@ export class ExportJob {
             await PushNotificationService.sendNotification(
               job.userId,
               '내보내기 준비 완료',
-              `일기 데이터가 ${updatedJob.email}로 전송되었습니다.`,
+              '일기 다운로드가 준비되었습니다.',
               { type: 'export_ready', jobId: job.id }
             );
 

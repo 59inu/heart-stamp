@@ -83,16 +83,26 @@ router.post('/diaries',
       // 기존 일기가 있으면 업데이트, 없으면 생성
       const existing = await DiaryDatabase.getById(diaryEntry._id);
       if (existing) {
-        // update 시 userId와 imageGenerationStatus는 변경하지 않음
-        // - userId: 원래 userId 보존
-        // - imageGenerationStatus: 이미지 생성 상태는 백그라운드 프로세스가 관리
+        // update 시 userId는 변경하지 않음 (원래 userId 보존)
+        // imageGenerationStatus는 새로 이미지 생성 요청이 있을 때만 업데이트
         const { userId: _, imageGenerationStatus: __, ...updateData } = diaryEntry;
-        console.log('🔄 [Diary Upload] Updating existing diary:', {
-          _id: diaryEntry._id,
-          hasImageUri: !!updateData.imageUri,
-          imageUri: updateData.imageUri,
-        });
-        await DiaryDatabase.update(diaryEntry._id, updateData);
+
+        // 새로 이미지 생성 요청이 있으면 상태를 pending으로 재설정
+        if (generateImage) {
+          console.log('🔄 [Diary Upload] Re-generating image for existing diary:', diaryEntry._id);
+          await DiaryDatabase.update(diaryEntry._id, {
+            ...updateData,
+            imageGenerationStatus: 'pending',
+            imageUri: undefined, // 기존 이미지 제거 (새로 생성할 것이므로)
+          });
+        } else {
+          console.log('🔄 [Diary Upload] Updating existing diary:', {
+            _id: diaryEntry._id,
+            hasImageUri: !!updateData.imageUri,
+            imageUri: updateData.imageUri,
+          });
+          await DiaryDatabase.update(diaryEntry._id, updateData);
+        }
       } else {
         await DiaryDatabase.create(diaryEntry);
       }
