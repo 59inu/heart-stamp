@@ -220,8 +220,9 @@ export class ApiService {
     error?: string;
   }> {
     try {
-      // userId는 인터셉터에서 X-User-Id 헤더로 자동 전송됨
+      const userId = await UserService.getOrCreateUserId();
       const response = await this.axiosInstance.delete('/push/unregister', {
+        data: { userId }, // DELETE 요청에 body 전송
         timeout: 5000,
       });
       return { success: response.data.success };

@@ -129,17 +129,16 @@ ExportJob.startCleanup();
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
   try {
-    const { token } = req.body;
-    if (!token) {
+    const { userId, token } = req.body;
+    if (!userId || !token) {
       return res.status(400).json({
         success: false,
-        message: 'token is required',
+        message: 'userId and token are required',
       });
     }
 
-    // req.userId는 requireFirebaseAuth에서 설정됨
-    const userId = req.userId!;
-
+    // 클라이언트가 보낸 userId 사용 (로컬 UUID)
+    // Firebase 인증은 보안을 위해 유지하지만, userId는 클라이언트 제공 값 사용
     const { PushTokenDatabase } = require('./services/database');
     await PushTokenDatabase.upsert(userId, token);
 
@@ -159,9 +158,15 @@ app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
 // 푸시 토큰 삭제 API (알림 끄기)
 app.delete('/api/push/unregister', requireFirebaseAuth, async (req, res) => {
   try {
-    // req.userId는 requireFirebaseAuth에서 설정됨
-    const userId = req.userId!;
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId is required',
+      });
+    }
 
+    // 클라이언트가 보낸 userId 사용 (로컬 UUID)
     const { PushTokenDatabase } = require('./services/database');
     await PushTokenDatabase.delete(userId);
 
