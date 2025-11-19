@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -64,14 +64,6 @@ export const DiaryListScreen: React.FC = () => {
       return diaryDate === selectedDate;
     });
   }, [diaries, selectedDate]);
-
-  // 오늘 일기 작성 여부
-  const hasTodayDiary = useMemo(() => {
-    return diaries.some((diary) => {
-      const diaryDate = format(new Date(diary.date), 'yyyy-MM-dd');
-      return diaryDate === today;
-    });
-  }, [diaries, today]);
 
   // loadDiaries 함수의 최신 참조를 유지하기 위한 ref (이벤트 리스너 메모리 누수 방지)
   const loadDiariesRef = useRef(loadDiaries);
@@ -156,7 +148,6 @@ export const DiaryListScreen: React.FC = () => {
   }, [currentDate, navigation]);
 
   const handleHeartPress = useCallback(() => {
-    // TODO: 연간 감정 흐름 화면으로 이동
     navigation.navigate('YearlyEmotionFlow');
   }, [navigation]);
 
@@ -239,17 +230,6 @@ export const DiaryListScreen: React.FC = () => {
         />
       </ScrollView>
 
-      {/* 빠른 작성 버튼 - 오늘 일기가 없을 때만 표시 */}
-      {!hasTodayDiary && (
-        <TouchableOpacity
-          style={styles.floatingButton}
-          onPress={() => navigation.navigate('DiaryWrite', { date: new Date() })}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="pencil" size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
-
       {/* 첫 방문 온보딩 */}
       <FirstVisitGuide
         visible={showOnboarding}
@@ -293,24 +273,5 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  floatingButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 40,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.buttonSecondaryBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 8,
   },
 });

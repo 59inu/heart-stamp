@@ -43,7 +43,7 @@ export const SelectedDateSection: React.FC<SelectedDateSectionProps> = ({
               onPress={onWriteDiary}
               activeOpacity={0.7}
             >
-              <Ionicons name="add" size={20} color="#fff" />
+              <Ionicons name="pencil" size={20} color="#fff" />
             </TouchableOpacity>
           )}
         </View>

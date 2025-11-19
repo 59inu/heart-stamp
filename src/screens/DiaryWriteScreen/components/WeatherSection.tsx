@@ -38,14 +38,6 @@ export const WeatherSection: React.FC<WeatherSectionProps> = ({
             <Text style={styles.weatherEmoji}>
               {WeatherService.getWeatherEmoji(option)}
             </Text>
-            <Text
-              style={[
-                styles.weatherText,
-                weather === option && styles.weatherTextSelected,
-              ]}
-            >
-              {WeatherService.getWeatherLabel(option)}
-            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -101,14 +93,5 @@ const styles = StyleSheet.create({
   },
   weatherEmoji: {
     fontSize: 24,
-    marginBottom: 2,
-  },
-  weatherText: {
-    fontSize: 11,
-    color: '#666',
-  },
-  weatherTextSelected: {
-    color: '#333',
-    fontWeight: '700',
   },
 });
