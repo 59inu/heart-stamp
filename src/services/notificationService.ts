@@ -205,6 +205,10 @@ export class NotificationService {
       if (data?.type === 'ai_comment_complete') {
         logger.log('📖 Navigate to diary list to see new comments');
         // 필요시 네비게이션 처리
+      } else if (data?.type === 'image_generated') {
+        logger.log('🎨 Image generated notification - Navigate to diary:', data.diaryId);
+        // TODO: Navigate to specific diary detail screen
+        // navigation.navigate('DiaryDetail', { diaryId: data.diaryId });
       }
     });
   }

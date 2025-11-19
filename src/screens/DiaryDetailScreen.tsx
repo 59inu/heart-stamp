@@ -300,18 +300,37 @@ export const DiaryDetailScreen: React.FC = () => {
         }
       >
         {/* 이미지 섹션 */}
-        {entry.imageUri && (
+        {entry.imageUri && entry.imageGenerationStatus !== 'generating' && entry.imageGenerationStatus !== 'pending' && (
           <View style={styles.imageSection}>
             <Image
               source={{ uri: entry.imageUri }}
               style={styles.diaryImage}
               contentFit="contain"
               transition={200}
-              placeholder={require('../../assets/image-placeholder.png')}
-              placeholderContentFit="contain"
               cachePolicy="memory-disk"
               priority="high"
             />
+          </View>
+        )}
+
+        {/* 이미지 생성 상태 표시 */}
+        {entry.imageGenerationStatus && entry.imageGenerationStatus !== 'completed' && (
+          <View style={[
+            styles.imageGenerationStatus,
+            entry.imageGenerationStatus === 'failed' && styles.imageGenerationStatusFailed
+          ]}>
+            <View style={styles.imageGenerationIconCircle}>
+              <Ionicons
+                name={entry.imageGenerationStatus === 'failed' ? 'alert-circle' : 'brush'}
+                size={16}
+                color="#fff"
+              />
+            </View>
+            <Text style={styles.imageGenerationStatusText}>
+              {entry.imageGenerationStatus === 'pending' && '그림일기 준비 중...'}
+              {entry.imageGenerationStatus === 'generating' && '그림 그리고 있어요 🎨'}
+              {entry.imageGenerationStatus === 'failed' && '그림 생성에 실패했어요'}
+            </Text>
           </View>
         )}
 
@@ -498,7 +517,7 @@ const styles = StyleSheet.create({
   imageSection: {
     width: '100%',
     height: IMAGE_HEIGHT,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   diaryImage: {
     width: '100%',
@@ -615,5 +634,32 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 12,
+  },
+  imageGenerationStatus: {
+    backgroundColor: '#FFF8E1',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  imageGenerationStatusFailed: {
+    backgroundColor: '#FFEBEE',
+  },
+  imageGenerationIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFA726',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageGenerationStatusText: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
   },
 });

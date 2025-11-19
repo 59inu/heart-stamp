@@ -161,6 +161,20 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                               <Text style={styles.watermark}>하트스탬프 일기장</Text>
                             </View>
 
+                            {/* 이미지 섹션 */}
+                            {diary.imageUri && diary.imageGenerationStatus === 'completed' && (
+                              <View style={styles.imageSection}>
+                                <Image
+                                  source={{ uri: diary.imageUri }}
+                                  style={styles.diaryImage}
+                                  contentFit="contain"
+                                  cachePolicy="memory-disk"
+                                  priority="high"
+                                  transition={0}
+                                />
+                              </View>
+                            )}
+
                             {/* 본문 - 원고지 스타일 */}
                             <View style={styles.contentSection}>
                               <ManuscriptPaper content={diary.content} />
@@ -316,6 +330,16 @@ const styles = StyleSheet.create({
   watermark: {
     fontSize: 11,
     color: '#999',
+  },
+  imageSection: {
+    width: '100%',
+    height: 250,
+    backgroundColor: '#fff',
+    marginBottom: 0,
+  },
+  diaryImage: {
+    width: '100%',
+    height: '100%',
   },
   contentSection: {
     backgroundColor: '#fffef8',

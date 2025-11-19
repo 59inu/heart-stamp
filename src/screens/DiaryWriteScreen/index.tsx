@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,9 @@ export const DiaryWriteScreen: React.FC = () => {
   const entryId = route.params?.entryId;
   const MAX_CHARS = 700;
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const textInputRef = useRef<TextInput>(null);
+
   // Weather hook을 먼저 선언
   const weatherHook = useWeather(setWeather);
 
@@ -83,6 +86,8 @@ export const DiaryWriteScreen: React.FC = () => {
     if (shouldShowSurvey) {
       setShowSurveyModal(true);
     } else {
+      // 수정 모드면 그냥 돌아가기 (이미 상세 화면에 있음)
+      // 새 작성이면 목록으로 이동 (상세 화면은 목록에서 선택해서 진입)
       navigation.goBack();
     }
   };
@@ -100,6 +105,7 @@ export const DiaryWriteScreen: React.FC = () => {
     selectedMood,
     selectedMoodTag,
     imageUri,
+    aiGenerateSelected,
     onSaveComplete: handleSaveComplete,
   });
 
@@ -151,7 +157,12 @@ export const DiaryWriteScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* 날씨 섹션 */}
           <WeatherSection
             weather={weather}
@@ -183,6 +194,7 @@ export const DiaryWriteScreen: React.FC = () => {
 
           <View style={styles.editorContainer}>
             <TextInput
+              ref={textInputRef}
               style={styles.textInput}
               placeholder="오늘 하루는 어땠나요?"
               placeholderTextColor="#999"
@@ -200,6 +212,10 @@ export const DiaryWriteScreen: React.FC = () => {
                   return;
                 }
                 setContent(text);
+              }}
+              onContentSizeChange={() => {
+                // 내용이 변경될 때마다 스크롤을 끝으로 이동
+                scrollViewRef.current?.scrollToEnd({ animated: true });
               }}
               maxLength={MAX_CHARS}
               autoFocus

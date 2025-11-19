@@ -19,6 +19,7 @@ interface UseDiarySaveParams {
   selectedMood: MoodType | null;
   selectedMoodTag: string | null;
   imageUri: string | null;
+  aiGenerateSelected: boolean;
   onSaveComplete: (shouldShowSurvey: boolean) => void;
 }
 
@@ -37,6 +38,7 @@ export const useDiarySave = ({
   selectedMood,
   selectedMoodTag,
   imageUri,
+  aiGenerateSelected,
   onSaveComplete,
 }: UseDiarySaveParams): UseDiarySaveReturn => {
   const [showMoodModal, setShowMoodModal] = useState(false);
@@ -100,8 +102,10 @@ export const useDiarySave = ({
       logger.log(`📝 일기 작성 횟수: ${newCount}`);
     }
 
-    // Upload to server
-    const uploadResult = await apiService.uploadDiary(savedEntry);
+    // Upload to server (AI 생성 선택된 경우 플래그 전달)
+    // DEV: 개발 중에는 수정 모드에서도 이미지 생성 허용
+    const shouldGenerateImage = aiGenerateSelected;
+    const uploadResult = await apiService.uploadDiary(savedEntry, shouldGenerateImage);
     if (uploadResult.success) {
       await DiaryStorage.update(savedEntry._id, {
         syncedWithServer: true,
@@ -138,39 +142,9 @@ export const useDiarySave = ({
       }
     }
 
-    // 과거 날짜인지 확인 (실제 저장된 일기의 날짜 기준)
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const diaryDate = format(new Date(savedEntry.date), 'yyyy-MM-dd');
-    const isPastDate = diaryDate < today;
-
-    // 메시지 결정
-    let title: string;
-    let message: string;
-
-    if (uploadResult.success) {
-      // 서버 업로드 성공
-      title = '저장 완료';
-      message = isPastDate
-        ? '일기가 안전하게 저장되었습니다.\n분명 훗날 읽으며 웃고 울게 될거에요. 💚'
-        : '일기가 저장되었습니다.\n밤 사이 선생님이 코멘트를 달아줄 거예요! 🌙';
-    } else {
-      // 오프라인 또는 서버 업로드 실패
-      title = '일기 저장 완료';
-
-      if (isPastDate) {
-        message = '일기가 안전하게 기기에 저장되었습니다.\n네트워크 연결 시 자동으로 백업됩니다. 💚';
-      } else {
-        message = '일기가 기기에 저장되었습니다.\n네트워크 연결되면 선생님이 코멘트를 달아줄 거예요! 🌙\n\n(네트워크 복구 시 자동으로 백업됩니다)';
-      }
-    }
-
-    // 저장 완료 Alert 먼저 표시
-    Alert.alert(title, message, [
-      {
-        text: '확인',
-        onPress: () => onSaveComplete(shouldShowSurvey),
-      },
-    ]);
+    // 저장 완료 - 상세 화면으로 이동 (Alert 없이)
+    // 상세 화면에서 imageGenerationStatus를 표시
+    onSaveComplete(shouldShowSurvey);
   };
 
   return {

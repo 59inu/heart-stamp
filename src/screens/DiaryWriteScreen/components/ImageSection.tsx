@@ -92,7 +92,8 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
   // 이미지가 없을 때
   return (
     <View style={[styles.buttonContainer, { height: PLACEHOLDER_HEIGHT }]}>
-      {!isEditMode && onAIGenerate && (
+      {/* 새 작성일 때만 AI 생성 버튼 표시 */}
+      {onAIGenerate && !isEditMode && (
         <>
           <TouchableOpacity
             style={[
@@ -118,7 +119,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
         </>
       )}
       <TouchableOpacity
-        style={[styles.button, styles.galleryButton, isEditMode && styles.fullWidth]}
+        style={[styles.button, styles.galleryButton]}
         onPress={onImagePick}
         activeOpacity={0.7}
         disabled={uploadingImage}
@@ -133,7 +134,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
 const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',

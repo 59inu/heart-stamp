@@ -106,6 +106,27 @@ export const DiaryCard: React.FC<DiaryCardProps> = ({ diary, onPress }) => {
 
         return null;
       })()}
+
+      {/* 이미지 생성 상태 표시 */}
+      {diary.imageGenerationStatus && diary.imageGenerationStatus !== 'completed' && (
+        <View style={[
+          styles.imageGenerationStatus,
+          diary.imageGenerationStatus === 'failed' && styles.imageGenerationStatusFailed
+        ]}>
+          <View style={styles.imageGenerationIconCircle}>
+            <Ionicons
+              name={diary.imageGenerationStatus === 'failed' ? 'alert-circle' : 'brush'}
+              size={14}
+              color="#fff"
+            />
+          </View>
+          <Text style={styles.imageGenerationStatusText}>
+            {diary.imageGenerationStatus === 'pending' && '그림일기 준비 중...'}
+            {diary.imageGenerationStatus === 'generating' && '그림 그리고 있어요 🎨'}
+            {diary.imageGenerationStatus === 'failed' && '그림 생성에 실패했어요'}
+          </Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -195,5 +216,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  imageGenerationStatus: {
+    backgroundColor: '#FFF8E1',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  imageGenerationStatusFailed: {
+    backgroundColor: '#FFEBEE',
+  },
+  imageGenerationIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFA726',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageGenerationStatusText: {
+    fontSize: 13,
+    color: '#666',
+    flex: 1,
   },
 });

@@ -78,7 +78,7 @@ export class ApiService {
     );
   }
 
-  async uploadDiary(diary: DiaryEntry): Promise<ApiResult<boolean>> {
+  async uploadDiary(diary: DiaryEntry, generateImage: boolean = false): Promise<ApiResult<boolean>> {
     try {
       logger.log(`📤 [apiService] Uploading diary ${diary._id} to server...`);
       const response = await this.axiosInstance.post('/diaries', {
@@ -93,6 +93,7 @@ export class ApiService {
         createdAt: diary.createdAt,
         updatedAt: diary.updatedAt,
         syncedWithServer: diary.syncedWithServer,
+        generateImage, // 그림일기 생성 플래그
       });
 
       logger.log(`✅ [apiService] Diary ${diary._id} uploaded successfully`);

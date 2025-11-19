@@ -11,7 +11,7 @@
  * 설치 방법: npm install @react-native-firebase/app @react-native-firebase/analytics
  */
 
-import analytics from '@react-native-firebase/analytics';
+// import analytics from '@react-native-firebase/analytics';
 import { Platform } from 'react-native';
 import { UserService } from './userService';
 import { DiaryEntry } from '../models/DiaryEntry';
