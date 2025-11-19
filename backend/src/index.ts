@@ -18,6 +18,7 @@ import reportRoutes, { initializeReportService } from './routes/reportRoutes';
 import imageRoutes from './routes/imageRoutes';
 import exportRoutes from './routes/exportRoutes';
 import nanobananaRoutes from './routes/nanobananaRoutes';
+import imageGenerationRoutes from './routes/imageGenerationRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
@@ -99,6 +100,7 @@ app.use('/api', generalApiLimiter, diaryRoutes);
 app.use('/api', generalApiLimiter, reportRoutes);
 app.use('/api', generalApiLimiter, imageRoutes);
 app.use('/api', generalApiLimiter, exportRoutes);
+app.use('/api', generalApiLimiter, imageGenerationRoutes);
 
 // Nanobanana callback (레이트리미트 없음 - 외부 API 호출)
 app.use('/api', nanobananaRoutes);

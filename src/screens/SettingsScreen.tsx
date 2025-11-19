@@ -30,6 +30,9 @@ import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
 import { logger } from '../utils/logger';
 import { AnalyticsService } from '../services/analyticsService';
+import { apiService } from '../services/apiService';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -44,6 +47,12 @@ export const SettingsScreen: React.FC = () => {
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [hasActiveExport, setHasActiveExport] = useState(false);
+  const [imageCredit, setImageCredit] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+    resetDate: string;
+  } | null>(null);
 
   const appVersion = '1.0.0';
 
@@ -79,6 +88,12 @@ export const SettingsScreen: React.FC = () => {
           // Export job 상태 체크
           const activeExport = await ExportService.hasActiveExportJob();
           setHasActiveExport(activeExport);
+
+          // 그림일기 크레딧 조회
+          const creditResult = await apiService.getImageGenerationCredit();
+          if (creditResult.success) {
+            setImageCredit(creditResult.data);
+          }
         } catch (error) {
           logger.error('Failed to load settings:', error);
         }
@@ -327,6 +342,33 @@ export const SettingsScreen: React.FC = () => {
               trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
               thumbColor={dailyReminderEnabled ? '#fff' : '#f4f3f4'}
             />
+          </View>
+        </View>
+
+        {/* 그림일기 크레딧 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>그림일기</Text>
+
+          <View style={styles.creditCard}>
+            <View style={styles.creditHeader}>
+              <Ionicons name="image-outline" size={24} color={COLORS.secondary} />
+              <Text style={styles.creditTitle}>월간 크레딧</Text>
+            </View>
+
+            {imageCredit ? (
+              <View style={styles.creditContent}>
+                <View style={styles.creditRow}>
+                  <Text style={styles.creditLabel}>이번 달 사용</Text>
+                  <Text style={styles.creditValue}>
+                    {imageCredit.used} / {imageCredit.limit}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.creditContent}>
+                <Text style={styles.creditLoadingText}>로딩 중...</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -630,5 +672,59 @@ const styles = StyleSheet.create({
     color: '#F57C00',
     marginLeft: 8,
     fontWeight: '500',
+  },
+  creditCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  creditHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  creditTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+  },
+  creditContent: {
+    gap: 12,
+  },
+  creditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  creditLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  creditValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  creditValueEmpty: {
+    color: '#F44336',
+  },
+  creditFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  creditResetText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+  },
+  creditLoadingText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });

@@ -510,6 +510,30 @@ export class ApiService {
       throw new Error(error.response?.data?.error || 'Failed to delete all data');
     }
   }
+
+  // Image generation credit
+  async getImageGenerationCredit(): Promise<ApiResult<{
+    used: number;
+    limit: number;
+    remaining: number;
+    resetDate: string;
+  }>> {
+    try {
+      const response = await this.axiosInstance.get('/image-generation/credit');
+      if (response.data.success) {
+        return { success: true, data: response.data.data };
+      }
+      return { success: false, error: '크레딧 정보를 불러올 수 없습니다' };
+    } catch (error: any) {
+      logger.error('Error getting image generation credit:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.DIARY_FETCH),
+        errorType
+      };
+    }
+  }
 }
 
 export const apiService = new ApiService();

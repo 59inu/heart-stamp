@@ -92,8 +92,8 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
   // 이미지가 없을 때
   return (
     <View style={[styles.buttonContainer, { height: PLACEHOLDER_HEIGHT }]}>
-      {/* 새 작성일 때만 AI 생성 버튼 표시 */}
-      {onAIGenerate && !isEditMode && (
+      {/* AI 생성 버튼 표시 */}
+      {onAIGenerate && (
         <>
           <TouchableOpacity
             style={[

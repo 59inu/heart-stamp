@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { WeatherType } from '../../models/DiaryEntry';
 import { SurveyModal } from '../../components/SurveyModal';
 import { SurveyService } from '../../services/surveyService';
 import { logger } from '../../utils/logger';
+import { apiService } from '../../services/apiService';
 import { useLoadEntry } from './hooks/useLoadEntry';
 import { useWeather } from './hooks/useWeather';
 import { useImagePicker } from './hooks/useImagePicker';
@@ -121,11 +122,33 @@ export const DiaryWriteScreen: React.FC = () => {
     navigation.goBack();
   };
 
+
   const handleMoodSelect = (mood: 'red' | 'yellow' | 'green') => {
     setSelectedMood(mood);
   };
 
-  const handleAIImageGenerate = () => {
+  const handleAIImageGenerate = async () => {
+    // 버튼 클릭 시점에 크레딧 확인
+    const creditResult = await apiService.getImageGenerationCredit();
+
+    if (!creditResult.success) {
+      Alert.alert(
+        '오류',
+        '크레딧 정보를 확인할 수 없습니다.\n잠시 후 다시 시도해주세요.',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+
+    if (creditResult.data.remaining <= 0) {
+      Alert.alert(
+        '그림일기 크레딧 부족',
+        '이번 달 그림일기 크레딧을 모두 사용하셨습니다.\n다음 달에 다시 이용해주세요.',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+
     setAiGenerateSelected(true);
     Alert.alert(
       '',
