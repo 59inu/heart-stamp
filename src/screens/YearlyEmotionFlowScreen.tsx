@@ -37,7 +37,7 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
         >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>감정의 흐름</Text>
+        <Text style={styles.headerTitle}>감정 로그</Text>
         <View style={styles.headerRight} />
       </View>
 
