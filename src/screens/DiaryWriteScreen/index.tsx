@@ -39,6 +39,7 @@ export const DiaryWriteScreen: React.FC = () => {
   const [selectedDate] = useState(route.params?.date || new Date());
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [weather, setWeather] = useState<WeatherType | null>(null);
+  const [aiGenerateSelected, setAiGenerateSelected] = useState(false);
 
   const entryId = route.params?.entryId;
   const MAX_CHARS = 700;
@@ -118,6 +119,20 @@ export const DiaryWriteScreen: React.FC = () => {
     setSelectedMood(mood);
   };
 
+  const handleAIImageGenerate = () => {
+    setAiGenerateSelected(true);
+    Alert.alert(
+      '',
+      '일기를 쓰고 저장하면 어울리는 그림을 그려올게요',
+      [{ text: '확인' }]
+    );
+  };
+
+  const handleImagePick = () => {
+    setAiGenerateSelected(false);
+    pickImage();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -150,7 +165,7 @@ export const DiaryWriteScreen: React.FC = () => {
             uploadingImage={uploadingImage}
             loadingImage={loadingImage}
             loadingEntry={loadingEntry}
-            onImagePick={pickImage}
+            onImagePick={handleImagePick}
             onImageRemove={removeImage}
             onLoadStart={() => setLoadingImage(true)}
             onLoad={() => {
@@ -161,6 +176,9 @@ export const DiaryWriteScreen: React.FC = () => {
               logger.error('❌ 이미지 로드 실패:', imageUri, error);
               setLoadingImage(false);
             }}
+            isEditMode={!!entryId}
+            onAIGenerate={handleAIImageGenerate}
+            aiGenerateSelected={aiGenerateSelected}
           />
 
           <View style={styles.editorContainer}>

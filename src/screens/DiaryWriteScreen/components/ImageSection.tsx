@@ -28,6 +28,7 @@ interface ImageSectionProps {
   onError: (error: any) => void;
   isEditMode?: boolean;
   onAIGenerate?: () => void;
+  aiGenerateSelected?: boolean;
 }
 
 export const ImageSection: React.FC<ImageSectionProps> = ({
@@ -42,6 +43,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
   onError,
   isEditMode = false,
   onAIGenerate,
+  aiGenerateSelected = false,
 }) => {
   // 이미지가 있을 때
   if (imageUri) {
@@ -93,13 +95,24 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
       {!isEditMode && onAIGenerate && (
         <>
           <TouchableOpacity
-            style={[styles.button, styles.aiButton]}
+            style={[
+              styles.button,
+              styles.aiButton,
+              aiGenerateSelected && styles.aiButtonSelected,
+            ]}
             onPress={onAIGenerate}
             activeOpacity={0.7}
             disabled={uploadingImage}
           >
-            <Ionicons name="sparkles" size={20} color={COLORS.emotionPositive} style={styles.buttonIcon} />
-            <Text style={styles.buttonText}>AI 이미지 생성</Text>
+            <Ionicons
+              name="sparkles"
+              size={20}
+              color={COLORS.emotionPositive}
+              style={styles.buttonIcon}
+            />
+            <Text style={[styles.buttonText, aiGenerateSelected && styles.buttonTextSelected]}>
+              그림일기 만들기
+            </Text>
           </TouchableOpacity>
           <View style={styles.buttonSpacer} />
         </>
@@ -152,6 +165,9 @@ const styles = StyleSheet.create({
     width: 8,
   },
   aiButton: {},
+  aiButtonSelected: {
+    backgroundColor: COLORS.emotionPositiveStrong,
+  },
   galleryButton: {},
   fullWidth: {
     flex: 1,
@@ -163,6 +179,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  buttonTextSelected: {
+    color: COLORS.emotionPositive,
+    fontWeight: '600',
   },
   imageDeleteButton: {
     position: 'absolute',
