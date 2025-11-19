@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationState } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from './types';
@@ -19,7 +19,11 @@ import { logger } from '../utils/logger';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-export const AppNavigator: React.FC = () => {
+interface AppNavigatorProps {
+  onNavigationStateChange?: (routeName: string) => void;
+}
+
+export const AppNavigator: React.FC<AppNavigatorProps> = ({ onNavigationStateChange }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasAgreed, setHasAgreed] = useState(false);
 
@@ -62,8 +66,22 @@ export const AppNavigator: React.FC = () => {
     );
   }
 
+  const getCurrentRouteName = (state: NavigationState | undefined): string => {
+    if (!state) return '';
+    const route = state.routes[state.index];
+    if ((route as any).state) {
+      return getCurrentRouteName((route as any).state as NavigationState);
+    }
+    return route.name;
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      onStateChange={(state) => {
+        const routeName = getCurrentRouteName(state);
+        onNavigationStateChange?.(routeName);
+      }}
+    >
       <Stack.Navigator
         initialRouteName={hasAgreed ? 'DiaryList' : 'Onboarding'}
         screenOptions={{

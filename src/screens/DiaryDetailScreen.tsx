@@ -49,9 +49,14 @@ export const DiaryDetailScreen: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     setImageLoadStatus('pending'); // 리셋
+
+    // 서버에서 전체 동기화 (imageGenerationStatus 포함)
+    // 조용히 실행 (실패해도 Alert 없이)
+    await DiaryStorage.syncWithServer();
+
     let diary = await DiaryStorage.getById(route.params.entryId);
 
-    // 서버에서 AI 코멘트 동기화
+    // AI 코멘트가 없는 경우에만 추가 동기화 시도
     if (diary && (!diary.aiComment || !diary.stampType)) {
       const result = await apiService.syncDiaryFromServer(diary._id);
 

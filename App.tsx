@@ -29,6 +29,13 @@ export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
+  // 업데이트 관련 ref
+  const currentRouteNameRef = useRef<string>('');
+  const lastUpdateCheckTime = useRef(0);
+  const isCheckingUpdate = useRef(false);
+  const UPDATE_CHECK_DEBOUNCE = 30000; // 30초
+  const SAFE_SCREENS = ['DiaryList']; // 홈 화면
+
   useEffect(() => {
     async function prepare() {
       try {
@@ -51,42 +58,50 @@ export default function App() {
     }
   }, [appIsReady]);
 
+  // 현재 화면 추적 콜백
+  const handleRouteChange = useCallback((routeName: string) => {
+    currentRouteNameRef.current = routeName;
+    logger.log(`[Nav] Current route: ${routeName}`);
+  }, []);
+
+  // EAS Update 체크 함수 (Alert 없이 즉시 적용)
+  const checkForUpdates = useCallback(async () => {
+    if (__DEV__) {
+      logger.log('ℹ️ [Update] Skipping in dev mode');
+      return;
+    }
+
+    if (isCheckingUpdate.current) {
+      logger.log('⏳ [Update] Already checking, skip');
+      return;
+    }
+
+    isCheckingUpdate.current = true;
+
+    try {
+      logger.log('🔍 [Update] Checking for updates...');
+      const update = await Updates.checkForUpdateAsync();
+
+      if (update.isAvailable) {
+        logger.log('📦 [Update] Update available, applying...');
+        await AnalyticsService.logEvent('eas_update_applying');
+        await Updates.fetchUpdateAsync();
+        await Updates.reloadAsync(); // 즉시 적용
+      } else {
+        logger.log('✅ [Update] App is up to date');
+      }
+    } catch (e) {
+      logger.error('❌ [Update] Check failed:', e);
+    } finally {
+      isCheckingUpdate.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     if (!appIsReady) return;
 
     const initializeApp = async () => {
-      // EAS Updates 체크 (프로덕션/프리뷰 빌드에서만)
-      const checkForUpdates = async () => {
-        if (__DEV__) {
-          logger.log('ℹ️ [App] Skipping update check in development mode');
-          return;
-        }
-
-        try {
-          const update = await Updates.checkForUpdateAsync();
-
-          if (update.isAvailable) {
-            logger.log('🔄 [App] Update available, downloading...');
-            await Updates.fetchUpdateAsync();
-            logger.log('✅ [App] Update downloaded, will apply on next restart');
-
-            // 사용자에게 알림 (선택적)
-            Alert.alert(
-              '업데이트 완료',
-              '새로운 버전을 다운로드했습니다. 앱을 재시작하면 적용됩니다.',
-              [
-                { text: '나중에', style: 'cancel' },
-                { text: '재시작', onPress: () => Updates.reloadAsync() }
-              ]
-            );
-          } else {
-            logger.log('✅ [App] App is up to date');
-          }
-        } catch (e) {
-          logger.error('❌ [App] Error checking for updates:', e);
-        }
-      };
-
+      // 앱 시작 시 업데이트 체크 (Alert 없이)
       await checkForUpdates();
 
       // Firebase Auth 및 Analytics 초기화 (완료될 때까지 대기)
@@ -160,7 +175,7 @@ export default function App() {
           const notificationType = notification.request.content.data?.type;
           if (notificationType === 'ai_comment_complete') {
             // Analytics: AI 코멘트 알림 수신
-            const entryId = notification.request.content.data?.diaryId || '';
+            const entryId = String(notification.request.content.data?.diaryId || '');
             await AnalyticsService.logAICommentNotificationReceived(
               entryId,
               AppState.currentState === 'active' ? 'foreground' : 'background'
@@ -240,8 +255,26 @@ export default function App() {
             logger.error('📱 [App] Sync failed:', result.error);
             // 백그라운드에서 포그라운드로 전환 시에는 Alert 표시하지 않음 (너무 방해됨)
           }
+
+          // 동기화 후 화면 업데이트 시간 확보
+          await new Promise(resolve => setTimeout(resolve, 500));
         } else {
           logger.log(`⏭️ [App] Skipping sync (only ${Math.round(timeSinceLastSync/1000)}s since last sync)`);
+        }
+
+        // 업데이트 체크 (조건: 안전한 화면 + 30초 경과)
+        const timeSinceLastUpdateCheck = now - lastUpdateCheckTime.current;
+        const isSafeScreen = SAFE_SCREENS.includes(currentRouteNameRef.current);
+        const shouldCheckUpdate = timeSinceLastUpdateCheck > UPDATE_CHECK_DEBOUNCE;
+
+        if (isSafeScreen && shouldCheckUpdate) {
+          logger.log(`✅ [Update] Safe to check (on ${currentRouteNameRef.current})`);
+          lastUpdateCheckTime.current = now;
+          await checkForUpdates();
+        } else if (!isSafeScreen) {
+          logger.log(`⏭️ [Update] Skip (on ${currentRouteNameRef.current}, waiting for safe screen)`);
+        } else {
+          logger.log(`⏭️ [Update] Skip (checked ${Math.round(timeSinceLastUpdateCheck/1000)}s ago)`);
         }
       }
       appState.current = nextAppState;
@@ -261,7 +294,7 @@ export default function App() {
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <ErrorBoundary level="app">
-        <AppNavigator />
+        <AppNavigator onNavigationStateChange={handleRouteChange} />
         <StatusBar style="auto" />
         <Toast />
         <OfflineBanner />
