@@ -39,6 +39,7 @@ router.post('/diaries',
   body('weather').optional().isString().trim(),
   body('mood').optional().isIn(['red', 'yellow', 'green']).withMessage('Invalid mood value'),
   body('moodTag').optional().isString().trim().isLength({ max: 100 }),
+  body('imageUri').optional().isString().trim(),
   body('createdAt').isISO8601(),
   body('updatedAt').isISO8601(),
   body('generateImage').optional().isBoolean().withMessage('generateImage must be a boolean'),
@@ -65,6 +66,13 @@ router.post('/diaries',
 
       const { generateImage, ...diaryData } = req.body;
 
+      console.log('📤 [Diary Upload] Received data:', {
+        _id: diaryData._id,
+        hasImageUri: !!diaryData.imageUri,
+        imageUri: diaryData.imageUri,
+        generateImage,
+      });
+
       const diaryEntry: DiaryEntry = {
         ...diaryData,
         userId, // X-User-Id 헤더의 userId로 설정
@@ -79,6 +87,11 @@ router.post('/diaries',
         // - userId: 원래 userId 보존
         // - imageGenerationStatus: 이미지 생성 상태는 백그라운드 프로세스가 관리
         const { userId: _, imageGenerationStatus: __, ...updateData } = diaryEntry;
+        console.log('🔄 [Diary Upload] Updating existing diary:', {
+          _id: diaryEntry._id,
+          hasImageUri: !!updateData.imageUri,
+          imageUri: updateData.imageUri,
+        });
         await DiaryDatabase.update(diaryEntry._id, updateData);
       } else {
         await DiaryDatabase.create(diaryEntry);

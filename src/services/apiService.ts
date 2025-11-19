@@ -88,6 +88,7 @@ export class ApiService {
         weather: diary.weather,
         mood: diary.mood,
         moodTag: diary.moodTag,
+        imageUri: diary.imageUri, // 이미지 URI 추가
         aiComment: diary.aiComment,
         stampType: diary.stampType,
         createdAt: diary.createdAt,
