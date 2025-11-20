@@ -92,7 +92,8 @@ export default ({ config }) => {
           'expo-build-properties',
           {
             ios: {
-              useFrameworks: 'dynamic',
+              useFrameworks: 'static',
+              forceStaticLinking: ['RNFBApp', 'RNFBAnalytics'],
             },
           },
         ],
