@@ -28,7 +28,7 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
   const { diaries, loading } = useYearlyDiaries(selectedYear);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -131,7 +131,7 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -213,6 +213,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingTop: 12,
+    backgroundColor: '#f5f5f5',
   },
   placeholder: {
     padding: 40,
