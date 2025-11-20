@@ -255,6 +255,100 @@ export class ApiService {
     }
   }
 
+  /**
+   * 알림 설정 업데이트
+   */
+  async updateNotificationPreferences(
+    userId: string,
+    preferences: {
+      teacherCommentEnabled?: boolean;
+      dailyReminderEnabled?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      logger.log('📤 [API] Updating notification preferences:', preferences);
+      const response = await this.axiosInstance.put('/notification-preferences', {
+        userId,
+        ...preferences,
+      });
+      logger.log('✅ [API] Notification preferences updated');
+      return { success: response.data.success };
+    } catch (error: any) {
+      if (error.response) {
+        logger.error('[API] Notification preferences update failed:', {
+          status: error.response.status,
+          data: error.response.data,
+        });
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.SETTINGS),
+        };
+      } else if (error.request) {
+        logger.error('[API] Notification preferences - no response received:', error.message);
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.NETWORK),
+        };
+      } else {
+        logger.error('[API] Notification preferences - request setup failed:', error.message);
+        return {
+          success: false,
+          error: '알림 설정 요청을 생성할 수 없습니다.',
+        };
+      }
+    }
+  }
+
+  /**
+   * 알림 설정 조회
+   */
+  async getNotificationPreferences(userId: string): Promise<{
+    success: boolean;
+    data?: {
+      teacherCommentEnabled: boolean;
+      dailyReminderEnabled: boolean;
+    };
+    error?: string;
+  }> {
+    try {
+      logger.log('📥 [API] Getting notification preferences for user:', userId);
+      const response = await this.axiosInstance.get('/notification-preferences', {
+        params: { userId },
+      });
+      logger.log('✅ [API] Notification preferences retrieved:', response.data.data);
+      return {
+        success: response.data.success,
+        data: response.data.data,
+      };
+    } catch (error: any) {
+      if (error.response) {
+        logger.error('[API] Notification preferences get failed:', {
+          status: error.response.status,
+          data: error.response.data,
+        });
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.SETTINGS),
+        };
+      } else if (error.request) {
+        logger.error('[API] Notification preferences - no response received:', error.message);
+        return {
+          success: false,
+          error: getLocalizedErrorMessage(error, ErrorContext.NETWORK),
+        };
+      } else {
+        logger.error('[API] Notification preferences - request setup failed:', error.message);
+        return {
+          success: false,
+          error: '알림 설정 요청을 생성할 수 없습니다.',
+        };
+      }
+    }
+  }
+
   async syncDiaryFromServer(diaryId: string): Promise<ApiResult<{
     aiComment?: string;
     stampType?: string;

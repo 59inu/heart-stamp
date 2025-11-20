@@ -91,7 +91,11 @@ export const MailboxScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>우편함</Text>
+        <View style={styles.placeholder} />
       </View>
 
 {loading ? (
@@ -138,15 +142,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     height: 56,
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  backButton: {
+    width: 36,
+    padding: 0,
+  },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  placeholder: {
+    width: 36,
   },
   loadingContainer: {
     flex: 1,

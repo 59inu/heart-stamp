@@ -445,6 +445,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   backButton: {
+    width: 36,
     padding: 0,
   },
   headerButtons: {

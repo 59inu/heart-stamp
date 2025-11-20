@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,11 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
   const [viewShotHeight, setViewShotHeight] = useState<number | null>(null);
   const [includeComment, setIncludeComment] = useState(true);
 
+  // ▸ 일기/코멘트 상태가 바뀔 때마다 높이 재측정하도록 리셋
+  useEffect(() => {
+    setViewShotHeight(null);
+  }, [diary._id, includeComment]);
+
   const getScaledTransform = () => {
     if (!viewShotHeight) {
       return [{ scale: SCALE_RATIO }];
@@ -52,7 +57,8 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
 
     const delta = viewShotHeight * (1 - SCALE_RATIO);
     return [
-      { translateY: -(delta / 2) }, // 위로 반만 당기기 → top 맞추기
+      // 위·아래로 줄어든 것 중 위쪽만 살짝 당겨서 top 쪽이 잘리지 않게
+      { translateY: -(delta / 2) + 1 }, // +1 정도 여유
       { scale: SCALE_RATIO },
     ];
   };
@@ -146,7 +152,8 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                   styles.scaleWrapper,
                   viewShotHeight
                     ? {
-                        height: Math.round(viewShotHeight * Math.round(SCALE_RATIO)),
+                        // ▸ 실제 높이에 scale 적용한 만큼 + 약간 여유
+                        height: Math.ceil(viewShotHeight * SCALE_RATIO) + 2,
                         overflow: 'hidden',
                       }
                     : undefined,
@@ -162,84 +169,81 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                     }}
                     style={styles.viewShot}
                     onLayout={(e) => {
-                      setViewShotHeight(e.nativeEvent.layout.height);
+                      const h = e.nativeEvent.layout.height;
+                      // ▸ onLayout 여러 번 들어오면 더 큰 값만 반영
+                      setViewShotHeight((prev) => (prev === null ? h : Math.max(prev, h)));
                     }}
                   >
                     <View style={styles.captureRoot}>
                       <View style={styles.shareableContent}>
-                        {/* 캡처 루트: 전체 배경 + 하단 여유 */}
-                        <View style={styles.captureRoot}>
-                          <View style={styles.shareableContent}>
-                            {/* 날짜와 워터마크 */}
-                            <View style={styles.dateContainer}>
-                              <Text style={styles.dateText}>{formattedDate}</Text>
-                              <Text style={styles.watermark}>하트스탬프 일기장</Text>
-                            </View>
-
-                            {/* 이미지 섹션 */}
-                            {diary.imageUri &&
-                              diary.imageGenerationStatus !== 'generating' &&
-                              diary.imageGenerationStatus !== 'pending' && (
-                                <View style={styles.imageSection}>
-                                  <Image
-                                    source={{ uri: diary.imageUri }}
-                                    style={styles.diaryImage}
-                                    contentFit="contain"
-                                    cachePolicy="memory-disk"
-                                    priority="high"
-                                    transition={0}
-                                  />
-                                </View>
-                              )}
-
-                            {/* 본문 - 원고지 스타일 */}
-                            <View style={styles.contentSection}>
-                              <ManuscriptPaper content={diary.content} />
-                            </View>
-
-                            {/* 선생님 코멘트 */}
-                            {includeComment && diary.aiComment && (
-                              <View style={styles.commentSection}>
-                                <View style={styles.commentHeader}>
-                                  <View style={styles.emojiCircle}>
-                                    <Ionicons name="sparkles" size={12} color="#fff" />
-                                  </View>
-                                  <Text style={styles.commentLabel}>선생님 코멘트</Text>
-                                </View>
-                                <Text style={styles.commentText}>{diary.aiComment}</Text>
-                              </View>
-                            )}
-
-                            {/* 도장 오버레이 */}
-                            {diary.stampType && (
-                              <View
-                                style={[
-                                  styles.stampOverlay,
-                                  {
-                                    top:
-                                      diary.imageUri &&
-                                      diary.imageGenerationStatus !== 'generating' &&
-                                      diary.imageGenerationStatus !== 'pending'
-                                        ? '45%' // 이미지 있을 때
-                                        : '15%', // 이미지 없을 때
-                                  },
-                                ]}
-                              >
-                                <Image
-                                  source={getStampImage(diary.stampType)}
-                                  style={[
-                                    styles.stampImageLarge,
-                                    { tintColor: getStampColor(diary._id) },
-                                  ]}
-                                  contentFit="contain"
-                                  cachePolicy="memory-disk"
-                                  priority="high"
-                                  transition={0}
-                                />
-                              </View>
-                            )}
-                          </View>
+                        {/* 날짜와 워터마크 */}
+                        <View style={styles.dateContainer}>
+                          <Text style={styles.dateText}>{formattedDate}</Text>
+                          <Text style={styles.watermark}>하트스탬프 일기장</Text>
                         </View>
+
+                        {/* 이미지 섹션 */}
+                        {diary.imageUri &&
+                          diary.imageGenerationStatus !== 'generating' &&
+                          diary.imageGenerationStatus !== 'pending' && (
+                            <View style={styles.imageSection}>
+                              <Image
+                                source={{ uri: diary.imageUri }}
+                                style={styles.diaryImage}
+                                contentFit="contain"
+                                cachePolicy="memory-disk"
+                                priority="high"
+                                transition={0}
+                              />
+                            </View>
+                          )}
+
+                        {/* 본문 - 원고지 스타일 */}
+                        <View style={styles.contentSection}>
+                          <ManuscriptPaper content={diary.content} />
+                        </View>
+
+                        {/* 선생님 코멘트 */}
+                        {includeComment && diary.aiComment && (
+                          <View style={styles.commentSection}>
+                            <View style={styles.commentHeader}>
+                              <View style={styles.emojiCircle}>
+                                <Ionicons name="sparkles" size={12} color="#fff" />
+                              </View>
+                              <Text style={styles.commentLabel}>선생님 코멘트</Text>
+                            </View>
+                            <Text style={styles.commentText}>{diary.aiComment}</Text>
+                          </View>
+                        )}
+
+                        {/* 도장 오버레이 */}
+                        {diary.stampType && (
+                          <View
+                            style={[
+                              styles.stampOverlay,
+                              {
+                                top:
+                                  diary.imageUri &&
+                                  diary.imageGenerationStatus !== 'generating' &&
+                                  diary.imageGenerationStatus !== 'pending'
+                                    ? '45%'
+                                    : '15%',
+                              },
+                            ]}
+                          >
+                            <Image
+                              source={getStampImage(diary.stampType)}
+                              style={[
+                                styles.stampImageLarge,
+                                { tintColor: getStampColor(diary._id) },
+                              ]}
+                              contentFit="contain"
+                              cachePolicy="memory-disk"
+                              priority="high"
+                              transition={0}
+                            />
+                          </View>
+                        )}
                       </View>
                     </View>
                   </ViewShot>
@@ -434,20 +438,10 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     flex: 1,
   },
-  stampImage: {
-    width: 72,
-    height: 72,
-  },
   commentText: {
     fontSize: 15,
     lineHeight: 24,
     color: '#333',
-  },
-  commentDisclaimer: {
-    fontSize: 11,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 12,
   },
   buttonContainer: {
     flexDirection: 'row',

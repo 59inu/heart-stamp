@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { SURVEY_URL, SURVEY_BENEFIT } from '../constants/survey';
 import { SurveyService } from '../services/surveyService';
@@ -303,7 +303,7 @@ export const SettingsScreen: React.FC = () => {
         {/* 헤더 */}
         <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>설정</Text>
         <View style={styles.placeholder} />
@@ -504,18 +504,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 56,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 4,
+    width: 36,
+    padding: 0,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#333',
   },
   placeholder: {

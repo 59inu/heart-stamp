@@ -25,7 +25,7 @@ SplashScreen.preventAutoHideAsync();
 export default function App() {
   const appState = useRef(AppState.currentState);
   const lastSyncTime = useRef(0);
-  const SYNC_DEBOUNCE_MS = 30000; // 30초 디바운스
+  const SYNC_DEBOUNCE_MS = 120000; // 2분 디바운스 (서버 부하 감소)
   const [appIsReady, setAppIsReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
@@ -142,6 +142,33 @@ export default function App() {
       // 푸시 알림 등록 및 리스너 설정
       const initPushNotifications = async () => {
       logger.log('📱 [App] Initializing push notifications...');
+
+      // ✅ 기존 로컬 9시 알림 모두 취소 (중복 방지)
+      try {
+        logger.log('🗑️ [App] Cancelling legacy local notifications...');
+
+        const Notifications = await import('expo-notifications');
+
+        // 특정 ID로 예약된 알림 취소
+        await Notifications.default.cancelScheduledNotificationAsync('daily-diary-reminder');
+
+        // 혹시 남아있는 모든 예약 알림 확인
+        const scheduled = await Notifications.default.getAllScheduledNotificationsAsync();
+        logger.log(`📋 [App] Scheduled notifications: ${scheduled.length}`);
+
+        // 일기 관련 알림으로 보이는 것들 모두 취소
+        for (const notification of scheduled) {
+          const title = notification.content.title || '';
+          if (title.includes('일기')) {
+            await Notifications.default.cancelScheduledNotificationAsync(notification.identifier);
+            logger.log(`🗑️ [App] Cancelled legacy notification: ${notification.identifier}`);
+          }
+        }
+
+        logger.log('✅ [App] Legacy local notifications cleaned up');
+      } catch (error) {
+        logger.error('❌ [App] Failed to cancel legacy notifications:', error);
+      }
 
       // 푸시 토큰 등록 (권한 요청 포함)
       const result = await NotificationService.registerForPushNotifications();

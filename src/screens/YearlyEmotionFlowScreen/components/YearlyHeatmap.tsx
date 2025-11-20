@@ -10,15 +10,12 @@ interface YearlyHeatmapProps {
 
 // 감정 타입별 색상
 const EMOTION_COLORS = {
-  red: '#F19392',    // 핑크 - 부정
+  red: '#F19392', // 핑크 - 부정
   yellow: '#F5EFE5', // 베이지 - 중립
-  green: '#9DD2B6',  // 민트 - 긍정
+  green: '#9DD2B6', // 민트 - 긍정
 };
 
-export const YearlyHeatmap: React.FC<YearlyHeatmapProps> = ({
-  diaries,
-  year,
-}) => {
+export const YearlyHeatmap: React.FC<YearlyHeatmapProps> = ({ diaries, year }) => {
   // 디바이스 너비에 따른 동적 크기 계산
   const dimensions = useMemo(() => {
     const screenWidth = Dimensions.get('window').width;
@@ -39,7 +36,7 @@ export const YearlyHeatmap: React.FC<YearlyHeatmapProps> = ({
 
     // 월 간격을 제외한 실제 셀 너비
     const monthMargin = 1.5;
-    const cellWidth = monthColumnWidth - (monthMargin * 2);
+    const cellWidth = monthColumnWidth - monthMargin * 2;
 
     return {
       cellWidth: Math.max(cellWidth, 18), // 최소 18px
@@ -63,7 +60,20 @@ export const YearlyHeatmap: React.FC<YearlyHeatmapProps> = ({
   }, [diaries]);
 
   // 월 라벨
-  const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+  const months = [
+    '1월',
+    '2월',
+    '3월',
+    '4월',
+    '5월',
+    '6월',
+    '7월',
+    '8월',
+    '9월',
+    '10월',
+    '11월',
+    '12월',
+  ];
 
   // 각 월의 일 수
   const getDaysInMonth = (month: number) => {
@@ -109,67 +119,94 @@ export const YearlyHeatmap: React.FC<YearlyHeatmapProps> = ({
           contentContainerStyle={styles.contentContainer}
         >
           <View style={styles.heatmapContainer}>
-        {/* 일(Day) 라벨 */}
-        <View style={styles.dayLabelColumn}>
-          <View style={[styles.cornerCell, {
-            height: dimensions.cornerSize,
-            width: dimensions.dayLabelWidth
-          }]} />
-          {Array.from({ length: 31 }, (_, i) => (
-            <View key={i} style={[styles.dayLabel, {
-              height: dimensions.cellHeight,
-              width: dimensions.dayLabelWidth
-            }]}>
-              <Text style={[styles.dayLabelText, { fontSize: dimensions.fontSize }]}>
-                {i + 1}
-              </Text>
+            {/* 일(Day) 라벨 */}
+            <View style={styles.dayLabelColumn}>
+              <View
+                style={[
+                  styles.cornerCell,
+                  {
+                    height: dimensions.cornerSize,
+                    width: dimensions.dayLabelWidth,
+                  },
+                ]}
+              />
+              {Array.from({ length: 31 }, (_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dayLabel,
+                    {
+                      height: dimensions.cellHeight,
+                      width: dimensions.dayLabelWidth,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.dayLabelText, { fontSize: dimensions.fontSize }]}>
+                    {i + 1}
+                  </Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
 
-        {/* 월별 컬럼 */}
-        {months.map((monthLabel, monthIndex) => {
-          const daysInMonth = getDaysInMonth(monthIndex);
+            {/* 월별 컬럼 */}
+            {months.map((monthLabel, monthIndex) => {
+              const daysInMonth = getDaysInMonth(monthIndex);
 
-          return (
-            <View key={monthIndex} style={[styles.monthColumn, {
-              marginHorizontal: dimensions.monthMargin
-            }]}>
-              {/* 월 라벨 */}
-              <View style={[styles.monthLabel, {
-                height: dimensions.cornerSize,
-                width: dimensions.cellWidth
-              }]}>
-                <Text style={[styles.monthLabelText, { fontSize: dimensions.fontSize }]}>
-                  {monthLabel}
-                </Text>
-              </View>
-
-              {/* 날짜 셀들 */}
-              {Array.from({ length: 31 }, (_, dayIndex) => {
-                const day = dayIndex + 1;
-                const emotionColor = getEmotionColor(monthIndex, day);
-                const isValidDay = day <= daysInMonth;
-
-                return (
+              return (
+                <View
+                  key={monthIndex}
+                  style={[
+                    styles.monthColumn,
+                    {
+                      marginHorizontal: dimensions.monthMargin,
+                    },
+                  ]}
+                >
+                  {/* 월 라벨 */}
                   <View
-                    key={dayIndex}
                     style={[
-                      styles.dayCell,
+                      styles.monthLabel,
                       {
-                        height: dimensions.cellHeight,
+                        height: dimensions.cornerSize,
                         width: dimensions.cellWidth,
-                        backgroundColor: isValidDay && emotionColor ? emotionColor : (isValidDay ? '#f9f9f9' : 'transparent')
                       },
-                      !isValidDay && styles.dayCellInvalid,
                     ]}
-                  />
-                );
-              })}
-            </View>
-          );
-        })}
-        </View>
+                  >
+                    <Text style={[styles.monthLabelText, { fontSize: dimensions.fontSize }]}>
+                      {monthLabel}
+                    </Text>
+                  </View>
+
+                  {/* 날짜 셀들 */}
+                  {Array.from({ length: 31 }, (_, dayIndex) => {
+                    const day = dayIndex + 1;
+                    const emotionColor = getEmotionColor(monthIndex, day);
+                    const isValidDay = day <= daysInMonth;
+
+                    return (
+                      <View
+                        key={dayIndex}
+                        style={[
+                          styles.dayCell,
+                          {
+                            height: dimensions.cellHeight,
+                            width: dimensions.cellWidth,
+                            backgroundColor:
+                              isValidDay && emotionColor
+                                ? emotionColor
+                                : isValidDay
+                                  ? '#f9f9f9'
+                                  : 'transparent',
+                          },
+                          !isValidDay && styles.dayCellInvalid,
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+              );
+            })}
+          </View>
         </ScrollView>
       </View>
     </View>
@@ -179,6 +216,7 @@ export const YearlyHeatmap: React.FC<YearlyHeatmapProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingBottom: 30,
   },
   heatmapCard: {
     marginHorizontal: 16,

@@ -302,15 +302,34 @@ export class NotificationService {
           throw new Error('Push notification permission denied');
         }
 
-        // 알림 활성화: 매일 저녁 9시로 예약
-        await this.scheduleDailyReminder(21, 0);
-      } else {
-        // 알림 비활성화: 예약 취소
-        await this.cancelDailyReminder();
+        // 토큰이 없으면 등록
+        const token = await this.getPushToken();
+        if (!token) {
+          const result = await this.registerForPushNotifications();
+          if (!result.success) {
+            throw new Error(`Failed to register push token: ${result.reason}`);
+          }
+        }
+      }
+
+      // ❌ 로컬 스케줄러 제거 (서버에서 발송하므로)
+      // await this.scheduleDailyReminder(21, 0);
+
+      // ✅ 백엔드 설정 업데이트
+      const userId = await UserService.getOrCreateUserId();
+      const teacherCommentEnabled = await this.getTeacherCommentNotificationEnabled();
+
+      const result = await apiService.updateNotificationPreferences(userId, {
+        teacherCommentEnabled: teacherCommentEnabled,
+        dailyReminderEnabled: enabled,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update notification preferences');
       }
 
       await AsyncStorage.setItem(DAILY_REMINDER_KEY, String(enabled));
-      logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'}`);
+      logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'} (server-side)`);
     } catch (error) {
       logger.error('❌ Failed to set daily reminder setting:', error);
       throw error;
@@ -370,21 +389,31 @@ export class NotificationService {
           throw new Error('Push notification permission denied');
         }
 
-        // 토큰이 서버에 등록되어 있는지 확인
+        // 토큰이 없으면 등록
         const token = await this.getPushToken();
         if (!token) {
-          // 토큰이 없으면 재등록 시도 (네트워크 오류 복구)
           logger.log('🔄 No push token found, re-registering...');
           const result = await this.registerForPushNotifications();
           if (!result.success) {
             throw new Error(`Failed to register push token: ${result.reason}`);
           }
         }
-      } else {
-        // 알림 비활성화: 백엔드에서 푸시 토큰 삭제
-        await this.unregisterPushToken();
       }
 
+      // ✅ 백엔드 설정 업데이트 (토큰 삭제 대신)
+      const userId = await UserService.getOrCreateUserId();
+      const dailyReminderEnabled = await this.getDailyReminderEnabled();
+
+      const result = await apiService.updateNotificationPreferences(userId, {
+        teacherCommentEnabled: enabled,
+        dailyReminderEnabled: dailyReminderEnabled,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update notification preferences');
+      }
+
+      // 로컬 설정도 업데이트
       await AsyncStorage.setItem(TEACHER_COMMENT_NOTIFICATION_KEY, String(enabled));
       logger.log(`✅ Teacher comment notification ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {

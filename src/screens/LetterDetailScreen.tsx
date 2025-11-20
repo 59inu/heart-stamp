@@ -122,12 +122,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   backButton: {
+    width: 36,
     padding: 0,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
   },
   loadingContainer: {
     flex: 1,
