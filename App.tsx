@@ -25,7 +25,7 @@ SplashScreen.preventAutoHideAsync();
 export default function App() {
   const appState = useRef(AppState.currentState);
   const lastSyncTime = useRef(0);
-  const SYNC_DEBOUNCE_MS = 30000; // 30초 디바운스
+  const SYNC_DEBOUNCE_MS = 180000; // 3분 디바운스 (홈 화면 자동 동기화 제거로 여유 확보)
   const [appIsReady, setAppIsReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 

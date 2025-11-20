@@ -27,28 +27,11 @@ export const useDiaryManagement = () => {
 
   // 로컬 데이터 빠르게 로드 + 백그라운드 서버 동기화
   const loadDiaries = useCallback(async () => {
-    // 1. 로컬 데이터 먼저 표시 (빠른 UI)
+    // 로컬 데이터만 로드 (서버 동기화는 App.tsx의 AppState 리스너가 담당)
+    // 이렇게 하면 홈 화면 방문 시마다 불필요한 API 요청이 발생하지 않음
     const entries = await DiaryStorage.getAll();
     setDiaries(entries);
-
-    // 2. 백그라운드에서 서버 동기화 (에러 발생해도 UI는 유지)
-    try {
-      logger.log('🔄 [DiaryListScreen] Auto-syncing with server in background...');
-      const result = await DiaryStorage.syncWithServer();
-
-      if (result.success) {
-        // 동기화 성공 시 데이터 다시 로드
-        const updatedEntries = await DiaryStorage.getAll();
-        setDiaries(updatedEntries);
-        logger.log('✅ [DiaryListScreen] Background sync completed');
-      } else {
-        // 동기화 실패해도 조용히 에러 로그만 남김 (사용자에게 방해 안 함)
-        logger.error('⚠️ [DiaryListScreen] Background sync failed (silent):', result.error);
-      }
-    } catch (error) {
-      // 에러 발생해도 조용히 에러 로그만
-      logger.error('⚠️ [DiaryListScreen] Background sync error (silent):', error);
-    }
+    logger.log('📖 [DiaryListScreen] Local diaries loaded');
   }, []);
 
   // Pull-to-Refresh 핸들러
