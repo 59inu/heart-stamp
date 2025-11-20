@@ -105,10 +105,7 @@ export const useDiarySave = ({
     // Upload to server (AI 생성 선택된 경우 플래그 전달)
     // DEV: 개발 중에는 수정 모드에서도 이미지 생성 허용
     const shouldGenerateImage = aiGenerateSelected;
-    logger.log('🎨 [useDiarySave] Uploading diary with generateImage:', shouldGenerateImage);
-    logger.log('🎨 [useDiarySave] aiGenerateSelected:', aiGenerateSelected);
     const uploadResult = await apiService.uploadDiary(savedEntry, shouldGenerateImage);
-    logger.log('🎨 [useDiarySave] Upload result:', uploadResult);
     if (uploadResult.success) {
       await DiaryStorage.update(savedEntry._id, {
         syncedWithServer: true,

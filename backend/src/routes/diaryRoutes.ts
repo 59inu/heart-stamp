@@ -44,14 +44,9 @@ router.post('/diaries',
   body('updatedAt').isISO8601(),
   body('generateImage').optional().isBoolean().withMessage('generateImage must be a boolean'),
   async (req: Request, res: Response) => {
-    console.log('📨 [POST /diaries] Request received');
-    console.log('📨 [POST /diaries] Body keys:', Object.keys(req.body));
-    console.log('📨 [POST /diaries] generateImage in body:', req.body.generateImage);
-
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('❌ [POST /diaries] Validation failed:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
@@ -63,7 +58,6 @@ router.post('/diaries',
       // X-User-Id 헤더에서 userId 추출
       const userId = req.headers['x-user-id'] as string;
       if (!userId) {
-        console.log('❌ [POST /diaries] No userId header');
         return res.status(401).json({
           success: false,
           message: 'User ID is required',
@@ -77,7 +71,6 @@ router.post('/diaries',
         hasImageUri: !!diaryData.imageUri,
         imageUri: diaryData.imageUri,
         generateImage,
-        userId,
       });
 
       const diaryEntry: DiaryEntry = {
@@ -115,9 +108,6 @@ router.post('/diaries',
       }
 
       // 그림일기 생성 요청 시 백그라운드로 이미지 생성
-      // DEV: 개발 중에는 수정 모드에서도 이미지 생성 허용
-      console.log(`🎨 [Diary Upload] Image generation check - generateImage: ${generateImage}, service exists: ${!!imageGenerationService}`);
-
       if (generateImage && imageGenerationService) {
         console.log(`🎨 [Diary Upload] Triggering image generation for diary ${diaryEntry._id}...`);
         // 백그라운드로 실행 (await 하지 않음)
@@ -126,8 +116,6 @@ router.post('/diaries',
           .catch((error) => {
             console.error(`❌ [Background] Image generation failed for ${diaryEntry._id}:`, error);
           });
-      } else if (generateImage && !imageGenerationService) {
-        console.error(`❌ [Diary Upload] Image generation requested but service not initialized!`);
       }
 
       res.status(201).json({
