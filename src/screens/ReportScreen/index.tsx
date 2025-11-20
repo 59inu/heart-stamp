@@ -146,11 +146,14 @@ export const ReportScreen: React.FC = () => {
   return (
     <>
       <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={[]}>
         {/* 헤더 */}
         <ReportHeader onBack={() => navigation.goBack()} />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* 기간 네비게이션 */}
         <PeriodNavigation
           periodText={periodText}
@@ -237,6 +240,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 30,
   },
   devButton: {
     backgroundColor: '#FF6B6B',
