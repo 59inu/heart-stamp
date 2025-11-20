@@ -157,8 +157,10 @@ export const DiaryListScreen: React.FC = () => {
   }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+      <SafeAreaView style={styles.container} edges={[]}>
+        <View style={styles.header}>
         <View style={styles.headerLeft}>
           <AnimatedHeartIcon onPress={handleHeartPress} />
         </View>
@@ -181,6 +183,7 @@ export const DiaryListScreen: React.FC = () => {
 
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -236,16 +239,17 @@ export const DiaryListScreen: React.FC = () => {
         />
       </ScrollView>
 
-      {/* 첫 방문 온보딩 */}
-      <FirstVisitGuide visible={showOnboarding} onComplete={handleOnboardingComplete} />
-    </SafeAreaView>
+        {/* 첫 방문 온보딩 */}
+        <FirstVisitGuide visible={showOnboarding} onComplete={handleOnboardingComplete} />
+      </SafeAreaView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   header: {
     backgroundColor: '#fff',
@@ -292,5 +296,8 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    paddingBottom: 30,
   },
 });
