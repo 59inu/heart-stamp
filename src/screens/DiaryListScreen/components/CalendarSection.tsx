@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
+    marginRight: -24,
   },
   calendarHeader: {
     flex: 1,
