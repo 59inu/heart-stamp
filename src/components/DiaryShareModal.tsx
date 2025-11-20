@@ -22,6 +22,7 @@ import { ko } from 'date-fns/locale';
 import { getStampImage, getStampColor } from '../utils/stampUtils';
 import { ManuscriptPaper } from './ManuscriptPaper';
 import { COLORS } from '../constants/colors';
+import { WeatherService } from '../services/weatherService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -178,7 +179,14 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                       <View style={styles.shareableContent}>
                         {/* 날짜와 워터마크 */}
                         <View style={styles.dateContainer}>
-                          <Text style={styles.dateText}>{formattedDate}</Text>
+                          <View style={styles.dateWithWeather}>
+                            <Text style={styles.dateText}>{formattedDate}</Text>
+                            {diary.weather && (
+                              <Text style={styles.weatherEmoji}>
+                                {WeatherService.getWeatherEmoji(diary.weather)}
+                              </Text>
+                            )}
+                          </View>
                           <Text style={styles.watermark}>하트스탬프 일기장</Text>
                         </View>
 
@@ -377,9 +385,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  dateWithWeather: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   dateText: {
     fontSize: 14,
     color: '#666',
+  },
+  weatherEmoji: {
+    fontSize: 18,
   },
   watermark: {
     fontSize: 11,
