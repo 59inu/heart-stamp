@@ -88,6 +88,14 @@ export default ({ config }) => {
             enableBackgroundRemoteNotifications: true,
           },
         ],
+        [
+          'expo-build-properties',
+          {
+            ios: {
+              useFrameworks: 'static',
+            },
+          },
+        ],
       ],
       extra: {
         eas: {
