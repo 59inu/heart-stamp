@@ -171,7 +171,7 @@ export const DiaryListScreen: React.FC = () => {
   }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <AnimatedHeartIcon onPress={handleHeartPress} />
