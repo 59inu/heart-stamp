@@ -117,6 +117,27 @@ async function initializeDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_letters_isRead ON letters("isRead")`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_letters_year_month ON letters(year, month)`);
 
+    // notification_preferences 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        "userId" TEXT PRIMARY KEY,
+        "teacherCommentEnabled" BOOLEAN NOT NULL DEFAULT true,
+        "dailyReminderEnabled" BOOLEAN NOT NULL DEFAULT true,
+        "marketingEnabled" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 기존 토큰이 있는 유저는 자동으로 활성화로 설정 (마이그레이션)
+    await pool.query(`
+      INSERT INTO notification_preferences ("userId", "teacherCommentEnabled", "dailyReminderEnabled")
+      SELECT "userId", true, true
+      FROM push_tokens
+      WHERE "deletedAt" IS NULL
+      ON CONFLICT ("userId") DO NOTHING
+    `);
+
     console.log('✅ PostgreSQL database initialized');
   } catch (error) {
     console.error('❌ Failed to initialize PostgreSQL database:', error);
@@ -722,6 +743,128 @@ export class PushTokenDatabase {
       });
     } catch (error) {
       this.handleDatabaseError(error, 'delete');
+    }
+  }
+}
+
+export class NotificationPreferencesDatabase {
+  /**
+   * PostgreSQL 에러 처리
+   */
+  private static handleDatabaseError(error: any, operation: string): never {
+    return DiaryDatabase['handleDatabaseError'](error, `NotificationPreferences.${operation}`);
+  }
+
+  /**
+   * 재시도 로직
+   */
+  private static async retryOnError<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3
+  ): Promise<T> {
+    return DiaryDatabase['retryOnError'](fn, maxRetries);
+  }
+
+  /**
+   * 알림 설정 저장/업데이트
+   */
+  static async upsert(
+    userId: string,
+    preferences: {
+      teacherCommentEnabled?: boolean;
+      dailyReminderEnabled?: boolean;
+      marketingEnabled?: boolean;
+    }
+  ): Promise<void> {
+    try {
+      await this.retryOnError(async () => {
+        const { teacherCommentEnabled, dailyReminderEnabled, marketingEnabled } = preferences;
+
+        await pool.query(
+          `INSERT INTO notification_preferences
+           ("userId", "teacherCommentEnabled", "dailyReminderEnabled", "marketingEnabled", "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, NOW(), NOW())
+           ON CONFLICT ("userId") DO UPDATE SET
+             "teacherCommentEnabled" = COALESCE($2, notification_preferences."teacherCommentEnabled"),
+             "dailyReminderEnabled" = COALESCE($3, notification_preferences."dailyReminderEnabled"),
+             "marketingEnabled" = COALESCE($4, notification_preferences."marketingEnabled"),
+             "updatedAt" = NOW()`,
+          [userId, teacherCommentEnabled, dailyReminderEnabled, marketingEnabled]
+        );
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'upsert');
+    }
+  }
+
+  /**
+   * 알림 설정 조회
+   */
+  static async get(userId: string): Promise<{
+    userId: string;
+    teacherCommentEnabled: boolean;
+    dailyReminderEnabled: boolean;
+    marketingEnabled: boolean;
+    createdAt: string;
+    updatedAt: string;
+  } | null> {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM notification_preferences WHERE "userId" = $1',
+        [userId]
+      );
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } catch (error) {
+      this.handleDatabaseError(error, 'get');
+    }
+  }
+
+  /**
+   * 알림 설정이 활성화된 사용자만 필터링
+   */
+  static async filterEnabled(
+    userIds: string[],
+    type: 'teacher_comment' | 'daily_reminder'
+  ): Promise<string[]> {
+    try {
+      if (userIds.length === 0) {
+        return [];
+      }
+
+      const column = type === 'teacher_comment'
+        ? '"teacherCommentEnabled"'
+        : '"dailyReminderEnabled"';
+
+      const result = await pool.query(
+        `SELECT "userId" FROM notification_preferences
+         WHERE "userId" = ANY($1) AND ${column} = true`,
+        [userIds]
+      );
+
+      const enabledUserIds = result.rows.map(row => row.userId);
+
+      // preference가 없는 유저 찾기 (하위 호환성)
+      const usersWithPreference = new Set(enabledUserIds);
+      const usersWithoutPreference = userIds.filter(id => !usersWithPreference.has(id));
+
+      if (usersWithoutPreference.length > 0) {
+        console.log(`⚠️  [NotificationPreferences] ${usersWithoutPreference.length} users have no preference, creating with default (enabled)`);
+
+        // preference 자동 생성 (기본값: 활성화)
+        for (const userId of usersWithoutPreference) {
+          await this.upsert(userId, {
+            teacherCommentEnabled: true,
+            dailyReminderEnabled: true
+          });
+        }
+
+        // 모두 활성화로 간주
+        return [...enabledUserIds, ...usersWithoutPreference];
+      }
+
+      return enabledUserIds;
+    } catch (error) {
+      this.handleDatabaseError(error, 'filterEnabled');
     }
   }
 }
