@@ -38,6 +38,7 @@ export default ({ config }) => {
       ios: {
         supportsTablet: false,
         bundleIdentifier: isProduction ? 'com.59inu.heartstamp' : 'com.59inu.heartstamp.preview',
+        googleServicesFile: process.env.GOOGLE_SERVICES_INFOPLIST,
         associatedDomains: [
           'applinks:heartstamp.kr',
           'applinks:www.heartstamp.kr'

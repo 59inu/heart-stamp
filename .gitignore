@@ -66,3 +66,4 @@ default.realm*
 diary.db
 *.db
 backend/database.sqlite
+GoogleService-Info.plist
