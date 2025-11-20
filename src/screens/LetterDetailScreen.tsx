@@ -48,24 +48,48 @@ export const LetterDetailScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>선생님의 편지</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4CAF50" />
-        </View>
-      </SafeAreaView>
+      <>
+        <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+        <SafeAreaView style={styles.container} edges={[]}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>선생님의 편지</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   if (!letter) {
     return (
-      <SafeAreaView style={styles.container}>
+      <>
+        <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+        <SafeAreaView style={styles.container} edges={[]}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>선생님의 편지</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>편지를 찾을 수 없습니다</Text>
+          </View>
+        </SafeAreaView>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+      <SafeAreaView style={styles.container} edges={[]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
@@ -73,36 +97,22 @@ export const LetterDetailScreen: React.FC = () => {
           <Text style={styles.headerTitle}>선생님의 편지</Text>
           <View style={{ width: 24 }} />
         </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>편지를 찾을 수 없습니다</Text>
-        </View>
+        <FlatList
+          data={[letter]}
+          keyExtractor={(item) => item.id}
+          style={styles.listBackground}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <View style={styles.letterDetailContainer}>
+              <Text style={styles.letterDetailDate}>
+                {item.year}년 {item.month}월
+              </Text>
+              <Text style={styles.letterDetailContent}>{item.content}</Text>
+            </View>
+          )}
+        />
       </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>선생님의 편지</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <FlatList
-        data={[letter]}
-        keyExtractor={(item) => item.id}
-        style={styles.listBackground}
-        renderItem={({ item }) => (
-          <View style={styles.letterDetailContainer}>
-            <Text style={styles.letterDetailDate}>
-              {item.year}년 {item.month}월
-            </Text>
-            <Text style={styles.letterDetailContent}>{item.content}</Text>
-          </View>
-        )}
-      />
-    </SafeAreaView>
+    </>
   );
 };
 
@@ -133,12 +143,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: 30,
     backgroundColor: '#F7F6F9',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: 30,
     backgroundColor: '#F7F6F9',
   },
   emptyText: {
@@ -147,6 +159,9 @@ const styles = StyleSheet.create({
   },
   listBackground: {
     backgroundColor: '#F7F6F9',
+  },
+  listContent: {
+    paddingBottom: 30,
   },
   letterDetailContainer: {
     padding: 24,

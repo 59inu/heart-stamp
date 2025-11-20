@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { apiService } from '../services/apiService';
@@ -21,7 +21,6 @@ type NavigationProp = any;
 
 export const MailboxScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const insets = useSafeAreaInsets();
   const [letters, setLetters] = useState<Letter[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,43 +88,52 @@ export const MailboxScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>우편함</Text>
-      </View>
-
-{loading ? (
-        <View style={[styles.loadingContainer, { paddingBottom: insets.bottom }]}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
+      <SafeAreaView style={styles.container} edges={[]}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>우편함</Text>
+          <View style={styles.placeholder} />
         </View>
-      ) : (
-<FlatList
-          data={letters}
-          keyExtractor={(item) => item.id}
-          renderItem={renderLetterItem}
-          ListEmptyComponent={
-            <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + 100 }]}>
-              <MaterialCommunityIcons name="mailbox-open-outline" size={80} color="#D1D5DB" />
-              <Text style={styles.emptyText}>일기를 열심히 쓰면{'\n'}편지가 온다는 소문이 있어요</Text>
-            </View>
-          }
-          contentContainerStyle={
-            letters.length > 0
-              ? [styles.listContainer, { paddingBottom: insets.bottom, flexGrow: 1 }]
-              : { flexGrow: 1 }
-          }
-          style={styles.listBackground}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={COLORS.primary}
-              colors={[COLORS.primary]}
-            />
-          }
-        />
-      )}
-    </SafeAreaView>
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+          </View>
+        ) : (
+          <FlatList
+            data={letters}
+            keyExtractor={(item) => item.id}
+            renderItem={renderLetterItem}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="mailbox-open-outline" size={80} color="#D1D5DB" />
+                <Text style={styles.emptyText}>
+                  일기를 열심히 쓰면{'\n'}편지가 온다는 소문이 있어요
+                </Text>
+              </View>
+            }
+            contentContainerStyle={
+              letters.length > 0
+                ? [styles.listContainer, { flexGrow: 1 }]
+                : { flexGrow: 1 }
+            }
+            style={styles.listBackground}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={COLORS.primary}
+                colors={[COLORS.primary]}
+              />
+            }
+          />
+        )}
+      </SafeAreaView>
+    </>
   );
 };
 
@@ -138,28 +146,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     height: 56,
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  backButton: {
+    width: 36,
+    padding: 0,
+  },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  placeholder: {
+    width: 36,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F7F6F9',
+    paddingBottom: 30,
+    backgroundColor: COLORS.background,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    backgroundColor: '#F7F6F9',
+    paddingBottom: 130,
+    backgroundColor: COLORS.background,
   },
   emptyText: {
     marginTop: 24,
@@ -169,10 +187,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listBackground: {
-    backgroundColor: '#F7F6F9',
+    backgroundColor: COLORS.background,
   },
   listContainer: {
     padding: 16,
+    paddingBottom: 30,
   },
   letterItem: {
     flexDirection: 'row',
