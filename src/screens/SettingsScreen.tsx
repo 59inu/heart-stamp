@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { SURVEY_URL, SURVEY_BENEFIT } from '../constants/survey';
 import { SurveyService } from '../services/surveyService';
@@ -82,7 +82,8 @@ export const SettingsScreen: React.FC = () => {
           const dailyReminderSetting = await NotificationService.getDailyReminderEnabled();
           setDailyReminderEnabled(dailyReminderSetting);
 
-          const teacherCommentSetting = await NotificationService.getTeacherCommentNotificationEnabled();
+          const teacherCommentSetting =
+            await NotificationService.getTeacherCommentNotificationEnabled();
           setNotificationEnabled(teacherCommentSetting);
 
           // Export job 상태 체크
@@ -126,7 +127,8 @@ export const SettingsScreen: React.FC = () => {
         }
 
         // 현재 설정 값 다시 로드 (두 알림 모두)
-        const teacherCommentSetting = await NotificationService.getTeacherCommentNotificationEnabled();
+        const teacherCommentSetting =
+          await NotificationService.getTeacherCommentNotificationEnabled();
         setNotificationEnabled(teacherCommentSetting);
 
         const dailyReminderSetting = await NotificationService.getDailyReminderEnabled();
@@ -240,10 +242,7 @@ export const SettingsScreen: React.FC = () => {
           ]
         );
       } else {
-        Alert.alert(
-          '알림 설정 실패',
-          '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
-        );
+        Alert.alert('알림 설정 실패', '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
     }
   };
@@ -275,10 +274,7 @@ export const SettingsScreen: React.FC = () => {
           ]
         );
       } else {
-        Alert.alert(
-          '알림 설정 실패',
-          '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.'
-        );
+        Alert.alert('알림 설정 실패', '알림 설정 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
     }
   };
@@ -299,197 +295,198 @@ export const SettingsScreen: React.FC = () => {
   return (
     <>
       <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={[]}>
         {/* 헤더 */}
         <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>설정</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 알림 설정 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>알림</Text>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingTextContainer}>
-              <Text style={styles.settingTitle}>선생님 코멘트 알림</Text>
-              <Text style={styles.settingDescription}>
-                선생님 코멘트가 도착하면 오전에 알림을 받습니다
-              </Text>
-            </View>
-            <Switch
-              value={notificationEnabled}
-              onValueChange={handleTeacherCommentNotificationToggle}
-              trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
-              thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingTextContainer}>
-              <Text style={styles.settingTitle}>일기 작성 알림</Text>
-              <Text style={styles.settingDescription}>
-                매일 저녁 9시에 일기 작성을 알려드립니다
-              </Text>
-            </View>
-            <Switch
-              value={dailyReminderEnabled}
-              onValueChange={handleDailyReminderToggle}
-              trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
-              thumbColor={dailyReminderEnabled ? '#fff' : '#f4f3f4'}
-            />
-          </View>
-        </View>
-
-        {/* 그림일기 크레딧 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>그림일기</Text>
-
-          <View style={styles.creditCard}>
-            <View style={styles.creditHeader}>
-              <Ionicons name="image-outline" size={24} color={COLORS.secondary} />
-              <Text style={styles.creditTitle}>월간 크레딧</Text>
-            </View>
-
-            {imageCredit ? (
-              <View style={styles.creditContent}>
-                <View style={styles.creditRow}>
-                  <Text style={styles.creditLabel}>이번 달 사용</Text>
-                  <Text style={styles.creditValue}>
-                    {imageCredit.used} / {imageCredit.limit}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.creditContent}>
-                <Text style={styles.creditLoadingText}>로딩 중...</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* 데이터 관리 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>데이터 관리</Text>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleExportHistory}>
-            <Ionicons name="download-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>일기 내보내기</Text>
-            {hasActiveExport && (
-              <View style={styles.processingBadge}>
-                <Text style={styles.processingText}>처리중</Text>
-              </View>
-            )}
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAllData}>
-            <Ionicons name="trash-outline" size={24} color="#F44336" />
-            <Text style={[styles.menuItemText, { color: '#F44336' }]}>모든 데이터 삭제</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>설정</Text>
+          <View style={styles.placeholder} />
         </View>
 
-        {/* 설문조사 배너 - 5회 이상 일기 작성자에게 표시 */}
-        {diaryCount >= 5 && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={[styles.menuItem, styles.surveyItem]}
-              onPress={handleSurvey}
-            >
-              <View style={styles.surveyIconContainer}>
-                <Ionicons name="clipboard-outline" size={24} color="#fff" />
-              </View>
-              <View style={styles.surveyTextContainer}>
-                <View style={styles.surveyTitleRow}>
-                  <Text style={styles.surveyTitle}>사용자 설문조사 참여하기</Text>
-                  <View style={styles.newBadge}>
-                    <Text style={styles.newBadgeText}>NEW</Text>
-                  </View>
-                </View>
-                <Text style={styles.surveyDescription}>
-                  🎁 {SURVEY_BENEFIT.title}
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 알림 설정 */}
+          <View style={[styles.section, styles.firstSection]}>
+            <Text style={styles.sectionTitle}>알림</Text>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingTitle}>선생님 코멘트 알림</Text>
+                <Text style={styles.settingDescription}>
+                  선생님 코멘트가 도착하면 오전에 알림을 받습니다
                 </Text>
               </View>
+              <Switch
+                value={notificationEnabled}
+                onValueChange={handleTeacherCommentNotificationToggle}
+                trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
+                thumbColor={notificationEnabled ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingTitle}>일기 작성 알림</Text>
+                <Text style={styles.settingDescription}>
+                  매일 저녁 9시에 일기 작성을 알려드립니다
+                </Text>
+              </View>
+              <Switch
+                value={dailyReminderEnabled}
+                onValueChange={handleDailyReminderToggle}
+                trackColor={{ false: '#d0d0d0', true: COLORS.settingsIconColor }}
+                thumbColor={dailyReminderEnabled ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+
+          {/* 그림일기 크레딧 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>그림일기</Text>
+
+            <View style={styles.creditCard}>
+              <View style={styles.creditHeader}>
+                <Ionicons name="image-outline" size={24} color={COLORS.secondary} />
+                <Text style={styles.creditTitle}>월간 크레딧</Text>
+              </View>
+
+              {imageCredit ? (
+                <View style={styles.creditContent}>
+                  <View style={styles.creditRow}>
+                    <Text style={styles.creditLabel}>이번 달 사용</Text>
+                    <Text style={styles.creditValue}>
+                      {imageCredit.used} / {imageCredit.limit}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.creditContent}>
+                  <Text style={styles.creditLoadingText}>로딩 중...</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* 데이터 관리 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>데이터 관리</Text>
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleExportHistory}>
+              <Ionicons name="download-outline" size={24} color={COLORS.settingsIconColor} />
+              <Text style={styles.menuItemText}>일기 내보내기</Text>
+              {hasActiveExport && (
+                <View style={styles.processingBadge}>
+                  <Text style={styles.processingText}>처리중</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAllData}>
+              <Ionicons name="trash-outline" size={24} color="#F44336" />
+              <Text style={[styles.menuItemText, { color: '#F44336' }]}>모든 데이터 삭제</Text>
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
           </View>
-        )}
 
-        {/* 정보 및 지원 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>정보 및 지원</Text>
+          {/* 설문조사 배너 - 5회 이상 일기 작성자에게 표시 */}
+          {diaryCount >= 5 && (
+            <View style={styles.section}>
+              <TouchableOpacity style={[styles.menuItem, styles.surveyItem]} onPress={handleSurvey}>
+                <View style={styles.surveyIconContainer}>
+                  <Ionicons name="clipboard-outline" size={24} color="#fff" />
+                </View>
+                <View style={styles.surveyTextContainer}>
+                  <View style={styles.surveyTitleRow}>
+                    <Text style={styles.surveyTitle}>사용자 설문조사 참여하기</Text>
+                    <View style={styles.newBadge}>
+                      <Text style={styles.newBadgeText}>NEW</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.surveyDescription}>🎁 {SURVEY_BENEFIT.title}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+            </View>
+          )}
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleNotice}>
-            <Ionicons name="megaphone-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>공지사항</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+          {/* 정보 및 지원 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>정보 및 지원</Text>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleUserGuide}>
-            <Ionicons name="book-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>사용 가이드</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleNotice}>
+              <Ionicons name="megaphone-outline" size={24} color={COLORS.settingsIconColor} />
+              <Text style={styles.menuItemText}>공지사항</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleFeedback}>
-            <Ionicons name="help-circle-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>FAQ / 문의하기</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleUserGuide}>
+              <Ionicons name="book-outline" size={24} color={COLORS.settingsIconColor} />
+              <Text style={styles.menuItemText}>사용 가이드</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
-            <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>서비스 이용약관</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleFeedback}>
+              <Ionicons name="help-circle-outline" size={24} color={COLORS.settingsIconColor} />
+              <Text style={styles.menuItemText}>FAQ / 문의하기</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
-            <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>개인정보 처리방침</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
+              <Ionicons name="document-text-outline" size={24} color={COLORS.settingsIconColor} />
+              <Text style={styles.menuItemText}>서비스 이용약관</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
 
-          <View style={styles.menuItem}>
-            <Ionicons name="information-circle-outline" size={24} color={COLORS.settingsIconColor} />
-            <Text style={styles.menuItemText}>앱 버전</Text>
-            <Text style={styles.versionText}>{appVersion}</Text>
+            <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={24}
+                color={COLORS.settingsIconColor}
+              />
+              <Text style={styles.menuItemText}>개인정보 처리방침</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <View style={styles.menuItem}>
+              <Ionicons
+                name="information-circle-outline"
+                size={24}
+                color={COLORS.settingsIconColor}
+              />
+              <Text style={styles.menuItemText}>앱 버전</Text>
+              <Text style={styles.versionText}>{appVersion}</Text>
+            </View>
           </View>
-        </View>
 
-        {/* 하단 여백 */}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+          {/* 하단 여백 */}
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
 
-      {/* 문의하기 모달 */}
-      <ContactModal
-        visible={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        onFAQ={() => setShowFAQModal(true)}
-      />
+        {/* 문의하기 모달 */}
+        <ContactModal
+          visible={showContactModal}
+          onClose={() => setShowContactModal(false)}
+          onFAQ={() => setShowFAQModal(true)}
+        />
 
-      {/* FAQ 모달 */}
-      <FAQModal
-        visible={showFAQModal}
-        onClose={() => setShowFAQModal(false)}
-      />
+        {/* FAQ 모달 */}
+        <FAQModal visible={showFAQModal} onClose={() => setShowFAQModal(false)} />
 
-      {/* 사용 가이드 모달 */}
-      <UserGuideModal
-        visible={showUserGuideModal}
-        onClose={() => setShowUserGuideModal(false)}
-        hideStartButton={true}
-      />
+        {/* 사용 가이드 모달 */}
+        <UserGuideModal
+          visible={showUserGuideModal}
+          onClose={() => setShowUserGuideModal(false)}
+          hideStartButton={true}
+        />
 
-      {/* 공지사항 모달 */}
-      <NoticeModal
-        visible={showNoticeModal}
-        onClose={() => setShowNoticeModal(false)}
-      />
+        {/* 공지사항 모달 */}
+        <NoticeModal visible={showNoticeModal} onClose={() => setShowNoticeModal(false)} />
       </SafeAreaView>
     </>
   );
@@ -498,24 +495,25 @@ export const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 56,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    padding: 4,
+    width: 36,
+    padding: 0,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#333',
   },
   placeholder: {
@@ -524,10 +522,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 30,
+  },
   section: {
-    marginTop: 24,
+    marginTop: 20,
     backgroundColor: '#fff',
     paddingHorizontal: 16,
+  },
+  firstSection: {
+    marginTop: 14,
   },
   sectionTitle: {
     fontSize: 14,
