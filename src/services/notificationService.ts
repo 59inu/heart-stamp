@@ -89,22 +89,16 @@ export class NotificationService {
       logger.log('✅ Expo Push Token:', token);
       logger.log('✅ Project ID:', projectId);
 
-      // 기존에 저장된 토큰과 다르면 백엔드에 등록
-      const savedToken = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
-      let backendRegistrationResult: { success: boolean; retriedCount: number } | null = null;
+      // 항상 백엔드에 토큰 등록 시도 (백엔드 DB 리셋 대응)
+      logger.log('🔄 Registering push token with backend...');
+      const backendRegistrationResult = await this.registerTokenWithBackend(token);
 
-      if (savedToken !== token) {
-        logger.log('🔄 New push token detected, registering with backend...');
-        backendRegistrationResult = await this.registerTokenWithBackend(token);
-        if (backendRegistrationResult.success) {
-          await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
-          logger.log('✅ Token saved to AsyncStorage after successful backend registration');
-        } else {
-          logger.error('❌ Token NOT saved to AsyncStorage due to backend registration failure');
-          logger.error('💡 Will retry on next app launch');
-        }
+      if (backendRegistrationResult.success) {
+        await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+        logger.log('✅ Token registered with backend and saved to AsyncStorage');
       } else {
-        logger.log('ℹ️ Push token unchanged, skipping registration');
+        logger.error('❌ Failed to register token with backend');
+        logger.error('💡 Will retry on next app launch');
       }
 
       // Android 알림 채널 설정
@@ -118,7 +112,7 @@ export class NotificationService {
       }
 
       // 백엔드 등록 실패 시 재시도 횟수와 함께 반환
-      if (backendRegistrationResult && !backendRegistrationResult.success) {
+      if (!backendRegistrationResult.success) {
         return {
           success: false,
           reason: 'network_error',
