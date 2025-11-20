@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { useYearlyDiaries } from './YearlyEmotionFlowScreen/hooks/useYearlyDiaries';
 import { YearlyHeatmap } from './YearlyEmotionFlowScreen/components/YearlyHeatmap';
@@ -31,11 +31,8 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#4B5563" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>감정 로그</Text>
         <View style={styles.headerRight} />
@@ -73,30 +70,16 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
         {/* 모드 전환 버튼 */}
         <View style={styles.modeSelector}>
           <TouchableOpacity
-            style={[
-              styles.modeButton,
-              viewMode === 'heatmap' && styles.modeButtonActive,
-            ]}
+            style={[styles.modeButton, viewMode === 'heatmap' && styles.modeButtonActive]}
             onPress={() => setViewMode('heatmap')}
           >
-            <Ionicons
-              name="grid"
-              size={16}
-              color={viewMode === 'heatmap' ? '#fff' : '#666'}
-            />
+            <Ionicons name="grid" size={16} color={viewMode === 'heatmap' ? '#fff' : '#666'} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.modeButton,
-              viewMode === 'chart' && styles.modeButtonActive,
-            ]}
+            style={[styles.modeButton, viewMode === 'chart' && styles.modeButtonActive]}
             onPress={() => setViewMode('chart')}
           >
-            <Ionicons
-              name="analytics"
-              size={16}
-              color={viewMode === 'chart' ? '#fff' : '#666'}
-            />
+            <Ionicons name="analytics" size={16} color={viewMode === 'chart' ? '#fff' : '#666'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -111,12 +94,8 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
         ) : diaries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>
-              {selectedYear}년 일기가 없어요
-            </Text>
-            <Text style={styles.emptySubText}>
-              일기를 작성하면 감정 흐름을 볼 수 있어요
-            </Text>
+            <Text style={styles.emptyText}>{selectedYear}년 일기가 없어요</Text>
+            <Text style={styles.emptySubText}>일기를 작성하면 감정 흐름을 볼 수 있어요</Text>
           </View>
         ) : viewMode === 'heatmap' ? (
           <YearlyHeatmap diaries={diaries} year={selectedYear} />
@@ -144,18 +123,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 0,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#333',
   },
   headerRight: {
-    width: 40,
+    width: 36,
   },
   controlBar: {
     flexDirection: 'row',
@@ -214,6 +190,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 12,
     backgroundColor: '#f5f5f5',
+    paddingBottom: 40,
   },
   placeholder: {
     padding: 40,
