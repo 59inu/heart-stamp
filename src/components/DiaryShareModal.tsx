@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   toggleSwitch: {
-    transform: [{ scale: 0.8 }],
+    transform: [{ scale: 0.7 }],
   },
   closeButton: {
     position: 'absolute',
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   stampImageLarge: {
     width: 300,
     height: 300,
-    opacity: 0.65,
+    opacity: 0.85,
   },
   commentSection: {
     backgroundColor: '#F0F6FF',
