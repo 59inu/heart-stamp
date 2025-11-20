@@ -50,10 +50,7 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
         return (
           <View style={styles.calendarHeaderContainer}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity
-                style={styles.calendarHeader}
-                onPress={onHeaderPress}
-              >
+              <TouchableOpacity style={styles.calendarHeader} onPress={onHeaderPress}>
                 <Text style={styles.calendarHeaderText}>{monthYear}</Text>
               </TouchableOpacity>
             </View>
@@ -112,10 +109,8 @@ export const CalendarSection: React.FC<CalendarSectionProps> = ({
 
 const styles = StyleSheet.create({
   calendar: {
-    marginTop: 24,
+    marginTop: 20,
     paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   calendarHeaderContainer: {
     flexDirection: 'row',
@@ -136,6 +131,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
+  headerLeft: {},
   todayButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,

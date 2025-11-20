@@ -1,11 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -33,22 +27,14 @@ type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
 export const DiaryListScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [selectedDate, setSelectedDate] = useState<string>(
-    format(new Date(), 'yyyy-MM-dd')
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
   // Custom hooks
-  const {
-    diaries,
-    refreshing,
-    loadDiaries,
-    handleRefresh,
-    handleHeaderTap,
-  } = useDiaryManagement();
+  const { diaries, refreshing, loadDiaries, handleRefresh, handleHeaderTap } = useDiaryManagement();
 
   // 읽지 않은 편지 개수 로드
   const loadUnreadLetterCount = useCallback(async () => {
@@ -177,17 +163,11 @@ export const DiaryListScreen: React.FC = () => {
           <AnimatedHeartIcon onPress={handleHeartPress} />
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.mailboxButton}
-            onPress={handleMailboxPress}
-          >
+          <TouchableOpacity style={styles.mailboxButton} onPress={handleMailboxPress}>
             <MaterialCommunityIcons name="mailbox" size={24} color="#4B5563" />
             {hasUnreadMessages && <View style={styles.unreadBadge} />}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Report')}
-          >
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Report')}>
             <MaterialCommunityIcons name="poll" size={22} color="#4B5563" />
           </TouchableOpacity>
           <TouchableOpacity
@@ -257,10 +237,7 @@ export const DiaryListScreen: React.FC = () => {
       </ScrollView>
 
       {/* 첫 방문 온보딩 */}
-      <FirstVisitGuide
-        visible={showOnboarding}
-        onComplete={handleOnboardingComplete}
-      />
+      <FirstVisitGuide visible={showOnboarding} onComplete={handleOnboardingComplete} />
     </SafeAreaView>
   );
 };

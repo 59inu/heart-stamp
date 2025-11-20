@@ -38,11 +38,7 @@ export const SelectedDateSection: React.FC<SelectedDateSectionProps> = ({
             )}
           </View>
           {!selectedDiary && (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={onWriteDiary}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.addButton} onPress={onWriteDiary} activeOpacity={0.7}>
               <Ionicons name="pencil" size={20} color="#fff" />
             </TouchableOpacity>
           )}
@@ -57,15 +53,15 @@ export const SelectedDateSection: React.FC<SelectedDateSectionProps> = ({
             {selectedDate > today
               ? '아직 오지 않은 미래에요'
               : selectedDate === today
-              ? '오늘의 일기를 작성하세요'
-              : '이 날의 일기가 없어요'}
+                ? '오늘의 일기를 작성하세요'
+                : '이 날의 일기가 없어요'}
           </Text>
           <Text style={styles.noDiarySubText}>
             {selectedDate > today
               ? '기대하며 기다려볼까요 ✨'
               : selectedDate === today
-              ? '선생님이 기다리고 있어요'
-              : '기억을 기록해주세요'}
+                ? '선생님이 기다리고 있어요'
+                : '기억을 기록해주세요'}
           </Text>
         </View>
       )}
@@ -77,9 +73,7 @@ const styles = StyleSheet.create({
   selectedDateSection: {
     backgroundColor: '#fff',
     padding: 16,
-    marginTop: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    marginTop: 20,
   },
   selectedDateHeader: {
     flexDirection: 'row',

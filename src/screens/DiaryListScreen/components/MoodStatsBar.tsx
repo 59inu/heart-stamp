@@ -24,12 +24,7 @@ export const MoodStatsBar: React.FC<MoodStatsBarProps> = ({
     <View style={styles.moodStatsContainer}>
       <View style={styles.moodStatsBar}>
         {moodStats.total === 0 ? (
-          <View
-            style={[
-              styles.moodStatsSegment,
-              { backgroundColor: '#d0d0d0', flex: 1 },
-            ]}
-          />
+          <View style={[styles.moodStatsSegment, { backgroundColor: '#d0d0d0', flex: 1 }]} />
         ) : (
           <>
             {moodStats.red > 0 && (
@@ -69,9 +64,7 @@ export const MoodStatsBar: React.FC<MoodStatsBarProps> = ({
         )}
       </View>
       <Text style={styles.moodSummaryText}>
-        {moodStats.total === 0
-          ? '이 달은 어떤 기분으로 채워갈까요'
-          : summaryText}
+        {moodStats.total === 0 ? '이 달은 어떤 기분으로 채워갈까요' : summaryText}
       </Text>
       {stampCount > 0 && (
         <TouchableOpacity
@@ -79,9 +72,7 @@ export const MoodStatsBar: React.FC<MoodStatsBarProps> = ({
           onPress={onStampPress}
           activeOpacity={0.7}
         >
-          <Text style={styles.stampCountText}>
-            이번 달에 모은 도장 {stampCount}개
-          </Text>
+          <Text style={styles.stampCountText}>이번 달에 모은 도장 {stampCount}개</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -94,8 +85,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginTop: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   moodStatsBar: {
     flexDirection: 'row',
