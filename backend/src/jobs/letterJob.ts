@@ -190,12 +190,15 @@ ${diariesSummary}
    * 2. 매월 1일 아침 9시: 푸시 알림 발송
    */
   static start() {
+    // TZ 환경변수 사용 (기본값: Asia/Seoul)
+    const TZ = process.env.TZ || 'Asia/Seoul';
+
     // 매월 1일 04:00에 AI 편지 생성
     cron.schedule('0 4 1 * *', async () => {
       console.log('🔔 [LetterJob] Monthly letter generation cron triggered');
       await this.generateMonthlyLetters();
     }, {
-      timezone: 'Asia/Seoul'
+      timezone: TZ
     });
 
     // 매월 1일 09:00에 푸시 알림 발송 (새벽 4시에 생성한 편지)
@@ -203,11 +206,12 @@ ${diariesSummary}
       console.log('🔔 [LetterJob] Letter notification cron triggered');
       await this.sendLetterNotifications();
     }, {
-      timezone: 'Asia/Seoul'
+      timezone: TZ
     });
 
     console.log('✅ [LetterJob] Letter jobs started:');
-    console.log('   - Letter generation: 04:00 AM on 1st of every month (KST)');
-    console.log('   - Push notifications: 09:00 AM on 1st of every month (KST)');
+    console.log(`   - Timezone: ${TZ}`);
+    console.log('   - Letter generation: 04:00 AM on 1st of every month');
+    console.log('   - Push notifications: 09:00 AM on 1st of every month');
   }
 }

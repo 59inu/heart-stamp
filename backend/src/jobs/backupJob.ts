@@ -13,6 +13,9 @@ export class BackupJob {
    * 매일 새벽 4시에 백업 실행 (AI 배치 작업 후)
    */
   start(): void {
+    // TZ 환경변수 사용 (기본값: Asia/Seoul)
+    const TZ = process.env.TZ || 'Asia/Seoul';
+
     // 매일 새벽 4시 실행 (cron: '0 4 * * *')
     this.job = cron.schedule('0 4 * * *', async () => {
       console.log('⏰ [BackupJob] Daily backup job triggered');
@@ -21,9 +24,12 @@ export class BackupJob {
       } catch (error) {
         console.error('❌ [BackupJob] Daily backup job failed:', error);
       }
+    }, {
+      timezone: TZ
     });
 
     console.log('✅ [BackupJob] Scheduled to run daily at 4:00 AM');
+    console.log(`   - Timezone: ${TZ}`);
   }
 
   /**

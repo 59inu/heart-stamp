@@ -156,21 +156,34 @@ ExportJob.startCleanup();
 LetterJob.initialize(claudeService);
 LetterJob.start();
 
-// 일기 작성 알림 Cron Job (매일 저녁 9시 KST = UTC 12:00)
-cron.schedule('0 12 * * *', async () => {
+// TZ 환경변수 사용 (기본값: Asia/Seoul)
+const TZ = process.env.TZ || 'Asia/Seoul';
+
+// 일기 작성 알림 Cron Job (매일 저녁 9시)
+cron.schedule('0 21 * * *', async () => {
   try {
     console.log('📅 [Daily Reminder] Starting daily diary reminder job...');
 
-    const { DiaryDatabase, PushTokenDatabase } = require('./services/database');
-    const tokens = await PushTokenDatabase.getAll();
+    const { DiaryDatabase, PushTokenDatabase, NotificationPreferencesDatabase } = require('./services/database');
+    const allTokens = await PushTokenDatabase.getAll();
+    const allUserIds = allTokens.map((t:any) => t.userId);
 
-    console.log(`👥 [Daily Reminder] Checking ${tokens.length} users for diary reminder...`);
+    console.log(`👥 [Daily Reminder] Total users: ${allUserIds.length}`);
+
+    // ✅ 알림 설정이 켜진 사용자만 필터링
+    const enabledUserIds = await NotificationPreferencesDatabase.filterEnabled(
+      allUserIds,
+      'daily_reminder'
+    );
+
+    console.log(`👥 [Daily Reminder] Users with daily reminder enabled: ${enabledUserIds.length}`);
+    console.log(`   Filtered out: ${allUserIds.length - enabledUserIds.length} users (notification disabled)`);
 
     let sentCount = 0;
     let skippedCount = 0;
     let failedCount = 0;
 
-    for (const { userId, token } of tokens) {
+    for (const userId of enabledUserIds) {
       try {
         // 오늘 일기 작성 여부 확인
         const hasWrittenToday = await DiaryDatabase.hasUserWrittenToday(userId);
@@ -205,10 +218,10 @@ cron.schedule('0 12 * * *', async () => {
     console.error('❌ [Daily Reminder] Job failed:', error);
   }
 }, {
-  timezone: 'Asia/Seoul'
+  timezone: TZ
 });
 
-console.log('✅ Daily diary reminder cron job scheduled (9:00 PM KST)');
+console.log(`✅ Daily diary reminder cron job scheduled (9:00 PM, timezone: ${TZ})`);
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
@@ -223,8 +236,15 @@ app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
 
     // 클라이언트가 보낸 userId 사용 (로컬 UUID)
     // Firebase 인증은 보안을 위해 유지하지만, userId는 클라이언트 제공 값 사용
-    const { PushTokenDatabase } = require('./services/database');
+    const { PushTokenDatabase, NotificationPreferencesDatabase } = require('./services/database');
     await PushTokenDatabase.upsert(userId, token);
+
+    // ✅ 하위 호환성: preference도 자동 생성 (구 버전 앱 대응)
+    // 이미 있으면 유지, 없으면 기본값(활성화)으로 생성
+    await NotificationPreferencesDatabase.upsert(userId, {
+      teacherCommentEnabled: true,
+      dailyReminderEnabled: true
+    });
 
     res.json({
       success: true,
@@ -263,6 +283,73 @@ app.delete('/api/push/unregister', requireFirebaseAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to unregister push token',
+    });
+  }
+});
+
+// GET: 알림 설정 조회
+app.get('/api/notification-preferences', requireFirebaseAuth, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId is required',
+      });
+    }
+
+    const { NotificationPreferencesDatabase } = require('./services/database');
+    const preferences = await NotificationPreferencesDatabase.get(userId as string);
+
+    res.json({
+      success: true,
+      data: preferences || {
+        teacherCommentEnabled: true,  // 기본값
+        dailyReminderEnabled: true
+      }
+    });
+  } catch (error) {
+    console.error('Error getting notification preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get notification preferences',
+    });
+  }
+});
+
+// PUT: 알림 설정 업데이트
+app.put('/api/notification-preferences', requireFirebaseAuth, async (req, res) => {
+  try {
+    const { userId, teacherCommentEnabled, dailyReminderEnabled, marketingEnabled } = req.body;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId is required',
+      });
+    }
+
+    const { NotificationPreferencesDatabase } = require('./services/database');
+    await NotificationPreferencesDatabase.upsert(userId, {
+      teacherCommentEnabled,
+      dailyReminderEnabled,
+      marketingEnabled
+    });
+
+    console.log(`✅ [NotificationPreferences] Updated for user ${userId}:`, {
+      teacherCommentEnabled,
+      dailyReminderEnabled,
+      marketingEnabled
+    });
+
+    res.json({
+      success: true,
+      message: 'Notification preferences updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update notification preferences',
     });
   }
 });

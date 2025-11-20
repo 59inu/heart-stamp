@@ -17,12 +17,18 @@ export class ExportJob {
    * Export job processor 시작
    */
   static start() {
+    // TZ 환경변수 사용 (기본값: Asia/Seoul)
+    const TZ = process.env.TZ || 'Asia/Seoul';
+
     // 매 5분마다 실행 (0, 5, 10, 15, ...)
     cron.schedule('*/5 * * * *', async () => {
       await this.processPendingJobs();
+    }, {
+      timezone: TZ
     });
 
     console.log('✅ [ExportJob] Export job processor started (runs every 5 minutes)');
+    console.log(`   - Timezone: ${TZ}`);
 
     // 서버 시작 시 한 번 실행
     setTimeout(() => {
@@ -108,6 +114,9 @@ export class ExportJob {
    * 매일 03:00 AM에 실행
    */
   static startCleanup() {
+    // TZ 환경변수 사용 (기본값: Asia/Seoul)
+    const TZ = process.env.TZ || 'Asia/Seoul';
+
     cron.schedule('0 3 * * *', async () => {
       try {
         console.log('🧹 [ExportJob] Starting daily cleanup of expired exports');
@@ -116,8 +125,11 @@ export class ExportJob {
       } catch (error) {
         console.error('❌ [ExportJob] Cleanup failed:', error);
       }
+    }, {
+      timezone: TZ
     });
 
     console.log('✅ [ExportJob] Export cleanup job started (runs daily at 03:00 AM)');
+    console.log(`   - Timezone: ${TZ}`);
   }
 }
