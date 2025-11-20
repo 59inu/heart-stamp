@@ -194,7 +194,8 @@ ${diaryContent}`,
       // 에러 타입 분류
       if (error.status === 429) {
         throw new ClaudeAPIError('Rate limit exceeded', 429, true, error);
-      } else if (error.status === 500 || error.status === 503) {
+      } else if (error.status >= 500 && error.status < 600) {
+        // 모든 5xx 서버 에러는 재시도 가능 (500, 502, 503, 529 등)
         throw new ClaudeAPIError('Claude API server error', error.status, true, error);
       } else if (error.name === 'TimeoutError') {
         throw new ClaudeAPIError('Request timeout', undefined, true, error);
