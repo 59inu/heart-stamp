@@ -79,6 +79,7 @@ export default ({ config }) => {
         'expo-web-browser',
         'expo-secure-store',
         '@sentry/react-native/expo',
+        '@react-native-firebase/app',
         [
           'expo-notifications',
           {
