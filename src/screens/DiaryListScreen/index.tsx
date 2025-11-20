@@ -201,6 +201,7 @@ export const DiaryListScreen: React.FC = () => {
 
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -315,5 +316,8 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    paddingBottom: 30,
   },
 });
