@@ -19,7 +19,7 @@ import { logger } from '../utils/logger';
 import { ANALYTICS_CONFIG } from '../config/analytics';
 
 // 환경별 자동 조절: 개발 모드에서는 MOCK, 프로덕션에서는 실제 Firebase
-const FIREBASE_INSTALLED = true;  // Firebase Analytics 활성화
+const FIREBASE_INSTALLED = false;  // Firebase Analytics 비활성화 (로컬 개발용)
 const MOCK_MODE = FIREBASE_INSTALLED ? __DEV__ : true;
 
 export class AnalyticsService {
