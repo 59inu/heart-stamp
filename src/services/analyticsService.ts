@@ -11,7 +11,8 @@
  * 설치 방법: npm install @react-native-firebase/app @react-native-firebase/analytics
  */
 
-import analytics from '@react-native-firebase/analytics';
+// Expo Go 호환: 로컬 개발 시 Firebase import 비활성화
+// import analytics from '@react-native-firebase/analytics';
 import { Platform } from 'react-native';
 import { UserService } from './userService';
 import { DiaryEntry } from '../models/DiaryEntry';
@@ -21,6 +22,13 @@ import { ANALYTICS_CONFIG } from '../config/analytics';
 // 환경별 자동 조절: 개발 모드에서는 MOCK, 프로덕션에서는 실제 Firebase
 const FIREBASE_INSTALLED = false;  // Firebase Analytics 비활성화 (로컬 개발용)
 const MOCK_MODE = FIREBASE_INSTALLED ? __DEV__ : true;
+
+// Expo Go용 더미 analytics 객체
+const analytics = () => ({
+  setUserId: async () => {},
+  setUserProperty: async () => {},
+  logEvent: async () => {},
+});
 
 export class AnalyticsService {
   private static isInitialized = false;
