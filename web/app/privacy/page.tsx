@@ -30,7 +30,7 @@ function PrivacyContent() {
         <div className="text-[#2F2B4C]/80 leading-relaxed space-y-8">
           <section>
             <p className="text-sm text-[#2F2B4C]/60 mb-8">
-              시행일: 2025년 11월 2일
+              시행일: 2025년 11월 17일
             </p>
             <div className="bg-gray-50 rounded-lg p-6">
               <p>
@@ -228,7 +228,7 @@ function PrivacyContent() {
               부칙
             </h2>
             <p>
-              본 개인정보 처리방침은 2025년 11월 2일부터 시행됩니다.
+              본 개인정보 처리방침은 2025년 11월 17일부터 시행됩니다.
             </p>
           </section>
 

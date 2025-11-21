@@ -30,7 +30,7 @@ function TermsContent() {
         <div className="text-[#2F2B4C]/80 leading-relaxed space-y-8">
           <section>
             <p className="text-sm text-[#2F2B4C]/60 mb-8">
-              시행일: 2025년 11월 2일
+              시행일: 2025년 11월 17일
             </p>
           </section>
 
