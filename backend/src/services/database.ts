@@ -9,6 +9,7 @@ import {
 } from '../utils/errors';
 import { sleep } from '../utils/retry';
 import { encryptFields, decryptFields } from './encryptionService';
+import { getYesterdayTZ, getTodayTZ } from '../utils/dateUtils';
 
 // PostgreSQL Connection Pool
 const pool = new Pool({
@@ -456,14 +457,10 @@ export class DiaryDatabase {
   // 어제 날짜 일기 중 AI 코멘트가 있는 사용자 목록 조회
   static async getUsersWithAICommentYesterday(): Promise<string[]> {
     try {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const year = yesterday.getFullYear();
-      const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-      const day = String(yesterday.getDate()).padStart(2, '0');
-      const yesterdayStr = `${year}-${month}-${day}`;
+      // TZ 환경변수 기준 어제 날짜 (Asia/Seoul 기준)
+      const yesterdayStr = getYesterdayTZ();
 
-      console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기`);
+      console.log(`📅 [DiaryDatabase] 알림 대상자 조회: ${yesterdayStr} 날짜 일기 (TZ=${process.env.TZ || 'UTC'})`);
 
       const result = await pool.query(
         'SELECT DISTINCT "userId" FROM diaries WHERE date LIKE $1 AND "aiComment" IS NOT NULL AND "deletedAt" IS NULL',
@@ -482,11 +479,8 @@ export class DiaryDatabase {
   // 특정 사용자가 오늘 일기를 작성했는지 확인
   static async hasUserWrittenToday(userId: string): Promise<boolean> {
     try {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const todayStr = `${year}-${month}-${day}`;
+      // TZ 환경변수 기준 오늘 날짜 (Asia/Seoul 기준)
+      const todayStr = getTodayTZ();
 
       const result = await pool.query(
         'SELECT COUNT(*) as count FROM diaries WHERE "userId" = $1 AND date LIKE $2 AND "deletedAt" IS NULL',
