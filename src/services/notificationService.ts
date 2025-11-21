@@ -292,6 +292,10 @@ export class NotificationService {
 
   /**
    * 일기 작성 알림 설정 저장
+   *
+   * 이제 서버 푸시 알림만 사용하므로, 로컬 설정만 저장하고
+   * 백엔드 API를 통해 서버 설정을 업데이트합니다.
+   * (로컬 알림 scheduleDailyReminder는 더 이상 사용하지 않음)
    */
   static async setDailyReminderEnabled(enabled: boolean): Promise<void> {
     try {
@@ -301,16 +305,13 @@ export class NotificationService {
         if (!hasPermission) {
           throw new Error('Push notification permission denied');
         }
-
-        // 알림 활성화: 매일 저녁 9시로 예약
-        await this.scheduleDailyReminder(21, 0);
-      } else {
-        // 알림 비활성화: 예약 취소
-        await this.cancelDailyReminder();
       }
 
+      // 로컬 설정 저장
       await AsyncStorage.setItem(DAILY_REMINDER_KEY, String(enabled));
       logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'}`);
+
+      // TODO: 백엔드 API 호출하여 서버 설정도 업데이트 (다음 단계에서 구현)
     } catch (error) {
       logger.error('❌ Failed to set daily reminder setting:', error);
       throw error;

@@ -163,69 +163,76 @@ LetterJob.start();
 // TZ 환경변수 사용 (기본값: Asia/Seoul)
 const TZ = process.env.TZ || 'Asia/Seoul';
 
-// 일기 작성 알림 Cron Job (매일 저녁 9시)
-cron.schedule('0 21 * * *', async () => {
-  try {
-    console.log('📅 [Daily Reminder] Starting daily diary reminder job...');
+// 환경변수로 cron job 제어 (Railway 여러 인스턴스에서 중복 실행 방지)
+const ENABLE_CRON_JOBS = process.env.ENABLE_CRON_JOBS === 'true';
 
-    const { DiaryDatabase, PushTokenDatabase, NotificationPreferencesDatabase } = require('./services/database');
-    const allTokens = await PushTokenDatabase.getAll();
-    const allUserIds = allTokens.map((t:any) => t.userId);
+if (ENABLE_CRON_JOBS) {
+  // 일기 작성 알림 Cron Job (매일 저녁 9시)
+  cron.schedule('0 21 * * *', async () => {
+    try {
+      console.log('📅 [Daily Reminder] Starting daily diary reminder job...');
 
-    console.log(`👥 [Daily Reminder] Total users: ${allUserIds.length}`);
+      const { DiaryDatabase, PushTokenDatabase, NotificationPreferencesDatabase } = require('./services/database');
+      const allTokens = await PushTokenDatabase.getAll();
+      const allUserIds = allTokens.map((t:any) => t.userId);
 
-    // ✅ 알림 설정이 켜진 사용자만 필터링
-    const enabledUserIds = await NotificationPreferencesDatabase.filterEnabled(
-      allUserIds,
-      'daily_reminder'
-    );
+      console.log(`👥 [Daily Reminder] Total users: ${allUserIds.length}`);
 
-    console.log(`👥 [Daily Reminder] Users with daily reminder enabled: ${enabledUserIds.length}`);
-    console.log(`   Filtered out: ${allUserIds.length - enabledUserIds.length} users (notification disabled)`);
+      // ✅ 알림 설정이 켜진 사용자만 필터링
+      const enabledUserIds = await NotificationPreferencesDatabase.filterEnabled(
+        allUserIds,
+        'daily_reminder'
+      );
 
-    let sentCount = 0;
-    let skippedCount = 0;
-    let failedCount = 0;
+      console.log(`👥 [Daily Reminder] Users with daily reminder enabled: ${enabledUserIds.length}`);
+      console.log(`   Filtered out: ${allUserIds.length - enabledUserIds.length} users (notification disabled)`);
 
-    for (const userId of enabledUserIds) {
-      try {
-        // 오늘 일기 작성 여부 확인
-        const hasWrittenToday = await DiaryDatabase.hasUserWrittenToday(userId);
+      let sentCount = 0;
+      let skippedCount = 0;
+      let failedCount = 0;
 
-        if (!hasWrittenToday) {
-          // 일기 안 쓴 사용자에게만 알림 전송
-          const success = await PushNotificationService.sendNotification(
-            userId,
-            '오늘의 일기를 써볼까요? 📝',
-            '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요'
-          );
+      for (const userId of enabledUserIds) {
+        try {
+          // 오늘 일기 작성 여부 확인
+          const hasWrittenToday = await DiaryDatabase.hasUserWrittenToday(userId);
 
-          if (success) {
-            sentCount++;
+          if (!hasWrittenToday) {
+            // 일기 안 쓴 사용자에게만 알림 전송
+            const success = await PushNotificationService.sendNotification(
+              userId,
+              '오늘의 일기를 써볼까요? 📝',
+              '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요'
+            );
+
+            if (success) {
+              sentCount++;
+            } else {
+              failedCount++;
+            }
           } else {
-            failedCount++;
+            skippedCount++;
           }
-        } else {
-          skippedCount++;
+
+          // Rate limiting: 약간의 지연
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`❌ [Daily Reminder] Error sending notification to user ${userId}:`, error);
+          failedCount++;
         }
-
-        // Rate limiting: 약간의 지연
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
-        console.error(`❌ [Daily Reminder] Error sending notification to user ${userId}:`, error);
-        failedCount++;
       }
+
+      console.log(`✅ [Daily Reminder] Job completed: ${sentCount} sent, ${skippedCount} skipped (already written), ${failedCount} failed`);
+    } catch (error) {
+      console.error('❌ [Daily Reminder] Job failed:', error);
     }
+  }, {
+    timezone: TZ
+  });
 
-    console.log(`✅ [Daily Reminder] Job completed: ${sentCount} sent, ${skippedCount} skipped (already written), ${failedCount} failed`);
-  } catch (error) {
-    console.error('❌ [Daily Reminder] Job failed:', error);
-  }
-}, {
-  timezone: TZ
-});
-
-console.log(`✅ Daily diary reminder cron job scheduled (9:00 PM, timezone: ${TZ})`);
+  console.log(`✅ Daily diary reminder cron job scheduled (9:00 PM, timezone: ${TZ})`);
+} else {
+  console.log(`⏭️  Daily diary reminder cron job disabled (set ENABLE_CRON_JOBS=true to enable)`);
+}
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
