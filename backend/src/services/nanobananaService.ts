@@ -3,12 +3,21 @@ import axios from 'axios';
 export class NanobananaService {
   private apiKey: string;
   private baseURL: string = 'https://api.nanobananaapi.ai/api/v1/nanobanana';
-  private referenceImageUrl: string;
+  private referenceImageUrls: string[];
   private callbackUrl: string;
 
-  constructor(apiKey: string, referenceImageUrl?: string, callbackUrl?: string) {
+  constructor(apiKey: string, referenceImageUrls?: string[], callbackUrl?: string) {
     this.apiKey = apiKey;
-    this.referenceImageUrl = referenceImageUrl || process.env.NANOBANANA_REFERENCE_IMAGE_URL || '';
+
+    if (referenceImageUrls) {
+      this.referenceImageUrls = referenceImageUrls;
+    } else {
+      const urlsFromEnv = process.env.NANOBANANA_REFERENCE_IMAGE_URLS;
+      this.referenceImageUrls = urlsFromEnv
+        ? urlsFromEnv.split(',').map(url => url.trim()).filter(url => url)
+        : [];
+    }
+
     this.callbackUrl = callbackUrl || '';
   }
 
@@ -20,7 +29,7 @@ export class NanobananaService {
   async generateImage(prompt: string): Promise<string> {
     try {
       console.log('🎨 [Nanobanana] Generating image with prompt:', prompt);
-      console.log('🖼️  [Nanobanana] Using reference image:', this.referenceImageUrl);
+      console.log('🖼️  [Nanobanana] Using reference images:', this.referenceImageUrls);
       console.log('🔔 [Nanobanana] Callback URL:', this.callbackUrl);
 
       // JSON 형식으로 요청 (API 스펙에 맞게)
@@ -29,7 +38,7 @@ export class NanobananaService {
         numImages: 1,
         type: 'IMAGETOIAMGE', // 레퍼런스 이미지 사용
         image_size: '3:2',
-        imageUrls: this.referenceImageUrl ? [this.referenceImageUrl] : [null],
+        imageUrls: this.referenceImageUrls.length > 0 ? this.referenceImageUrls : [null],
         watermark: 'HeartStamp',
         callBackUrl: this.callbackUrl, // 콜백 URL 추가
       };

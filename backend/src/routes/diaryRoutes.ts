@@ -20,10 +20,10 @@ export function initializeClaudeService(apiKey: string) {
 export function initializeImageGenerationService(
   claudeApiKey: string,
   nanobananaApiKey: string,
-  referenceImageUrl?: string,
+  referenceImageUrls?: string[],
   callbackUrl?: string
 ) {
-  imageGenerationService = new ImageGenerationService(claudeApiKey, nanobananaApiKey, referenceImageUrl, callbackUrl);
+  imageGenerationService = new ImageGenerationService(claudeApiKey, nanobananaApiKey, referenceImageUrls, callbackUrl);
   console.log('✅ ImageGenerationService initialized');
   if (callbackUrl) {
     console.log('🔔 Callback URL configured:', callbackUrl);

@@ -11,11 +11,11 @@ export class ImageGenerationService {
   constructor(
     claudeApiKey: string,
     nanobananaApiKey: string,
-    referenceImageUrl?: string,
+    referenceImageUrls?: string[],
     callbackUrl?: string
   ) {
     this.claudeService = new ClaudeService(claudeApiKey);
-    this.nanobananaService = new NanobananaService(nanobananaApiKey, referenceImageUrl, callbackUrl);
+    this.nanobananaService = new NanobananaService(nanobananaApiKey, referenceImageUrls, callbackUrl);
   }
 
   /**

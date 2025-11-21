@@ -126,15 +126,19 @@ const claudeService = new ClaudeService(CLAUDE_API_KEY);
 
 // Initialize Image Generation Service
 const NANOBANANA_API_KEY = process.env.NANOBANANA_API_KEY;
-const NANOBANANA_REFERENCE_IMAGE_URL = process.env.NANOBANANA_REFERENCE_IMAGE_URL;
+const NANOBANANA_REFERENCE_IMAGE_URLS = process.env.NANOBANANA_REFERENCE_IMAGE_URLS;
 const NANOBANANA_CALLBACK_URL = process.env.NANOBANANA_CALLBACK_URL;
 if (NANOBANANA_API_KEY) {
-  initializeImageGenerationService(CLAUDE_API_KEY, NANOBANANA_API_KEY, NANOBANANA_REFERENCE_IMAGE_URL, NANOBANANA_CALLBACK_URL);
+  const referenceImageUrls = NANOBANANA_REFERENCE_IMAGE_URLS
+    ? NANOBANANA_REFERENCE_IMAGE_URLS.split(',').map(url => url.trim()).filter(url => url)
+    : [];
+
+  initializeImageGenerationService(CLAUDE_API_KEY, NANOBANANA_API_KEY, referenceImageUrls, NANOBANANA_CALLBACK_URL);
   console.log('✅ Image Generation Service enabled');
-  if (NANOBANANA_REFERENCE_IMAGE_URL) {
-    console.log(`🖼️  Reference image: ${NANOBANANA_REFERENCE_IMAGE_URL}`);
+  if (referenceImageUrls.length > 0) {
+    console.log(`🖼️  Reference images (${referenceImageUrls.length}):`, referenceImageUrls);
   } else {
-    console.log('⚠️  No reference image URL configured');
+    console.log('⚠️  No reference image URLs configured');
   }
 } else {
   console.log('⚠️  NANOBANANA_API_KEY not set - Image generation disabled');
