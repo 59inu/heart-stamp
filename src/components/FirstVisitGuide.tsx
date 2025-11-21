@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: SCREEN_WIDTH - 40,
-    backgroundColor: '#F4EBDD', // 기존 앱 온보딩 베이지 컬러
+    backgroundColor: '#fff',
     borderRadius: 20,
     paddingVertical: 60,
     paddingHorizontal: 30,
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#6474A7', // 기존 가이드 타이틀 컬러 (하트 블루 계열)
+    color: '#333',
     textAlign: 'center',
     lineHeight: 28,
     marginBottom: 40,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.buttonSecondaryBackground, // 하트 블루 (#87A6D1)
     paddingVertical: 16,
     paddingHorizontal: 40,
-    borderRadius: 20, // 기존 가이드 버튼과 동일한 borderRadius
+    borderRadius: 12,
     minWidth: 200,
     alignItems: 'center',
     shadowColor: COLORS.buttonSecondaryBackground,
