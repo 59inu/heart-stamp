@@ -119,10 +119,12 @@ export const DiaryListScreen: React.FC = () => {
 
       // 첫 방문 온보딩 체크
       const checkOnboarding = async () => {
-        const completed = await OnboardingService.hasCompletedOnboarding();
-        if (!completed) {
-          setShowOnboarding(true);
-        }
+        // TODO: 임시 - 항상 온보딩 표시 (테스트용)
+        setShowOnboarding(true);
+        // const completed = await OnboardingService.hasCompletedOnboarding();
+        // if (!completed) {
+        //   setShowOnboarding(true);
+        // }
       };
       checkOnboarding();
     }, [loadDiaries, loadUnreadLetterCount, checkPrivacyPolicyUpdate])
