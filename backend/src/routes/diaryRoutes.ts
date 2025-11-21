@@ -6,6 +6,7 @@ import { DiaryEntry } from '../types/diary';
 import { DiaryDatabase } from '../services/database';
 import { aiAnalysisLimiter } from '../middleware/rateLimiter';
 import { requireFirebaseAuth, requireAdminToken } from '../middleware/auth';
+import { checkUserCredit } from './imageGenerationRoutes';
 
 const router = Router();
 
@@ -72,6 +73,25 @@ router.post('/diaries',
         imageUri: diaryData.imageUri,
         generateImage,
       });
+
+      // 그림일기 생성 요청 시 크레딧 확인
+      if (generateImage) {
+        const credit = await checkUserCredit(userId);
+        if (credit.remaining <= 0) {
+          console.log(`❌ [Credit] User ${userId} has no remaining credit (${credit.used}/${credit.limit})`);
+          return res.status(403).json({
+            success: false,
+            message: 'Image generation credit limit exceeded',
+            code: 'CREDIT_LIMIT_EXCEEDED',
+            data: {
+              used: credit.used,
+              limit: credit.limit,
+              remaining: credit.remaining,
+            },
+          });
+        }
+        console.log(`✅ [Credit] User ${userId} has ${credit.remaining} credits remaining`);
+      }
 
       const diaryEntry: DiaryEntry = {
         ...diaryData,

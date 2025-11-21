@@ -16,7 +16,7 @@ export enum ApiErrorType {
 
 export type ApiResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string; errorType?: ApiErrorType };
+  | { success: false; error: string; errorType?: ApiErrorType; errorCode?: string; data?: any };
 
 export class ApiService {
   private baseURL: string;
@@ -102,6 +102,18 @@ export class ApiService {
       return { success: true, data: response.data.success };
     } catch (error: any) {
       logger.error(`❌ [apiService] Error uploading diary ${diary._id}:`, error);
+
+      // 크레딧 제한 에러 처리 (403)
+      if (error.response?.status === 403 && error.response?.data?.code === 'CREDIT_LIMIT_EXCEEDED') {
+        return {
+          success: false,
+          error: '이번 달 그림일기 크레딧을 모두 사용하셨습니다.\n다음 달에 다시 이용해주세요.',
+          errorType: ApiErrorType.VALIDATION_ERROR,
+          errorCode: 'CREDIT_LIMIT_EXCEEDED',
+          data: error.response.data.data, // { used, limit, remaining }
+        };
+      }
+
       const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
       return {
         success: false,

@@ -111,6 +111,24 @@ export const useDiarySave = ({
         syncedWithServer: true,
       });
     } else {
+      // 크레딧 제한 에러 처리
+      if (uploadResult.errorCode === 'CREDIT_LIMIT_EXCEEDED') {
+        logger.warn('그림일기 크레딧 부족:', uploadResult.data);
+        Alert.alert(
+          '그림일기 크레딧 부족',
+          uploadResult.error,
+          [{ text: '확인' }]
+        );
+        // 일기는 저장되었지만 이미지 생성은 안 됨
+        await DiaryStorage.update(savedEntry._id, {
+          syncedWithServer: true, // 일기 자체는 업로드 성공
+        });
+        // 모달 닫기
+        setShowMoodModal(false);
+        onSaveComplete(false);
+        return;
+      }
+
       logger.error('일기 업로드 실패:', uploadResult.error);
       // 로컬에는 저장되었지만 서버 업로드 실패를 표시
       await DiaryStorage.update(savedEntry._id, {
