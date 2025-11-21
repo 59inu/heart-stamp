@@ -778,7 +778,11 @@ export class NotificationPreferencesDatabase {
   ): Promise<void> {
     try {
       await this.retryOnError(async () => {
-        const { teacherCommentEnabled, dailyReminderEnabled, marketingEnabled } = preferences;
+        const {
+          teacherCommentEnabled,
+          dailyReminderEnabled,
+          marketingEnabled = false  // 기본값 false
+        } = preferences;
 
         await pool.query(
           `INSERT INTO notification_preferences
