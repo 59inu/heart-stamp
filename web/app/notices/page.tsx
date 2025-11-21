@@ -80,7 +80,7 @@ function NoticesContent() {
 
           {/* 1.0.0 출시 안내 */}
           <section className="bg-gray-50 rounded-xl p-8">
-            <p className="text-sm text-[#2F2B4C]/60 mb-2">2025.11.02</p>
+            <p className="text-sm text-[#2F2B4C]/60 mb-2">2025.11.17</p>
             <h2 className="text-xl font-semibold text-[#2F2B4C] mb-4">Heart Stamp 출시 안내</h2>
 
             <p className="mb-4">
@@ -108,7 +108,7 @@ function NoticesContent() {
 
           {/* 서비스 이용 안내 */}
           <section className="bg-gray-50 rounded-xl p-8">
-            <p className="text-sm text-[#2F2B4C]/60 mb-2">2025.11.02</p>
+            <p className="text-sm text-[#2F2B4C]/60 mb-2">2025.11.17</p>
             <h2 className="text-xl font-semibold text-[#2F2B4C] mb-4">서비스 이용 안내</h2>
 
             <div className="space-y-4">

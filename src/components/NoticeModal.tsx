@@ -50,7 +50,7 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({ visible, onClose }) =>
 
           {/* 1.0.0 출시 안내 (이전 공지) */}
           <View style={styles.noticeItem}>
-            <Text style={styles.noticeDate}>2025.11.02</Text>
+            <Text style={styles.noticeDate}>2025.11.17</Text>
             <Text style={styles.noticeTitle}>Heart Stamp 출시 안내</Text>
             <Text style={styles.noticeContent}>
               안녕하세요, Heart Stamp 팀입니다.{'\n\n'}
@@ -66,7 +66,7 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({ visible, onClose }) =>
 
           {/* 서비스 이용 안내 (기존 공지) */}
           <View style={styles.noticeItem}>
-            <Text style={styles.noticeDate}>2025.11.02</Text>
+            <Text style={styles.noticeDate}>2025.11.17</Text>
             <Text style={styles.noticeTitle}>서비스 이용 안내</Text>
             <Text style={styles.noticeContent}>
               <Text style={styles.bold}>일기 작성</Text>

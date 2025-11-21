@@ -23,7 +23,6 @@ import { SurveyService } from '../services/surveyService';
 import { FAQModal } from '../components/FAQModal';
 import { ContactModal } from '../components/ContactModal';
 import { UserGuideModal } from '../components/UserGuideModal';
-import { NoticeModal } from '../components/NoticeModal';
 import { ExportService } from '../services/exportService';
 import { DiaryStorage } from '../services/diaryStorage';
 import { NotificationService } from '../services/notificationService';
@@ -47,7 +46,6 @@ export const SettingsScreen: React.FC = () => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
-  const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [hasActiveExport, setHasActiveExport] = useState(false);
   const [hasNewNotice, setHasNewNotice] = useState(false);
   const [imageCredit, setImageCredit] = useState<{
@@ -149,10 +147,11 @@ export const SettingsScreen: React.FC = () => {
   }, [hasPushPermission]);
 
   const handleNotice = async () => {
-    setShowNoticeModal(true);
     // 공지사항 확인 처리
     await AsyncStorage.setItem('noticeViewedVersion', PRIVACY_POLICY_VERSION);
     setHasNewNotice(false);
+    // 웹뷰로 공지사항 열기
+    await WebBrowser.openBrowserAsync('https://heartstamp.kr/notices?embedded=true');
   };
 
   const handleTerms = async () => {
@@ -501,9 +500,6 @@ export const SettingsScreen: React.FC = () => {
           onClose={() => setShowUserGuideModal(false)}
           hideStartButton={true}
         />
-
-        {/* 공지사항 모달 */}
-        <NoticeModal visible={showNoticeModal} onClose={() => setShowNoticeModal(false)} />
       </SafeAreaView>
     </>
   );
