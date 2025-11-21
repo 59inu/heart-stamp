@@ -267,6 +267,36 @@ export class ApiService {
     }
   }
 
+  /**
+   * 알림 설정 업데이트 (백엔드 동기화)
+   */
+  async updateNotificationPreferences(
+    dailyReminderEnabled?: boolean,
+    teacherCommentEnabled?: boolean
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const userId = await UserService.getOrCreateUserId();
+      const response = await this.axiosInstance.put('/notification-preferences', {
+        userId,
+        dailyReminderEnabled,
+        teacherCommentEnabled,
+      }, {
+        timeout: 5000,
+      });
+      return { success: response.data.success };
+    } catch (error: any) {
+      logger.error('[API] Notification preferences update failed:', error);
+      const errorType = error.code === 'ERR_NETWORK' ? ApiErrorType.NETWORK_ERROR : ApiErrorType.SERVER_ERROR;
+      return {
+        success: false,
+        error: getLocalizedErrorMessage(error, ErrorContext.PUSH_NOTIFICATION),
+      };
+    }
+  }
+
   async syncDiaryFromServer(diaryId: string): Promise<ApiResult<{
     aiComment?: string;
     stampType?: string;

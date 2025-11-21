@@ -11,7 +11,9 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc && cp -r public dist/",
     "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "backup": "ts-node scripts/manual-backup.ts",
+    "restore": "ts-node scripts/restore-backup.ts"
   },
   "keywords": [],
   "author": "",

@@ -198,20 +198,8 @@ export default function App() {
 
       await initPushNotifications();
 
-      // 일기 작성 알림 초기화 (설정이 활성화되어 있으면 예약)
-      const initDailyReminder = async () => {
-        try {
-          const enabled = await NotificationService.getDailyReminderEnabled();
-          if (enabled) {
-            await NotificationService.scheduleDailyReminder(21, 0);
-            logger.log('✅ Daily reminder initialized');
-          }
-        } catch (error) {
-          logger.error('❌ Failed to initialize daily reminder:', error);
-        }
-      };
-
-      await initDailyReminder();
+      // 일기 작성 알림은 이제 서버에서 푸시 알림으로 전송되므로
+      // 로컬 알림 초기화가 필요 없음 (중복 방지)
     };
 
     // 앱 초기화 실행

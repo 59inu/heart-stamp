@@ -148,9 +148,8 @@ if (NANOBANANA_API_KEY) {
 const aiAnalysisJob = new AIAnalysisJob(claudeService);
 aiAnalysisJob.start();
 
-// Start Backup Job
+// Backup Job 인스턴스 생성 (관리 엔드포인트에서 사용)
 const backupJob = new BackupJob();
-backupJob.start();
 
 // Start Export Job
 ExportJob.start();
@@ -230,8 +229,13 @@ if (ENABLE_CRON_JOBS) {
   });
 
   console.log(`✅ Daily diary reminder cron job scheduled (9:00 PM, timezone: ${TZ})`);
+
+  // Start Backup Job
+  backupJob.start();
+  console.log(`✅ Backup job scheduled (daily at 4:00 AM, timezone: ${TZ})`);
 } else {
   console.log(`⏭️  Daily diary reminder cron job disabled (set ENABLE_CRON_JOBS=true to enable)`);
+  console.log(`⏭️  Backup job disabled (set ENABLE_CRON_JOBS=true to enable)`);
 }
 
 // 푸시 토큰 등록 API

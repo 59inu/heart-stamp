@@ -309,9 +309,15 @@ export class NotificationService {
 
       // 로컬 설정 저장
       await AsyncStorage.setItem(DAILY_REMINDER_KEY, String(enabled));
-      logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'}`);
 
-      // TODO: 백엔드 API 호출하여 서버 설정도 업데이트 (다음 단계에서 구현)
+      // 백엔드 API 호출하여 서버 설정 동기화
+      const result = await apiService.updateNotificationPreferences(enabled, undefined);
+      if (!result.success) {
+        logger.error('❌ Failed to sync daily reminder setting to backend:', result.error);
+        // 실패해도 로컬 설정은 유지 (다음에 재시도 가능)
+      } else {
+        logger.log(`✅ Daily reminder ${enabled ? 'enabled' : 'disabled'} (synced to backend)`);
+      }
     } catch (error) {
       logger.error('❌ Failed to set daily reminder setting:', error);
       throw error;
@@ -381,13 +387,19 @@ export class NotificationService {
             throw new Error(`Failed to register push token: ${result.reason}`);
           }
         }
-      } else {
-        // 알림 비활성화: 백엔드에서 푸시 토큰 삭제
-        await this.unregisterPushToken();
       }
 
+      // 로컬 설정 저장
       await AsyncStorage.setItem(TEACHER_COMMENT_NOTIFICATION_KEY, String(enabled));
-      logger.log(`✅ Teacher comment notification ${enabled ? 'enabled' : 'disabled'}`);
+
+      // 백엔드 API 호출하여 서버 설정 동기화
+      const result = await apiService.updateNotificationPreferences(undefined, enabled);
+      if (!result.success) {
+        logger.error('❌ Failed to sync teacher comment notification setting to backend:', result.error);
+        // 실패해도 로컬 설정은 유지 (다음에 재시도 가능)
+      } else {
+        logger.log(`✅ Teacher comment notification ${enabled ? 'enabled' : 'disabled'} (synced to backend)`);
+      }
     } catch (error) {
       logger.error('❌ Failed to set teacher comment notification setting:', error);
       throw error;

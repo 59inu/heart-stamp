@@ -1,21 +1,27 @@
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import archiver from 'archiver';
 import { S3Service } from './s3Service';
-
-const execAsync = promisify(exec);
+import { Pool } from 'pg';
 
 const BACKUP_DIR = path.join(__dirname, '../../backups');
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 const RETENTION_DAYS = 7; // 7일치 백업 보관
 
+// Railway 환경 감지
+const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT !== undefined;
+
 export class BackupService {
   /**
-   * 백업 디렉토리 초기화
+   * 백업 디렉토리 초기화 (로컬 환경에만 사용)
    */
   private static ensureBackupDir(): void {
+    // Railway는 ephemeral filesystem이므로 로컬 저장 불필요
+    if (IS_RAILWAY) {
+      console.log('⚠️  [Backup] Railway environment detected - skipping local backup dir');
+      return;
+    }
+
     if (!fs.existsSync(BACKUP_DIR)) {
       fs.mkdirSync(BACKUP_DIR, { recursive: true });
       console.log('✅ [Backup] Created backup directory');
@@ -23,28 +29,59 @@ export class BackupService {
   }
 
   /**
-   * PostgreSQL 데이터베이스 백업 (pg_dump 사용)
+   * PostgreSQL 데이터베이스 백업 (pg 라이브러리 사용 - pg_dump 불필요)
    */
   private static async performDatabaseBackup(timestamp: string): Promise<{ path: string; size: number }> {
     try {
-      const backupPath = path.join(BACKUP_DIR, `${timestamp}_diary_backup.sql`);
-
       console.log('📦 [Backup] Starting database backup...');
 
-      // pg_dump를 사용하여 SQL 백업 생성
       const databaseUrl = process.env.DATABASE_URL;
       if (!databaseUrl) {
         throw new Error('DATABASE_URL not configured');
       }
 
-      await execAsync(`pg_dump "${databaseUrl}" > "${backupPath}"`);
+      // pg 라이브러리로 데이터 추출
+      const pool = new Pool({ connectionString: databaseUrl });
 
-      const stats = fs.statSync(backupPath);
-      const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+      try {
+        // 모든 테이블 조회
+        const tablesResult = await pool.query(`
+          SELECT tablename
+          FROM pg_tables
+          WHERE schemaname = 'public'
+        `);
 
-      console.log(`✅ [Backup] Database backup created: ${sizeMB}MB`);
+        const tables = tablesResult.rows.map(row => row.tablename);
+        console.log(`📋 [Backup] Found ${tables.length} tables: ${tables.join(', ')}`);
 
-      return { path: backupPath, size: stats.size };
+        // 각 테이블 데이터 추출
+        const backupData: Record<string, any[]> = {};
+        for (const table of tables) {
+          const result = await pool.query(`SELECT * FROM "${table}"`);
+          backupData[table] = result.rows;
+          console.log(`   ✓ ${table}: ${result.rows.length} rows`);
+        }
+
+        // JSON 파일로 저장
+        const backupJson = JSON.stringify(backupData, null, 2);
+
+        // Railway 환경: 임시 파일로만 생성 (S3 업로드 후 삭제 예정)
+        // 로컬 환경: backups/ 디렉토리에 영구 저장
+        const backupPath = IS_RAILWAY
+          ? path.join('/tmp', `${timestamp}_diary_backup.json`)
+          : path.join(BACKUP_DIR, `${timestamp}_diary_backup.json`);
+
+        fs.writeFileSync(backupPath, backupJson);
+
+        const stats = fs.statSync(backupPath);
+        const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+
+        console.log(`✅ [Backup] Database backup created: ${sizeMB}MB (${IS_RAILWAY ? 'temp' : 'local'})`);
+
+        return { path: backupPath, size: stats.size };
+      } finally {
+        await pool.end();
+      }
     } catch (error) {
       console.error('❌ [Backup] Database backup failed:', error);
       throw error;
@@ -131,36 +168,6 @@ export class BackupService {
     }
   }
 
-  /**
-   * 백업 메타데이터 저장
-   */
-  private static saveBackupMetadata(
-    timestamp: string,
-    dbSize: number,
-    uploadsSize: number,
-    success: boolean,
-    duration: number,
-    error?: string
-  ): void {
-    try {
-      const metadata = {
-        timestamp,
-        db_size_bytes: dbSize,
-        db_size_mb: (dbSize / 1024 / 1024).toFixed(2),
-        uploads_size_bytes: uploadsSize,
-        uploads_size_mb: (uploadsSize / 1024 / 1024).toFixed(2),
-        total_size_mb: ((dbSize + uploadsSize) / 1024 / 1024).toFixed(2),
-        success,
-        duration_seconds: duration.toFixed(2),
-        error: error || null,
-      };
-
-      const metadataPath = path.join(BACKUP_DIR, `${timestamp}_metadata.json`);
-      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-    } catch (error) {
-      console.error('❌ [Backup] Failed to save metadata:', error);
-    }
-  }
 
   /**
    * S3에 백업 파일 업로드
@@ -206,46 +213,99 @@ export class BackupService {
         // DB 백업 업로드
         if (dbBackup.path) {
           await this.uploadToS3(dbBackup.path, path.basename(dbBackup.path));
+          // Railway 환경: 임시 파일 삭제
+          if (IS_RAILWAY && fs.existsSync(dbBackup.path)) {
+            fs.unlinkSync(dbBackup.path);
+            console.log('🗑️  [Backup] Cleaned up temp DB backup file');
+          }
         }
 
         // uploads 백업 업로드
         if (uploadsBackup.path) {
           await this.uploadToS3(uploadsBackup.path, path.basename(uploadsBackup.path));
+          // Railway 환경: 임시 파일 삭제
+          if (IS_RAILWAY && fs.existsSync(uploadsBackup.path)) {
+            fs.unlinkSync(uploadsBackup.path);
+            console.log('🗑️  [Backup] Cleaned up temp uploads backup file');
+          }
         }
 
-        // 메타데이터 업로드
-        const metadataPath = path.join(BACKUP_DIR, `${timestamp}_metadata.json`);
-        if (fs.existsSync(metadataPath)) {
-          await this.uploadToS3(metadataPath, `${timestamp}_metadata.json`);
+        // 메타데이터 생성 및 업로드
+        const metadata = {
+          timestamp,
+          db_size_bytes: dbBackup.size,
+          db_size_mb: (dbBackup.size / 1024 / 1024).toFixed(2),
+          uploads_size_bytes: uploadsBackup.size,
+          uploads_size_mb: (uploadsBackup.size / 1024 / 1024).toFixed(2),
+          total_size_mb: ((dbBackup.size + uploadsBackup.size) / 1024 / 1024).toFixed(2),
+          success: true,
+          duration_seconds: ((Date.now() - startTime) / 1000).toFixed(2),
+          environment: IS_RAILWAY ? 'railway' : 'local',
+        };
+
+        const metadataPath = IS_RAILWAY
+          ? path.join('/tmp', `${timestamp}_metadata.json`)
+          : path.join(BACKUP_DIR, `${timestamp}_metadata.json`);
+
+        fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+        await this.uploadToS3(metadataPath, `${timestamp}_metadata.json`);
+
+        // Railway 환경: 메타데이터 임시 파일 삭제
+        if (IS_RAILWAY && fs.existsSync(metadataPath)) {
+          fs.unlinkSync(metadataPath);
+          console.log('🗑️  [Backup] Cleaned up temp metadata file');
         }
 
         // S3 오래된 백업 정리
         await S3Service.cleanOldBackups('backups/', RETENTION_DAYS);
+      } else {
+        console.warn('⚠️  [Backup] S3 not configured - backups stored locally only (NOT recommended for Railway!)');
       }
 
-      // 로컬 오래된 백업 정리
-      this.cleanOldBackups();
+      // 로컬 오래된 백업 정리 (로컬 환경에만 필요)
+      if (!IS_RAILWAY) {
+        this.cleanOldBackups();
+      }
 
       const duration = (Date.now() - startTime) / 1000;
-
-      // 메타데이터 저장
-      this.saveBackupMetadata(
-        timestamp,
-        dbBackup.size,
-        uploadsBackup.size,
-        true,
-        duration
-      );
-
       console.log(`✅ [Backup] Daily backup completed successfully in ${duration.toFixed(2)}s\n`);
     } catch (error) {
       const duration = (Date.now() - startTime) / 1000;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      // 실패 메타데이터 저장
-      this.saveBackupMetadata(timestamp, 0, 0, false, duration, errorMessage);
-
       console.error(`❌ [Backup] Daily backup failed after ${duration.toFixed(2)}s:`, error);
+
+      // 실패 메타데이터를 S3에 업로드
+      if (S3Service.isConfigured()) {
+        try {
+          const failureMetadata = {
+            timestamp,
+            db_size_bytes: 0,
+            db_size_mb: '0.00',
+            uploads_size_bytes: 0,
+            uploads_size_mb: '0.00',
+            total_size_mb: '0.00',
+            success: false,
+            duration_seconds: duration.toFixed(2),
+            error: errorMessage,
+            environment: IS_RAILWAY ? 'railway' : 'local',
+          };
+
+          const metadataPath = IS_RAILWAY
+            ? path.join('/tmp', `${timestamp}_metadata.json`)
+            : path.join(BACKUP_DIR, `${timestamp}_metadata.json`);
+
+          fs.writeFileSync(metadataPath, JSON.stringify(failureMetadata, null, 2));
+          await this.uploadToS3(metadataPath, `${timestamp}_metadata.json`);
+
+          if (IS_RAILWAY && fs.existsSync(metadataPath)) {
+            fs.unlinkSync(metadataPath);
+          }
+        } catch (metaError) {
+          console.error('❌ [Backup] Failed to upload failure metadata:', metaError);
+        }
+      }
+
       throw error;
     }
   }
