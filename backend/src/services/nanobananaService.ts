@@ -39,7 +39,6 @@ export class NanobananaService {
         type: 'IMAGETOIAMGE', // 레퍼런스 이미지 사용
         image_size: '3:2',
         imageUrls: this.referenceImageUrls.length > 0 ? this.referenceImageUrls : [null],
-        watermark: 'HeartStamp',
         callBackUrl: this.callbackUrl, // 콜백 URL 추가
       };
 

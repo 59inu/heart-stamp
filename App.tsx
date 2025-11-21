@@ -83,9 +83,18 @@ export default function App() {
       const update = await Updates.checkForUpdateAsync();
 
       if (update.isAvailable) {
-        logger.log('📦 [Update] Update available, applying...');
+        logger.log('📦 [Update] Update available, downloading...');
         await AnalyticsService.logEvent('eas_update_applying');
         await Updates.fetchUpdateAsync();
+
+        // 재시작 전 현재 화면 재확인 (다운로드 중 화면 이동 가능성 대비)
+        const stillSafe = SAFE_SCREENS.includes(currentRouteNameRef.current);
+        if (!stillSafe) {
+          logger.log('⏭️ [Update] User moved to unsafe screen, postponing reload');
+          return;
+        }
+
+        logger.log('✅ [Update] Still on safe screen, applying update...');
         await Updates.reloadAsync(); // 즉시 적용
       } else {
         logger.log('✅ [Update] App is up to date');
