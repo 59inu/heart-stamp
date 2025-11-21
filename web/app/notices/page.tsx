@@ -46,6 +46,9 @@ function NoticesContent() {
                   ✏️ 크레용으로 그려주는 그림 일기 기능이 생겼어요
                 </p>
                 <p className="text-sm text-[#2F2B4C]/70 ml-6">일기 속 순간을 그림으로 다시 만나보세요!</p>
+                <p className="text-xs text-[#2F2B4C]/50 ml-6 mt-1">
+                  ※ 일기 원문 전체가 아닌, 한 장면만 추출되어 그림이 생성되며, 개인정보 보호를 위해 추상적으로 표현됩니다
+                </p>
               </div>
 
               <div>

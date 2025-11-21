@@ -63,6 +63,7 @@ function PrivacyContent() {
             <ul className="list-disc list-inside space-y-1 ml-4">
               <li>일기 작성, 저장 및 조회 서비스 제공</li>
               <li>AI 기반 일기 코멘트 생성</li>
+              <li>AI 기반 크레용 일러스트 생성 (그림일기 기능)</li>
               <li>감정 분석 및 주간/월간 리포트 제공</li>
               <li>감정 스탬프 컬렉션 및 통계 제공</li>
               <li>푸시 알림 발송</li>
@@ -97,6 +98,26 @@ function PrivacyContent() {
               </ul>
             </div>
 
+            <div className="bg-[#F0F6FF] rounded-lg p-6 border-l-4 border-[#87A6D1] mb-4">
+              <h3 className="text-lg font-semibold text-[#2F2B4C] mb-3">
+                나노바나나 (그림일기 AI)
+              </h3>
+              <ul className="space-y-1 text-sm">
+                <li><strong>제공받는 자:</strong> 나노바나나 (대한민국)</li>
+                <li><strong>제공 목적:</strong> 일기 기반 크레용 스타일 일러스트 생성</li>
+                <li><strong>제공 항목:</strong> 일기에서 추출된 장면 설명 및 키워드</li>
+                <li><strong>보유 및 이용기간:</strong> 이미지 생성 완료 즉시 자동 삭제</li>
+                <li><strong>개인정보 보호:</strong>
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    <li>일기 원문 전체가 전송되지 않으며, 한 장면의 설명만 추출되어 전송됩니다</li>
+                    <li>성별과 나이는 모호하게 표현되어 개인을 특정할 수 없습니다</li>
+                    <li>이름, 장소명 등 개인 식별 정보는 제거되거나 일반화됩니다</li>
+                    <li>생성된 이미지는 프라이버시 보호를 위해 추상적으로 표현됩니다</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
             <div className="bg-[#F0F6FF] rounded-lg p-6 border-l-4 border-[#87A6D1]">
               <h3 className="text-lg font-semibold text-[#2F2B4C] mb-3">
                 Sentry (에러 추적)
@@ -126,6 +147,7 @@ function PrivacyContent() {
               <li>앱 삭제 시: 디바이스 내 모든 데이터 즉시 삭제 (서버 데이터는 별도 삭제 요청 필요)</li>
               <li>서버 데이터: 이용자가 삭제 요청 시 즉시 삭제 (자동 백업 파일은 14일 보관)</li>
               <li>Anthropic 전송 데이터: 처리 완료 후 최대 30일 보관 후 자동 삭제</li>
+              <li>나노바나나 전송 데이터: 이미지 생성 완료 즉시 자동 삭제</li>
               <li>Sentry 에러 로그: 90일 보관 후 자동 삭제</li>
             </ul>
           </section>

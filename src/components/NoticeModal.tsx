@@ -33,7 +33,11 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({ visible, onClose }) =>
             <Text style={styles.noticeTitle}>📌 What's New — Version 1.1.0</Text>
             <Text style={styles.noticeContent}>
               ✏️ <Text style={styles.bold}>크레용으로 그려주는 그림 일기 기능이 생겼어요</Text>
-              {'\n'}일기 속 순간을 그림으로 다시 만나보세요!{'\n\n'}
+              {'\n'}일기 속 순간을 그림으로 다시 만나보세요!{'\n'}
+              <Text style={styles.privacyNote}>
+                ※ 일기 원문 전체가 아닌, 한 장면만 추출되어 그림이 생성되며, 개인정보 보호를 위해 추상적으로 표현됩니다
+              </Text>
+              {'\n\n'}
               🖼️ <Text style={styles.bold}>마음에 드는 일기를 이미지로 저장하거나 공유할 수 있어요</Text>
               {'\n'}나만의 기록을 예쁘게 간직하세요{'\n\n'}
               🌈 <Text style={styles.bold}>1년 감정 로그를 색으로 확인해보세요</Text>
@@ -158,6 +162,11 @@ const styles = StyleSheet.create({
   bold: {
     fontWeight: '600',
     color: '#333',
+  },
+  privacyNote: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
   },
   bottomSpacing: {
     height: 40,
