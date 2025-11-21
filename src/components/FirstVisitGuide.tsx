@@ -40,16 +40,17 @@ export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
         {/* 메인 메시지 */}
         <Text style={styles.message}>
           한 줄만 써도 괜찮아요.{'\n'}
-          오늘 쓰면 내일 아침 선생님 답장이 도착합니다
+          오늘 쓰면 내일 아침,{'\n'}
+          선생님 답장이 도착합니다
         </Text>
 
-        {/* 오늘 일기 쓰기 버튼 */}
+        {/* 오늘 일기 쓰러 가기 버튼 */}
         <TouchableOpacity
           style={styles.button}
           onPress={onComplete}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>오늘 일기 쓰기</Text>
+          <Text style={styles.buttonText}>오늘 일기 쓰러 가기</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -92,8 +93,8 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   stampImage: {
-    width: 120,
-    height: 120,
+    width: 156, // 120 * 1.3
+    height: 156,
     marginBottom: 32,
   },
   message: {
