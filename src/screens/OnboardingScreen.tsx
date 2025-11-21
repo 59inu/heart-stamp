@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
+import { PRIVACY_POLICY_VERSION } from '../constants/privacy';
 import { logger } from '../utils/logger';
 import { AnalyticsService } from '../services/analyticsService';
 
@@ -123,7 +124,7 @@ export const OnboardingScreen: React.FC = () => {
       const agreedAt = new Date().toISOString();
       await AsyncStorage.setItem('privacyAgreement', JSON.stringify({
         agreedAt,
-        version: '1.0',
+        version: PRIVACY_POLICY_VERSION,
         ageVerification: true,
         terms: true,
         privacy: true,

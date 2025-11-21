@@ -6,12 +6,15 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { DateData } from 'react-native-calendars';
 import { format } from 'date-fns';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../../navigation/types';
 import { OnboardingService } from '../../services/onboardingService';
 import { FirstVisitGuide } from '../../components/FirstVisitGuide';
+import { PrivacyUpdateModal } from '../../components/PrivacyUpdateModal';
 import { SyncStatusBar } from '../../components/SyncStatusBar';
 import { AnimatedHeartIcon } from '../../components/AnimatedHeartIcon';
 import { COLORS } from '../../constants/colors';
+import { PRIVACY_POLICY_VERSION } from '../../constants/privacy';
 import { diaryEvents, EVENTS } from '../../services/eventEmitter';
 import { logger } from '../../utils/logger';
 import { apiService } from '../../services/apiService';
@@ -31,6 +34,7 @@ export const DiaryListScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showPrivacyUpdateModal, setShowPrivacyUpdateModal] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
   // Custom hooks
@@ -45,6 +49,42 @@ export const DiaryListScreen: React.FC = () => {
       }
     } catch (error) {
       logger.error('Error loading unread letter count:', error);
+    }
+  }, []);
+
+  // 개인정보 처리방침 버전 체크
+  const checkPrivacyPolicyUpdate = useCallback(async () => {
+    try {
+      const agreement = await AsyncStorage.getItem('privacyAgreement');
+      if (!agreement) {
+        // 온보딩을 안 한 경우 (온보딩에서 처리)
+        return;
+      }
+
+      const agreementData = JSON.parse(agreement);
+      if (agreementData.version !== PRIVACY_POLICY_VERSION) {
+        logger.log('개인정보 처리방침 버전 불일치:', agreementData.version, '→', PRIVACY_POLICY_VERSION);
+        setShowPrivacyUpdateModal(true);
+      }
+    } catch (error) {
+      logger.error('개인정보 처리방침 버전 체크 오류:', error);
+    }
+  }, []);
+
+  // 개인정보 처리방침 업데이트 동의
+  const handlePrivacyUpdateAgree = useCallback(async () => {
+    try {
+      const agreement = await AsyncStorage.getItem('privacyAgreement');
+      if (agreement) {
+        const agreementData = JSON.parse(agreement);
+        agreementData.version = PRIVACY_POLICY_VERSION;
+        agreementData.updatedAt = new Date().toISOString();
+        await AsyncStorage.setItem('privacyAgreement', JSON.stringify(agreementData));
+        logger.log('개인정보 처리방침 버전 업데이트:', PRIVACY_POLICY_VERSION);
+      }
+      setShowPrivacyUpdateModal(false);
+    } catch (error) {
+      logger.error('개인정보 처리방침 버전 업데이트 오류:', error);
     }
   }, []);
 
@@ -75,6 +115,7 @@ export const DiaryListScreen: React.FC = () => {
     useCallback(() => {
       loadDiaries();
       loadUnreadLetterCount();
+      checkPrivacyPolicyUpdate();
 
       // 첫 방문 온보딩 체크
       const checkOnboarding = async () => {
@@ -84,7 +125,7 @@ export const DiaryListScreen: React.FC = () => {
         }
       };
       checkOnboarding();
-    }, [loadDiaries, loadUnreadLetterCount])
+    }, [loadDiaries, loadUnreadLetterCount, checkPrivacyPolicyUpdate])
   );
 
   // AI 코멘트 수신 시 자동 새로고침
@@ -241,6 +282,12 @@ export const DiaryListScreen: React.FC = () => {
 
         {/* 첫 방문 온보딩 */}
         <FirstVisitGuide visible={showOnboarding} onComplete={handleOnboardingComplete} />
+
+        {/* 개인정보 처리방침 업데이트 안내 */}
+        <PrivacyUpdateModal
+          visible={showPrivacyUpdateModal}
+          onAgree={handlePrivacyUpdateAgree}
+        />
       </SafeAreaView>
     </>
   );
