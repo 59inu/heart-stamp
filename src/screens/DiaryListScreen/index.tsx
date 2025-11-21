@@ -148,7 +148,9 @@ export const DiaryListScreen: React.FC = () => {
   const handleOnboardingComplete = useCallback(async () => {
     await OnboardingService.markOnboardingCompleted();
     setShowOnboarding(false);
-  }, []);
+    // 오늘 일기 작성 화면으로 이동
+    navigation.navigate('DiaryWrite', { date: new Date() });
+  }, [navigation]);
 
   const handleDateSelect = useCallback((date: DateData) => {
     setSelectedDate(date.dateString);

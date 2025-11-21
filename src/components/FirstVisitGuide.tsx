@@ -1,11 +1,12 @@
 import React from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import { GuideCarousel } from './GuideCarousel';
+import { COLORS } from '../constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,10 +29,23 @@ export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
         onPress={() => {}}
       />
       <View style={styles.card}>
-        <GuideCarousel
-          onComplete={onComplete}
-          containerWidth={SCREEN_WIDTH - 40}
-        />
+        {/* 이모지 */}
+        <Text style={styles.emoji}>💌</Text>
+
+        {/* 메인 메시지 */}
+        <Text style={styles.message}>
+          한 줄만 써도 괜찮아요.{'\n'}
+          오늘 쓰면 내일 아침 선생님 답장이 도착합니다
+        </Text>
+
+        {/* 오늘 일기 쓰기 버튼 */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onComplete}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>오늘 일기 쓰기</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -58,9 +72,11 @@ const styles = StyleSheet.create({
   },
   card: {
     width: SCREEN_WIDTH - 40,
-    backgroundColor: '#F4EBDD',
+    backgroundColor: '#fff',
     borderRadius: 20,
-    paddingVertical: 20,
+    paddingVertical: 60,
+    paddingHorizontal: 30,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -69,5 +85,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
+  },
+  emoji: {
+    fontSize: 72,
+    marginBottom: 32,
+  },
+  message: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 28,
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    minWidth: 200,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
