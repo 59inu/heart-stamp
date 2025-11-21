@@ -54,7 +54,7 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
             >
               <Ionicons name="chevron-back" size={18} color="#666" />
             </TouchableOpacity>
-            <Text style={styles.yearText}>{selectedYear}년</Text>
+            <Text style={styles.yearText}>{selectedYear}</Text>
             <TouchableOpacity
               style={styles.yearButton}
               onPress={() => {
