@@ -7,6 +7,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -30,6 +31,15 @@ export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
         onPress={() => {}}
       />
       <View style={styles.card}>
+        {/* X 닫기 버튼 */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onComplete}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="close" size={28} color="#999" />
+        </TouchableOpacity>
+
         {/* 도장 이미지 */}
         <Image
           source={require('../../assets/stamp.png')}
@@ -91,6 +101,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    padding: 4,
   },
   stampImage: {
     width: 156, // 120 * 1.3
