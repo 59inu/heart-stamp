@@ -17,6 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SURVEY_URL, SURVEY_BENEFIT } from '../constants/survey';
 import { SurveyService } from '../services/surveyService';
 import { FAQModal } from '../components/FAQModal';
@@ -28,6 +29,7 @@ import { DiaryStorage } from '../services/diaryStorage';
 import { NotificationService } from '../services/notificationService';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS } from '../constants/colors';
+import { PRIVACY_POLICY_VERSION } from '../constants/privacy';
 import { logger } from '../utils/logger';
 import { AnalyticsService } from '../services/analyticsService';
 import { apiService } from '../services/apiService';
@@ -47,6 +49,7 @@ export const SettingsScreen: React.FC = () => {
   const [showUserGuideModal, setShowUserGuideModal] = useState(false);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [hasActiveExport, setHasActiveExport] = useState(false);
+  const [hasNewNotice, setHasNewNotice] = useState(false);
   const [imageCredit, setImageCredit] = useState<{
     used: number;
     limit: number;
@@ -95,6 +98,10 @@ export const SettingsScreen: React.FC = () => {
           if (creditResult.success) {
             setImageCredit(creditResult.data);
           }
+
+          // 공지사항 확인 여부 체크
+          const noticeVersion = await AsyncStorage.getItem('noticeViewedVersion');
+          setHasNewNotice(noticeVersion !== PRIVACY_POLICY_VERSION);
         } catch (error) {
           logger.error('Failed to load settings:', error);
         }
@@ -141,8 +148,11 @@ export const SettingsScreen: React.FC = () => {
     };
   }, [hasPushPermission]);
 
-  const handleNotice = () => {
+  const handleNotice = async () => {
     setShowNoticeModal(true);
+    // 공지사항 확인 처리
+    await AsyncStorage.setItem('noticeViewedVersion', PRIVACY_POLICY_VERSION);
+    setHasNewNotice(false);
   };
 
   const handleTerms = async () => {
@@ -422,7 +432,14 @@ export const SettingsScreen: React.FC = () => {
             <TouchableOpacity style={styles.menuItem} onPress={handleNotice}>
               <Ionicons name="megaphone-outline" size={24} color={COLORS.settingsIconColor} />
               <Text style={styles.menuItemText}>공지사항</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
+              <View style={styles.menuItemRight}>
+                {hasNewNotice && (
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>NEW</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} onPress={handleUserGuide}>
@@ -730,5 +747,10 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     paddingVertical: 8,
+  },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
