@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
@@ -29,8 +30,12 @@ export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
         onPress={() => {}}
       />
       <View style={styles.card}>
-        {/* 이모지 */}
-        <Text style={styles.emoji}>💌</Text>
+        {/* 도장 이미지 */}
+        <Image
+          source={require('../../assets/stamp.png')}
+          style={styles.stampImage}
+          resizeMode="contain"
+        />
 
         {/* 메인 메시지 */}
         <Text style={styles.message}>
@@ -86,8 +91,9 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
-  emoji: {
-    fontSize: 72,
+  stampImage: {
+    width: 120,
+    height: 120,
     marginBottom: 32,
   },
   message: {
