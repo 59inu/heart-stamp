@@ -22,6 +22,7 @@ import { SurveyModal } from '../../components/SurveyModal';
 import { SurveyService } from '../../services/surveyService';
 import { logger } from '../../utils/logger';
 import { apiService } from '../../services/apiService';
+import { AnalyticsService } from '../../services/analyticsService';
 import { useLoadEntry } from './hooks/useLoadEntry';
 import { useWeather } from './hooks/useWeather';
 import { useImagePicker } from './hooks/useImagePicker';
@@ -148,6 +149,14 @@ export const DiaryWriteScreen: React.FC = () => {
       );
       return;
     }
+
+    // Analytics: 그림일기 생성 요청
+    AnalyticsService.logPictureGenerateRequest(
+      content.length,
+      !!selectedMood,
+      !!weather,
+      !!entryId
+    );
 
     setAiGenerateSelected(true);
     Alert.alert(

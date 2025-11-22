@@ -388,4 +388,145 @@ export class AnalyticsService {
       logger.log('🚨 High churn risk detected!');
     }
   }
+
+  // ============================================================
+  // 1.1.0 신규 기능 이벤트
+  // ============================================================
+
+  /**
+   * 연간 감정 로그 화면 진입
+   */
+  static async logYearlyEmotionFlowOpen(
+    source: 'heart_icon' | 'navigation',
+    totalDiaryCount: number,
+    currentYear: number
+  ): Promise<void> {
+    await this.logEvent('yearly_emotion_flow_open', {
+      source,
+      total_diary_count: totalDiaryCount,
+      current_year: currentYear,
+    });
+  }
+
+  /**
+   * 연간 감정 로그 연도 변경
+   */
+  static async logYearlyEmotionFlowYearChange(
+    fromYear: number,
+    toYear: number,
+    diaryCountInYear: number
+  ): Promise<void> {
+    await this.logEvent('yearly_emotion_flow_year_change', {
+      from_year: fromYear,
+      to_year: toYear,
+      diary_count_in_year: diaryCountInYear,
+    });
+  }
+
+  /**
+   * 연간 감정 로그 뷰 모드 전환
+   */
+  static async logYearlyEmotionFlowViewModeToggle(
+    fromMode: 'heatmap' | 'chart',
+    toMode: 'heatmap' | 'chart',
+    currentYear: number
+  ): Promise<void> {
+    await this.logEvent('yearly_emotion_flow_view_mode_toggle', {
+      from_mode: fromMode,
+      to_mode: toMode,
+      current_year: currentYear,
+    });
+  }
+
+  /**
+   * 그림일기 생성 요청
+   */
+  static async logPictureGenerateRequest(
+    diaryCharacterCount: number,
+    hasMood: boolean,
+    hasWeather: boolean,
+    isEditMode: boolean
+  ): Promise<void> {
+    await this.logEvent('picture_generate_request', {
+      diary_character_count: diaryCharacterCount,
+      has_mood: hasMood,
+      has_weather: hasWeather,
+      is_edit_mode: isEditMode,
+    });
+  }
+
+  /**
+   * 그림일기 생성 완료
+   */
+  static async logPictureGenerateComplete(
+    success: boolean,
+    generationTimeSeconds: number,
+    errorType?: 'network' | 'server' | 'timeout',
+    retryCount?: number
+  ): Promise<void> {
+    await this.logEvent('picture_generate_complete', {
+      success,
+      generation_time_seconds: generationTimeSeconds,
+      error_type: errorType,
+      retry_count: retryCount,
+    });
+  }
+
+  /**
+   * 생성된 그림 조회
+   */
+  static async logPictureView(
+    viewSource: 'diary_write' | 'diary_detail' | 'share_modal',
+    daysSinceGenerated: number
+  ): Promise<void> {
+    await this.logEvent('picture_view', {
+      view_source: viewSource,
+      days_since_generated: daysSinceGenerated,
+    });
+  }
+
+  /**
+   * 공유 모달 열기
+   */
+  static async logShareModalOpen(
+    source: 'diary_detail',
+    hasAiComment: boolean,
+    hasPicture: boolean,
+    diaryAgeDays: number
+  ): Promise<void> {
+    await this.logEvent('share_modal_open', {
+      source,
+      has_ai_comment: hasAiComment,
+      has_picture: hasPicture,
+      diary_age_days: diaryAgeDays,
+    });
+  }
+
+  /**
+   * 일기 공유 실행
+   */
+  static async logDiaryShare(
+    shareMethod: 'share_sheet' | 'save_to_gallery',
+    includeComment: boolean,
+    hasPicture: boolean,
+    success: boolean,
+    errorType?: string
+  ): Promise<void> {
+    await this.logEvent('diary_share', {
+      share_method: shareMethod,
+      include_comment: includeComment,
+      has_picture: hasPicture,
+      success,
+      error_type: errorType,
+    });
+  }
+
+  /**
+   * 공유 시 코멘트 포함 토글
+   */
+  static async logShareCommentToggle(includeComment: boolean): Promise<void> {
+    await this.logEvent('share_comment_toggle', {
+      include_comment: includeComment,
+    });
+  }
 }

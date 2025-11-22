@@ -23,6 +23,7 @@ import { getStampImage, getStampColor } from '../utils/stampUtils';
 import { ManuscriptPaper } from './ManuscriptPaper';
 import { COLORS } from '../constants/colors';
 import { WeatherService } from '../services/weatherService';
+import { AnalyticsService } from '../services/analyticsService';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -65,12 +66,16 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
   };
 
   const handleSaveToGallery = async () => {
+    let success = false;
+    let errorType: string | undefined;
+
     try {
       setIsSaving(true);
 
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('권한 필요', '갤러리에 저장하려면 사진 접근 권한이 필요합니다.');
+        errorType = 'permission_denied';
         return;
       }
 
@@ -80,16 +85,30 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
 
       await MediaLibrary.saveToLibraryAsync(uri);
       Alert.alert('저장 완료', '갤러리에 저장되었습니다.');
+      success = true;
       onClose();
     } catch (error) {
       console.error('Save error:', error);
       Alert.alert('저장 실패', '이미지 저장 중 오류가 발생했습니다.');
+      errorType = 'capture_failed';
     } finally {
       setIsSaving(false);
+
+      // Analytics: 일기 공유 (갤러리 저장)
+      AnalyticsService.logDiaryShare(
+        'save_to_gallery',
+        includeComment,
+        !!diary.imageUri,
+        success,
+        errorType
+      );
     }
   };
 
   const handleShare = async () => {
+    let success = false;
+    let errorType: string | undefined;
+
     try {
       setIsSharing(true);
 
@@ -100,15 +119,27 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
         Alert.alert('공유 불가', '이 기기에서는 공유 기능을 사용할 수 없습니다.');
+        errorType = 'sharing_unavailable';
         return;
       }
 
       await Sharing.shareAsync(uri);
+      success = true;
     } catch (error) {
       console.error('Share error:', error);
       Alert.alert('공유 실패', '공유 중 오류가 발생했습니다.');
+      errorType = 'capture_failed';
     } finally {
       setIsSharing(false);
+
+      // Analytics: 일기 공유 (공유 시트)
+      AnalyticsService.logDiaryShare(
+        'share_sheet',
+        includeComment,
+        !!diary.imageUri,
+        success,
+        errorType
+      );
     }
   };
 
@@ -127,7 +158,11 @@ export const DiaryShareModal: React.FC<DiaryShareModalProps> = ({ visible, diary
                 <Text style={styles.toggleLabel}>선생님 코멘트</Text>
                 <Switch
                   value={includeComment}
-                  onValueChange={setIncludeComment}
+                  onValueChange={(value) => {
+                    setIncludeComment(value);
+                    // Analytics: 코멘트 포함 토글
+                    AnalyticsService.logShareCommentToggle(value);
+                  }}
                   trackColor={{ false: '#d1d5db', true: COLORS.secondary }}
                   thumbColor="#fff"
                   ios_backgroundColor="#d1d5db"

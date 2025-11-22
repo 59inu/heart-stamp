@@ -15,11 +15,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface FirstVisitGuideProps {
   visible: boolean;
   onComplete: () => void;
+  onClose: () => void;
 }
 
 export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
   visible,
   onComplete,
+  onClose,
 }) => {
   if (!visible) return null;
 
@@ -34,7 +36,7 @@ export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
         {/* X 닫기 버튼 */}
         <TouchableOpacity
           style={styles.closeButton}
-          onPress={onComplete}
+          onPress={onClose}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="close" size={28} color="#999" />
@@ -111,9 +113,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   stampImage: {
-    width: 156, // 120 * 1.3
-    height: 156,
-    marginBottom: 32,
+    width: 180,
+    height: 180,
+    marginBottom: 24,
   },
   message: {
     fontSize: 18,

@@ -119,12 +119,10 @@ export const DiaryListScreen: React.FC = () => {
 
       // 첫 방문 온보딩 체크
       const checkOnboarding = async () => {
-        // TODO: 임시 - 항상 온보딩 표시 (테스트용)
-        setShowOnboarding(true);
-        // const completed = await OnboardingService.hasCompletedOnboarding();
-        // if (!completed) {
-        //   setShowOnboarding(true);
-        // }
+        const completed = await OnboardingService.hasCompletedOnboarding();
+        if (!completed) {
+          setShowOnboarding(true);
+        }
       };
       checkOnboarding();
     }, [loadDiaries, loadUnreadLetterCount, checkPrivacyPolicyUpdate])
@@ -153,6 +151,12 @@ export const DiaryListScreen: React.FC = () => {
     // 오늘 일기 작성 화면으로 이동
     navigation.navigate('DiaryWrite', { date: new Date() });
   }, [navigation]);
+
+  const handleOnboardingClose = useCallback(async () => {
+    await OnboardingService.markOnboardingCompleted();
+    setShowOnboarding(false);
+    // 네비게이션 없이 그냥 닫기만
+  }, []);
 
   const handleDateSelect = useCallback((date: DateData) => {
     setSelectedDate(date.dateString);
@@ -285,7 +289,11 @@ export const DiaryListScreen: React.FC = () => {
       </ScrollView>
 
         {/* 첫 방문 온보딩 */}
-        <FirstVisitGuide visible={showOnboarding} onComplete={handleOnboardingComplete} />
+        <FirstVisitGuide
+          visible={showOnboarding}
+          onComplete={handleOnboardingComplete}
+          onClose={handleOnboardingClose}
+        />
 
         {/* 개인정보 처리방침 업데이트 안내 */}
         <PrivacyUpdateModal

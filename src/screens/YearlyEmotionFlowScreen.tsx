@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useYearlyDiaries } from './YearlyEmotionFlowScreen/hooks/useYearlyDiari
 import { YearlyHeatmap } from './YearlyEmotionFlowScreen/components/YearlyHeatmap';
 import { YearlyLineChart } from './YearlyEmotionFlowScreen/components/YearlyLineChart';
 import { COLORS } from '../constants/colors';
+import { AnalyticsService } from '../services/analyticsService';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'YearlyEmotionFlow'>;
 
@@ -27,6 +28,15 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const { diaries, loading } = useYearlyDiaries(selectedYear);
+
+  // Analytics: 화면 진입
+  useEffect(() => {
+    AnalyticsService.logYearlyEmotionFlowOpen(
+      'heart_icon', // 하트 아이콘으로 진입
+      diaries.length,
+      selectedYear
+    );
+  }, []); // 화면 최초 진입 시 한 번만
 
   return (
     <>
@@ -50,7 +60,16 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
           <View style={styles.yearSelector}>
             <TouchableOpacity
               style={styles.yearButton}
-              onPress={() => setSelectedYear(selectedYear - 1)}
+              onPress={() => {
+                const newYear = selectedYear - 1;
+                setSelectedYear(newYear);
+                // Analytics: 연도 변경
+                AnalyticsService.logYearlyEmotionFlowYearChange(
+                  selectedYear,
+                  newYear,
+                  diaries.length
+                );
+              }}
             >
               <Ionicons name="chevron-back" size={18} color="#666" />
             </TouchableOpacity>
@@ -60,7 +79,14 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
               onPress={() => {
                 const currentYear = new Date().getFullYear();
                 if (selectedYear < currentYear) {
-                  setSelectedYear(selectedYear + 1);
+                  const newYear = selectedYear + 1;
+                  setSelectedYear(newYear);
+                  // Analytics: 연도 변경
+                  AnalyticsService.logYearlyEmotionFlowYearChange(
+                    selectedYear,
+                    newYear,
+                    diaries.length
+                  );
                 }
               }}
               disabled={selectedYear >= new Date().getFullYear()}
@@ -80,7 +106,17 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
                 styles.modeButton,
                 viewMode === 'heatmap' && styles.modeButtonActive,
               ]}
-              onPress={() => setViewMode('heatmap')}
+              onPress={() => {
+                if (viewMode !== 'heatmap') {
+                  // Analytics: 뷰 모드 전환
+                  AnalyticsService.logYearlyEmotionFlowViewModeToggle(
+                    viewMode,
+                    'heatmap',
+                    selectedYear
+                  );
+                  setViewMode('heatmap');
+                }
+              }}
             >
               <Ionicons
                 name="grid"
@@ -93,7 +129,17 @@ export const YearlyEmotionFlowScreen: React.FC = () => {
                 styles.modeButton,
                 viewMode === 'chart' && styles.modeButtonActive,
               ]}
-              onPress={() => setViewMode('chart')}
+              onPress={() => {
+                if (viewMode !== 'chart') {
+                  // Analytics: 뷰 모드 전환
+                  AnalyticsService.logYearlyEmotionFlowViewModeToggle(
+                    viewMode,
+                    'chart',
+                    selectedYear
+                  );
+                  setViewMode('chart');
+                }
+              }}
             >
               <Ionicons
                 name="analytics"

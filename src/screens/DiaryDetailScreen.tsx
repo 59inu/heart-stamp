@@ -287,7 +287,19 @@ export const DiaryDetailScreen: React.FC = () => {
         {/* 공유 버튼 */}
         <TouchableOpacity
           style={styles.shareButton}
-          onPress={() => setShowShareModal(true)}
+          onPress={() => {
+            setShowShareModal(true);
+            // Analytics: 공유 모달 열기
+            const diaryAgeDays = Math.floor(
+              (Date.now() - new Date(entry.date).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            AnalyticsService.logShareModalOpen(
+              'diary_detail',
+              !!entry.aiComment,
+              !!entry.imageUri,
+              diaryAgeDays
+            );
+          }}
         >
           <Ionicons name="share-outline" size={20} color="#666" />
         </TouchableOpacity>
