@@ -279,7 +279,7 @@ export default function Home() {
           응석 부리고 싶은 어른들을 위한 다이어리 앱
         </h2>
         <p className="text-lg text-[#2F2B4C]/60 mb-12">
-          다정한 대답이 돌아오는 일기장에
+          다정한 대답이 돌아오는 일기장에{' '}
           <br className="md:hidden" />
           마음을 기록하세요
         </p>
