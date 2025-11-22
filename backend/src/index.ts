@@ -573,6 +573,29 @@ app.get('/api/admin/recent-comments', adminLimiter, requireAdminToken, async (re
   }
 });
 
+// 최근 폴백 코멘트 조회 (관리 리미터 + 토큰 인증)
+app.get('/api/admin/fallback-comments', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    const { DiaryDatabase } = require('./services/database');
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // 최근 폴백 코멘트 조회 (model IS NULL)
+    const fallbackComments = await DiaryDatabase.getFallbackComments(limit);
+
+    res.json({
+      success: true,
+      count: fallbackComments.length,
+      data: fallbackComments,
+    });
+  } catch (error) {
+    console.error('Error fetching fallback comments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch fallback comments',
+    });
+  }
+});
+
 // 일기 중요도 분석 테스트 (관리 리미터 + 토큰 인증)
 app.post('/api/admin/test-importance', adminLimiter, requireAdminToken, async (req, res) => {
   try {

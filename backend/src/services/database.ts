@@ -542,6 +542,47 @@ export class DiaryDatabase {
     }
   }
 
+  // 최근 폴백 코멘트 조회 (관리자용)
+  static async getFallbackComments(limit: number = 10): Promise<any[]> {
+    try {
+      console.log(`📋 [DiaryDatabase] 최근 폴백 코멘트 ${limit}개 조회`);
+
+      const result = await pool.query(
+        `SELECT
+          _id,
+          "userId",
+          date,
+          content,
+          "moodTag",
+          "aiComment",
+          model,
+          "importanceScore",
+          "stampType",
+          "createdAt",
+          "updatedAt"
+        FROM diaries
+        WHERE "aiComment" IS NOT NULL
+          AND model IS NULL
+          AND "deletedAt" IS NULL
+        ORDER BY "updatedAt" DESC
+        LIMIT $1`,
+        [limit]
+      );
+
+      console.log(`✅ [DiaryDatabase] ${result.rows.length}개의 폴백 코멘트 조회 완료`);
+
+      return result.rows.map(row => {
+        const entry = {
+          ...row,
+          syncedWithServer: row.syncedWithServer === true,
+        };
+        return decryptFields(entry);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getFallbackComments');
+    }
+  }
+
   // DB 통계 조회 (관리자용)
   static async getStats(): Promise<any> {
     try {

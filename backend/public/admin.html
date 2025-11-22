@@ -238,6 +238,25 @@
       border-top: 1px solid #e0e0e0;
     }
 
+    /* 섹션 헤더 스타일 */
+    .section-header {
+      color: white;
+      font-size: 24px;
+      margin: 30px 0 15px 0;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-header:first-of-type {
+      margin-top: 20px;
+    }
+
     @media (max-width: 768px) {
       .grid {
         grid-template-columns: 1fr;
@@ -260,7 +279,8 @@
     <!-- Main Content (hidden until token verified) -->
     <div id="mainContent" style="display: none;">
 
-    <!-- Statistics Grid -->
+    <!-- 📊 통계 섹션 -->
+    <div class="section-header">📊 통계 (Statistics)</div>
     <div class="grid">
       <!-- Model Stats -->
       <div class="card">
@@ -279,15 +299,35 @@
         </div>
         <button class="btn btn-primary" onclick="loadDbStats()">새로고침</button>
       </div>
+    </div>
 
+    <!-- 🔧 관리 작업 섹션 -->
+    <div class="section-header">🔧 관리 작업 (Management)</div>
+    <div class="grid">
       <!-- Admin Actions -->
       <div class="card">
-        <h2>관리 작업</h2>
+        <h2>배치 작업</h2>
         <button class="btn btn-success" onclick="triggerAnalysis()">배치 분석 실행</button>
         <button class="btn btn-danger" onclick="resetYesterdayComments()">어제 코멘트 초기화</button>
         <div id="actionResult" class="result"></div>
       </div>
 
+      <!-- Generate/Delete Comment for Specific Date -->
+      <div class="card">
+        <h2>특정 날짜 코멘트 생성/삭제</h2>
+        <input type="text" id="generateUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+        <input type="date" id="generateDate" placeholder="YYYY-MM-DD" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-success" onclick="generateCommentForDate()" style="flex: 1;">코멘트 생성</button>
+          <button class="btn btn-danger" onclick="deleteCommentForDate()" style="flex: 1; background: #f56565;">코멘트 삭제</button>
+        </div>
+        <div id="generateCommentResult" class="result"></div>
+      </div>
+    </div>
+
+    <!-- 📱 푸시 알림 섹션 -->
+    <div class="section-header">📱 푸시 알림 (Push Notifications)</div>
+    <div class="grid">
       <!-- Push Notification to Specific User -->
       <div class="card">
         <h2>특정 유저에게 푸시 알림 보내기</h2>
@@ -299,6 +339,9 @@
       </div>
     </div>
 
+    <!-- 💬 AI 코멘트 섹션 -->
+    <div class="section-header">💬 AI 코멘트 (AI Comments)</div>
+
     <!-- Recent Comments -->
     <div class="card" style="margin-bottom: 20px;">
       <h2>최근 AI 코멘트</h2>
@@ -306,13 +349,23 @@
       <div id="recentComments"></div>
     </div>
 
+    <!-- Fallback Comments -->
+    <div class="card" style="margin-bottom: 20px;">
+      <h2>최근 폴백 코멘트 (실패한 코멘트)</h2>
+      <button class="btn btn-warning" onclick="loadFallbackComments()">폴백 코멘트 조회 (10개)</button>
+      <div id="fallbackComments"></div>
+    </div>
+
     <!-- Importance Test -->
-    <div class="card">
+    <div class="card" style="margin-bottom: 20px;">
       <h2>일기 중요도 테스트</h2>
       <textarea id="testContent" placeholder="일기 내용을 입력하세요..."></textarea>
       <button class="btn btn-success" onclick="testImportance()" style="margin-top: 10px;">중요도 분석</button>
       <div id="importanceResult" class="result"></div>
     </div>
+
+    <!-- 📝 일기 관리 섹션 -->
+    <div class="section-header">📝 일기 관리 (Diary Management)</div>
 
     <!-- User Diaries List -->
     <div class="card">
@@ -320,18 +373,6 @@
       <input type="text" id="diariesUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
       <button class="btn btn-primary" onclick="loadUserDiaries()">일기 목록 조회</button>
       <div id="userDiariesResult" class="result"></div>
-    </div>
-
-    <!-- Generate/Delete Comment for Specific Date -->
-    <div class="card">
-      <h2>특정 날짜 코멘트 생성/삭제</h2>
-      <input type="text" id="generateUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-      <input type="date" id="generateDate" placeholder="YYYY-MM-DD" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-success" onclick="generateCommentForDate()" style="flex: 1;">코멘트 생성</button>
-        <button class="btn btn-danger" onclick="deleteCommentForDate()" style="flex: 1; background: #f56565;">코멘트 삭제</button>
-      </div>
-      <div id="generateCommentResult" class="result"></div>
     </div>
 
     </div><!-- End of mainContent -->
@@ -591,6 +632,49 @@
             </div>
           `;
         }).join('') + '</div>';
+      } catch (error) {
+        container.innerHTML = `<div class="error">에러: ${error.message}</div>`;
+      }
+    }
+
+    async function loadFallbackComments() {
+      const container = document.getElementById('fallbackComments');
+      container.innerHTML = '<div class="loading">로딩 중...</div>';
+
+      try {
+        const result = await apiCall('/api/admin/fallback-comments?limit=10');
+        const comments = result.data;
+
+        if (comments.length === 0) {
+          container.innerHTML = '<div class="loading" style="color: #48bb78;">✅ 폴백 코멘트가 없습니다 (모든 코멘트 정상 생성)</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div style="background: #fff5f5; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f56565;">
+            <strong style="color: #c53030;">⚠️ ${comments.length}개의 폴백 코멘트 발견</strong>
+            <div style="color: #666; font-size: 13px; margin-top: 5px;">
+              AI API 실패로 인해 기본 코멘트로 대체된 일기들입니다.
+            </div>
+          </div>
+          <div class="comments-list">` +
+          comments.map(comment => {
+            const date = new Date(comment.date).toLocaleString('ko-KR');
+            const content = comment.content.substring(0, 100) + (comment.content.length > 100 ? '...' : '');
+            const aiComment = comment.aiComment.substring(0, 150) + (comment.aiComment.length > 150 ? '...' : '');
+
+            return `
+              <div class="comment-item" style="border-left: 3px solid #f56565;">
+                <div class="date">${date} <span style="color: #f56565; font-weight: bold;">[FALLBACK]</span></div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 5px;">User ID: ${comment.userId}</div>
+                <div class="content">${content}</div>
+                <div class="ai-comment" style="background: #fff5f5; padding: 8px; border-radius: 4px;">
+                  💬 ${aiComment}
+                </div>
+              </div>
+            `;
+          }).join('') +
+          '</div>';
       } catch (error) {
         container.innerHTML = `<div class="error">에러: ${error.message}</div>`;
       }
