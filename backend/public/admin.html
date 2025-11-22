@@ -332,8 +332,8 @@
       <div class="card">
         <h2>특정 유저에게 푸시 알림 보내기</h2>
         <input type="text" id="pushUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-        <input type="text" id="pushTitle" placeholder="알림 제목" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-        <textarea id="pushBody" placeholder="알림 본문" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
+        <input type="text" id="pushTitle" value="선생님이 코멘트를 다시 썼어요💌" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+        <textarea id="pushBody" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; font-family: inherit;">처음엔 바빠서 대충 남겼는데, 미안해서 다시 읽고 코멘트를 새로 남겼어요</textarea>
         <button class="btn btn-primary" onclick="sendPushToUser()">푸시 알림 전송</button>
         <div id="pushResult" class="result"></div>
       </div>
