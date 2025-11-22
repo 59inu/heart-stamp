@@ -735,6 +735,41 @@ app.get('/api/push/ticket-stats', adminLimiter, requireAdminToken, (req, res) =>
   }
 });
 
+// 특정 유저에게 푸시 알림 전송 (관리 리미터 + 토큰 인증)
+app.post('/api/admin/push/send-to-user', adminLimiter, requireAdminToken, async (req, res) => {
+  try {
+    const { userId, title, body } = req.body;
+
+    if (!userId || !title || !body) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId, title, and body are required',
+      });
+    }
+
+    console.log(`📤 [ADMIN] Sending push to user ${userId}: ${title}`);
+    const success = await PushNotificationService.sendNotification(userId, title, body);
+
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Push notification sent successfully',
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send push notification (user may not have a valid token)',
+      });
+    }
+  } catch (error) {
+    console.error('Error sending push to user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send push notification',
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on:`);
