@@ -18,6 +18,7 @@ export interface DiaryEntry {
   stampType?: StampType;
   model?: 'haiku' | 'sonnet'; // AI 모델 종류 (통계용)
   importanceScore?: number; // 중요도 점수 0-40 (통계용)
+  isFallbackComment?: boolean; // 폴백 코멘트 여부 (3차 재시도 후에도 실패하여 기본 코멘트 사용)
   createdAt: string;
   updatedAt: string;
   syncedWithServer: boolean;
@@ -30,6 +31,7 @@ export interface AIAnalysisResult {
   stampType: StampType;
   model?: 'haiku' | 'sonnet'; // 사용된 모델
   importanceScore?: number; // 중요도 점수 (0-40)
+  isFallbackComment?: boolean; // 폴백 코멘트 여부
 }
 
 export interface ImportanceScore {

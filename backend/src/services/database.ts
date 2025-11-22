@@ -67,6 +67,14 @@ async function initializeDatabase() {
       console.log('ℹ️  Migration: columns already exist or migration not needed');
     }
 
+    // 마이그레이션: isFallbackComment 컬럼 추가 (이미 존재하면 무시)
+    try {
+      await pool.query(`ALTER TABLE diaries ADD COLUMN IF NOT EXISTS "isFallbackComment" BOOLEAN DEFAULT FALSE`);
+      console.log('✅ Migration: isFallbackComment column added');
+    } catch (error) {
+      console.log('ℹ️  Migration: isFallbackComment column already exists or migration not needed');
+    }
+
     // push_tokens 테이블 생성
     await pool.query(`
       CREATE TABLE IF NOT EXISTS push_tokens (
@@ -412,6 +420,27 @@ export class DiaryDatabase {
       });
     } catch (error) {
       this.handleDatabaseError(error, 'getPending');
+    }
+  }
+
+  // 폴백 코멘트로 저장된 일기 조회 (관리용)
+  static async getFallbackComments(): Promise<DiaryEntry[]> {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM diaries WHERE "isFallbackComment" = TRUE AND "deletedAt" IS NULL ORDER BY date DESC'
+      );
+
+      console.log(`📋 [DiaryDatabase] Fallback comments found: ${result.rows.length}개`);
+
+      return result.rows.map(row => {
+        const entry = {
+          ...row,
+          syncedWithServer: row.syncedWithServer === true,
+        };
+        return decryptFields(entry);
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getFallbackComments');
     }
   }
 

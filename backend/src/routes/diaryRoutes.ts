@@ -635,4 +635,120 @@ router.get('/admin/stats',
   }
 );
 
+// [Admin] Get fallback comments (폴백 코멘트 조회)
+router.get('/admin/fallback-comments',
+  requireAdminToken,
+  async (req: Request, res: Response) => {
+    try {
+      const fallbackDiaries = await DiaryDatabase.getFallbackComments();
+
+      // 사용자 정보와 함께 반환 (관리용)
+      const result = fallbackDiaries.map(diary => ({
+        _id: diary._id,
+        userId: diary.userId,
+        date: diary.date,
+        content: diary.content.substring(0, 100) + '...',
+        fullContent: diary.content,
+        aiComment: diary.aiComment,
+        stampType: diary.stampType,
+        model: diary.model,
+        createdAt: diary.createdAt,
+        isFallbackComment: diary.isFallbackComment,
+      }));
+
+      res.json({
+        success: true,
+        count: result.length,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Error fetching fallback comments:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch fallback comments',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+// [Admin] Regenerate all fallback comments (일괄 재생성)
+router.post('/admin/regenerate-fallbacks',
+  requireAdminToken,
+  async (req: Request, res: Response) => {
+    try {
+      const fallbackDiaries = await DiaryDatabase.getFallbackComments();
+
+      if (fallbackDiaries.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No fallback comments to regenerate',
+          count: 0,
+        });
+      }
+
+      console.log(`🔄 [Admin] Starting regeneration for ${fallbackDiaries.length} fallback comments...`);
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const diary of fallbackDiaries) {
+        try {
+          // 1. 기존 코멘트 삭제
+          await DiaryDatabase.update(diary._id, {
+            aiComment: undefined,
+            model: undefined,
+            importanceScore: undefined,
+            stampType: undefined,
+            isFallbackComment: undefined,
+          });
+
+          // 2. Sonnet으로 새 코멘트 생성
+          const result = await claudeService.generateComment(
+            diary.content,
+            diary.moodTag || '',
+            diary.date,
+            { forceModel: 'sonnet', useFallback: true }
+          );
+
+          // 3. 새 코멘트 저장
+          await DiaryDatabase.update(diary._id, {
+            aiComment: result.comment,
+            stampType: result.stampType,
+            model: result.model,
+            importanceScore: result.importanceScore,
+            isFallbackComment: result.isFallbackComment,
+          });
+
+          successCount++;
+          console.log(`✅ [Admin] Regenerated comment for diary ${diary._id} (${diary.date})`);
+
+          // Rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          failCount++;
+          console.error(`❌ [Admin] Failed to regenerate comment for diary ${diary._id}:`, error);
+        }
+      }
+
+      console.log(`✅ [Admin] Regeneration complete: ${successCount} success, ${failCount} failed`);
+
+      res.json({
+        success: true,
+        message: 'Fallback comments regeneration completed',
+        total: fallbackDiaries.length,
+        successCount,
+        failCount,
+      });
+    } catch (error) {
+      console.error('Error regenerating fallback comments:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to regenerate fallback comments',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

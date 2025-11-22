@@ -65,6 +65,52 @@ export class AIAnalysisJob {
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
+  /**
+   * 개별 일기 처리 (헬퍼 메서드)
+   */
+  private async processDiary(
+    diary: any,
+    index: number,
+    total: number,
+    useFallback: boolean,
+    VERBOSE_LOGS: boolean
+  ): Promise<{ success: boolean; comment?: string; stampType?: string }> {
+    try {
+      if (VERBOSE_LOGS) {
+        console.log(`\n📝 [${index + 1}/${total}] Analyzing diary ${diary._id}...`);
+        console.log(`   Date: ${diary.date}`);
+        console.log(`   Mood: ${diary.moodTag || 'neutral'}`);
+        console.log(`   Content: ${diary.content.substring(0, 50)}...`);
+      }
+
+      const analysis = await this.claudeService.generateComment(
+        diary.content,
+        diary.moodTag || 'neutral',
+        diary.date,
+        { useFallback }
+      );
+
+      await DiaryDatabase.update(diary._id, {
+        aiComment: analysis.comment,
+        stampType: analysis.stampType,
+        model: analysis.model,
+        importanceScore: analysis.importanceScore,
+        isFallbackComment: analysis.isFallbackComment,
+        syncedWithServer: true,
+      });
+
+      if (VERBOSE_LOGS) {
+        console.log(`   ✅ Comment: "${analysis.comment.substring(0, 40)}..."`);
+        console.log(`   🏆 Stamp: ${analysis.stampType}`);
+      }
+
+      return { success: true, comment: analysis.comment, stampType: analysis.stampType };
+    } catch (error) {
+      console.error(`\n❌ [BATCH] Failed [${index + 1}/${total}] diary ${diary._id}:`, error);
+      return { success: false };
+    }
+  }
+
   async runBatchAnalysis() {
     if (this.isRunning) {
       console.log('⏭️  [BATCH] Already running, skipping...');
@@ -76,12 +122,13 @@ export class AIAnalysisJob {
     // 환경변수로 로그 상세도 조절
     const VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
     const BATCH_LOG_INTERVAL = parseInt(process.env.BATCH_LOG_INTERVAL || '10', 10);
+    const RETRY_DELAY = 5 * 60 * 1000; // 5분 대기
 
     console.log('\n' + '🔊'.repeat(40));
     console.log('🔊🔊🔊 [BATCH] 배치 작업 시작!!! 🔊🔊🔊');
     console.log('🔊'.repeat(40));
     console.log('\n' + '='.repeat(80));
-    console.log('🤖 [BATCH] AI COMMENT GENERATION STARTED');
+    console.log('🤖 [BATCH] AI COMMENT GENERATION STARTED (3-PASS RETRY SYSTEM)');
     console.log('='.repeat(80));
     console.log(`⏰ Started at: ${new Date().toISOString()}`);
     console.log(`🌏 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
@@ -100,77 +147,136 @@ export class AIAnalysisJob {
         return;
       }
 
-      let successCount = 0;
-      let failCount = 0;
       const startTime = Date.now();
+      let currentBatch = pendingDiaries;
 
-      for (let i = 0; i < total; i++) {
-        const diary = pendingDiaries[i];
+      // ===== 1차 배치 =====
+      console.log('\n' + '🎯'.repeat(40));
+      console.log('🎯 [PASS 1/3] FIRST ATTEMPT');
+      console.log('🎯'.repeat(40));
 
-        try {
-          if (VERBOSE_LOGS) {
-            console.log(`\n📝 [${i + 1}/${total}] Analyzing diary ${diary._id}...`);
-            console.log(`   Date: ${diary.date}`);
-            console.log(`   Mood: ${diary.moodTag || 'neutral'}`);
-            console.log(`   Content: ${diary.content.substring(0, 50)}...`);
-          }
+      let failedDiaries: any[] = [];
+      let successCount = 0;
 
-          const analysis = await this.claudeService.generateComment(
-            diary.content,
-            diary.moodTag || 'neutral',
-            diary.date
-          );
+      for (let i = 0; i < currentBatch.length; i++) {
+        const diary = currentBatch[i];
+        const result = await this.processDiary(diary, i, currentBatch.length, false, VERBOSE_LOGS);
 
-          await DiaryDatabase.update(diary._id, {
-            aiComment: analysis.comment,
-            stampType: analysis.stampType,
-            model: analysis.model,
-            importanceScore: analysis.importanceScore,
-            syncedWithServer: true,
-          });
-
+        if (result.success) {
           successCount++;
 
-          if (VERBOSE_LOGS) {
-            console.log(`   ✅ Comment: "${analysis.comment.substring(0, 40)}..."`);
-            console.log(`   🏆 Stamp: ${analysis.stampType}`);
-          }
-
-          // N개마다 또는 마지막에 진행률 표시
-          const shouldLogProgress = (i + 1) % BATCH_LOG_INTERVAL === 0 || (i + 1) === total;
-
+          // 진행률 로그
+          const shouldLogProgress = (i + 1) % BATCH_LOG_INTERVAL === 0 || (i + 1) === currentBatch.length;
           if (shouldLogProgress && !VERBOSE_LOGS) {
-            const processed = successCount + failCount;
-            const successRate = Math.round((successCount / processed) * 100);
-            console.log(`\n📊 [BATCH] Progress: ${processed}/${total} (${Math.round(processed/total*100)}%)`);
-            console.log(`   Latest comment: "${analysis.comment.substring(0, 40)}..." (${analysis.stampType})`);
-            console.log(`   Success rate: ${successRate}%`);
+            const processed = i + 1;
+            console.log(`\n📊 [PASS 1] Progress: ${processed}/${currentBatch.length} (${Math.round(processed/currentBatch.length*100)}%)`);
+            console.log(`   Latest: "${result.comment?.substring(0, 40)}..." (${result.stampType})`);
+            console.log(`   Success: ${successCount}/${processed}`);
+          }
+        } else {
+          failedDiaries.push(diary);
+        }
+
+        // Rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      console.log('\n' + '📊'.repeat(40));
+      console.log(`✅ [PASS 1] Complete: ${successCount} success, ${failedDiaries.length} failed`);
+      console.log('📊'.repeat(40));
+
+      // ===== 2차 재시도 =====
+      if (failedDiaries.length > 0) {
+        console.log(`\n⏳ [RETRY] Waiting ${RETRY_DELAY / 1000}s before 2nd attempt...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+
+        console.log('\n' + '🎯'.repeat(40));
+        console.log('🎯 [PASS 2/3] SECOND ATTEMPT');
+        console.log('🎯'.repeat(40));
+
+        currentBatch = failedDiaries;
+        failedDiaries = [];
+
+        for (let i = 0; i < currentBatch.length; i++) {
+          const diary = currentBatch[i];
+          const result = await this.processDiary(diary, i, currentBatch.length, false, VERBOSE_LOGS);
+
+          if (result.success) {
+            successCount++;
+
+            const shouldLogProgress = (i + 1) % BATCH_LOG_INTERVAL === 0 || (i + 1) === currentBatch.length;
+            if (shouldLogProgress && !VERBOSE_LOGS) {
+              console.log(`\n📊 [PASS 2] Progress: ${i + 1}/${currentBatch.length}`);
+              console.log(`   Recovered: "${result.comment?.substring(0, 40)}..."`);
+            }
+          } else {
+            failedDiaries.push(diary);
           }
 
-          // Add a small delay to avoid rate limiting
           await new Promise((resolve) => setTimeout(resolve, 1000));
-        } catch (error) {
-          failCount++;
-          // 에러는 항상 로그 (중요!)
-          console.error(`\n❌ [BATCH] Failed [${i + 1}/${total}] diary ${diary._id}:`, error);
-          // Continue with next diary even if one fails
         }
+
+        console.log('\n' + '📊'.repeat(40));
+        console.log(`✅ [PASS 2] Complete: ${currentBatch.length - failedDiaries.length} recovered, ${failedDiaries.length} still failed`);
+        console.log('📊'.repeat(40));
+      }
+
+      // ===== 3차 재시도 =====
+      if (failedDiaries.length > 0) {
+        console.log(`\n⏳ [RETRY] Waiting ${RETRY_DELAY / 1000}s before 3rd attempt...`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+
+        console.log('\n' + '🎯'.repeat(40));
+        console.log('🎯 [PASS 3/3] FINAL ATTEMPT (WITH FALLBACK)');
+        console.log('🎯'.repeat(40));
+
+        currentBatch = failedDiaries;
+        failedDiaries = [];
+
+        for (let i = 0; i < currentBatch.length; i++) {
+          const diary = currentBatch[i];
+          // 3차에는 useFallback=true로 반드시 저장
+          const result = await this.processDiary(diary, i, currentBatch.length, true, VERBOSE_LOGS);
+
+          if (result.success) {
+            successCount++;
+
+            const shouldLogProgress = (i + 1) % BATCH_LOG_INTERVAL === 0 || (i + 1) === currentBatch.length;
+            if (shouldLogProgress && !VERBOSE_LOGS) {
+              console.log(`\n📊 [PASS 3] Progress: ${i + 1}/${currentBatch.length}`);
+              console.log(`   Saved: "${result.comment?.substring(0, 40)}..."`);
+            }
+          } else {
+            failedDiaries.push(diary);
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        console.log('\n' + '📊'.repeat(40));
+        console.log(`✅ [PASS 3] Complete: ${currentBatch.length - failedDiaries.length} saved, ${failedDiaries.length} permanently failed`);
+        console.log('📊'.repeat(40));
       }
 
       const duration = Math.round((Date.now() - startTime) / 1000);
-      const avgTime = Math.round(duration / total);
+      const avgTime = total > 0 ? Math.round(duration / total) : 0;
 
       console.log('\n' + '='.repeat(80));
       console.log('🎉 [BATCH] AI COMMENT GENERATION COMPLETED');
       console.log('='.repeat(80));
       console.log(`✅ Successful: ${successCount} diaries`);
-      console.log(`❌ Failed: ${failCount} diaries`);
+      console.log(`❌ Permanently failed: ${failedDiaries.length} diaries`);
       console.log(`📊 Total processed: ${total} diaries`);
       console.log(`⏱️  Duration: ${duration}s (avg ${avgTime}s per diary)`);
       console.log(`📈 Success rate: ${Math.round((successCount / total) * 100)}%`);
       console.log(`⏰ Finished at: ${new Date().toISOString()}`);
       console.log(`📱 Push notifications will be sent at 8:30 AM`);
       console.log('='.repeat(80) + '\n');
+
+      if (failedDiaries.length > 0) {
+        console.warn('⚠️  [BATCH] Some diaries could not be processed even after 3 attempts:');
+        failedDiaries.forEach(d => console.warn(`   - ${d._id} (${d.date})`));
+      }
     } catch (error) {
       console.error('\n' + '❌'.repeat(40));
       console.error('💥 [BATCH] CRITICAL ERROR in batch analysis:', error);

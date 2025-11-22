@@ -39,7 +39,7 @@ export class ClaudeService {
     diaryContent: string,
     emotionTag: string,
     date: string,
-    options?: { forceModel?: 'sonnet' | 'haiku' }
+    options?: { forceModel?: 'sonnet' | 'haiku'; useFallback?: boolean }
   ): Promise<AIAnalysisResult> {
     try {
       // Circuit Breaker로 보호
@@ -64,15 +64,21 @@ export class ClaudeService {
         );
       });
     } catch (error) {
-      // Circuit Breaker OPEN 상태
-      if (error instanceof Error && error.message.includes('Circuit breaker is OPEN')) {
-        console.error('❌ Claude API circuit breaker is OPEN - using fallback');
+      // useFallback이 true인 경우에만 폴백 반환 (3차 재시도 후)
+      if (options?.useFallback) {
+        // Circuit Breaker OPEN 상태
+        if (error instanceof Error && error.message.includes('Circuit breaker is OPEN')) {
+          console.error('❌ Claude API circuit breaker is OPEN - using fallback');
+          return this.getFallbackResponse();
+        }
+
+        // 기타 에러 - Fallback 사용
+        console.error('❌ Claude API failed after all retries - using fallback:', error);
         return this.getFallbackResponse();
       }
 
-      // 기타 에러 - Fallback 사용
-      console.error('❌ Claude API failed after retries - using fallback:', error);
-      return this.getFallbackResponse();
+      // useFallback이 false면 에러 throw (재시도 대기)
+      throw error;
     }
   }
 
@@ -307,6 +313,7 @@ ${diaryContent}`,
     return {
       comment: '오늘도 일기를 작성해주었네요! 매일 기록하는 습관이 참 좋아요. 조금씩이라도 자신의 감정을 표현하는 것이 중요하답니다.',
       stampType: 'nice',
+      isFallbackComment: true,
     };
   }
 
