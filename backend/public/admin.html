@@ -287,6 +287,16 @@
         <button class="btn btn-danger" onclick="resetYesterdayComments()">어제 코멘트 초기화</button>
         <div id="actionResult" class="result"></div>
       </div>
+
+      <!-- Push Notification to Specific User -->
+      <div class="card">
+        <h2>특정 유저에게 푸시 알림 보내기</h2>
+        <input type="text" id="pushUserId" placeholder="사용자 Firebase UID" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+        <input type="text" id="pushTitle" placeholder="알림 제목" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+        <textarea id="pushBody" placeholder="알림 본문" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
+        <button class="btn btn-primary" onclick="sendPushToUser()">푸시 알림 전송</button>
+        <div id="pushResult" class="result"></div>
+      </div>
     </div>
 
     <!-- Recent Comments -->
@@ -820,6 +830,59 @@ ${data.reason}</pre>
             </div>
           </div>
         `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function sendPushToUser() {
+      const userId = document.getElementById('pushUserId').value.trim();
+      const title = document.getElementById('pushTitle').value.trim();
+      const body = document.getElementById('pushBody').value.trim();
+      const resultDiv = document.getElementById('pushResult');
+
+      if (!userId) {
+        alert('사용자 Firebase UID를 입력하세요');
+        return;
+      }
+
+      if (!title) {
+        alert('알림 제목을 입력하세요');
+        return;
+      }
+
+      if (!body) {
+        alert('알림 본문을 입력하세요');
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">푸시 알림 전송 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall('/api/admin/push/send-to-user', 'POST', {
+          userId,
+          title,
+          body,
+        });
+
+        resultDiv.innerHTML = `
+          <div style="background: #f0fff4; padding: 16px; border-radius: 8px; border-left: 4px solid #48bb78;">
+            <div style="margin-bottom: 8px;">
+              <strong style="font-size: 16px; color: #22543d;">✅ 푸시 알림 전송 성공</strong>
+            </div>
+            <div style="color: #2d3748; font-size: 14px;">
+              <div><strong>수신자:</strong> ${userId}</div>
+              <div style="margin-top: 8px;"><strong>제목:</strong> ${title}</div>
+              <div style="margin-top: 8px;"><strong>본문:</strong> ${body}</div>
+            </div>
+          </div>
+        `;
+
+        // Clear input fields
+        document.getElementById('pushUserId').value = '';
+        document.getElementById('pushTitle').value = '';
+        document.getElementById('pushBody').value = '';
       } catch (error) {
         resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
       }
