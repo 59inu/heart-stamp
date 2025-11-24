@@ -41,7 +41,7 @@ type ReportPeriod = 'week' | 'month';
 export const ReportScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [period, setPeriod] = useState<ReportPeriod>('week');
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(subWeeks(new Date(), 1));
   const [showInfoModal, setShowInfoModal] = useState(false);
 
   // 기간 계산
