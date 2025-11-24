@@ -35,6 +35,23 @@ export const aiAnalysisLimiter = rateLimit({
   },
 });
 
+// 리포트 생성: userId당 분당 5회 (비용이 높은 작업)
+export const reportGenerationLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1분
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // x-user-id 헤더 우선, 없으면 IP 폴백
+    const userId = req.headers['x-user-id'];
+    return userId ? String(userId) : req.ip || 'unknown';
+  },
+  message: {
+    success: false,
+    message: 'Too many report generation requests. Please try again in a minute.',
+  },
+});
+
 // 관리 엔드포인트: IP당 분당 30회
 export const adminLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1분

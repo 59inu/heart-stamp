@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { ReportService } from '../services/reportService';
 import { startOfISOWeek, endOfISOWeek, setISOWeek, setYear, startOfDay, isAfter, startOfMonth, endOfMonth } from 'date-fns';
+import { reportGenerationLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -101,7 +102,7 @@ router.get('/reports/weekly/:year/:week', async (req: Request, res: Response) =>
 });
 
 // 주간 리포트 생성
-router.post('/reports/weekly/:year/:week', async (req: Request, res: Response) => {
+router.post('/reports/weekly/:year/:week', reportGenerationLimiter, async (req: Request, res: Response) => {
   try {
     const userId = req.headers['x-user-id'] as string;
     if (!userId) {

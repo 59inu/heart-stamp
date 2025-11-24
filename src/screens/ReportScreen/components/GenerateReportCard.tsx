@@ -28,9 +28,13 @@ export const GenerateReportCard: React.FC<GenerateReportCardProps> = ({
         💡 한 번 생성된 리포트는 과거 일기가 수정되어도{'\n'}업데이트되지 않습니다
       </Text>
       <TouchableOpacity
-        style={styles.generateButton}
+        style={[
+          styles.generateButton,
+          isGenerating && styles.generateButtonDisabled,
+        ]}
         onPress={onGenerate}
         disabled={isGenerating}
+        activeOpacity={isGenerating ? 1 : 0.7}
       >
         {isGenerating ? (
           <ActivityIndicator size="small" color="#fff" />
@@ -90,6 +94,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 200,
     alignItems: 'center',
+  },
+  generateButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
   generateButtonText: {
     fontSize: 16,

@@ -15,6 +15,7 @@ export const useReportGeneration = (
 
   const handleGenerateReport = useCallback(async () => {
     if (period !== 'week') return; // 현재는 주간만 지원
+    if (isGenerating) return; // 이미 생성 중이면 중복 요청 방지
 
     setIsGenerating(true);
 
@@ -37,7 +38,7 @@ export const useReportGeneration = (
     } finally {
       setIsGenerating(false);
     }
-  }, [period, currentDate, loadReport]);
+  }, [period, currentDate, loadReport, isGenerating]);
 
   return {
     isGenerating,
