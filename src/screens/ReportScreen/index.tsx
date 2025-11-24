@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -43,6 +43,8 @@ export const ReportScreen: React.FC = () => {
   const [period, setPeriod] = useState<ReportPeriod>('week');
   const [currentDate, setCurrentDate] = useState(subWeeks(new Date(), 1));
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const lastPeriodChangeTime = useRef(0);
+  const PERIOD_CHANGE_THROTTLE = 500; // 500ms throttle
 
   // 기간 계산
   const { startDate, endDate, isPeriodCompleted } = usePeriodDates(period, currentDate);
@@ -76,8 +78,14 @@ export const ReportScreen: React.FC = () => {
     loadReport();
   }, [loadReport]);
 
-  // 기간 변경
+  // 기간 변경 (throttle 적용으로 연속 클릭 방지)
   const handlePreviousPeriod = () => {
+    const now = Date.now();
+    if (now - lastPeriodChangeTime.current < PERIOD_CHANGE_THROTTLE) {
+      return; // throttle 중이면 무시
+    }
+    lastPeriodChangeTime.current = now;
+
     if (period === 'week') {
       setCurrentDate(subWeeks(currentDate, 1));
     } else {
@@ -86,6 +94,12 @@ export const ReportScreen: React.FC = () => {
   };
 
   const handleNextPeriod = () => {
+    const now = Date.now();
+    if (now - lastPeriodChangeTime.current < PERIOD_CHANGE_THROTTLE) {
+      return; // throttle 중이면 무시
+    }
+    lastPeriodChangeTime.current = now;
+
     if (period === 'week') {
       setCurrentDate((prev) => {
         const next = new Date(prev);

@@ -114,7 +114,6 @@ export const DiaryListScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadDiaries();
-      loadUnreadLetterCount();
       checkPrivacyPolicyUpdate();
 
       // 첫 방문 온보딩 체크
@@ -125,8 +124,13 @@ export const DiaryListScreen: React.FC = () => {
         }
       };
       checkOnboarding();
-    }, [loadDiaries, loadUnreadLetterCount, checkPrivacyPolicyUpdate])
+    }, [loadDiaries, checkPrivacyPolicyUpdate])
   );
+
+  // 초기 마운트 시 읽지 않은 편지 개수 로드
+  useEffect(() => {
+    loadUnreadLetterCount();
+  }, [loadUnreadLetterCount]);
 
   // AI 코멘트 수신 시 자동 새로고침
   useEffect(() => {
@@ -138,12 +142,19 @@ export const DiaryListScreen: React.FC = () => {
       logger.log('✅ [DiaryListScreen] Local data reloaded');
     };
 
+    const handleAppForeground = async () => {
+      logger.log('📱 [DiaryListScreen] App foreground event - checking unread letters...');
+      await loadUnreadLetterCount();
+    };
+
     diaryEvents.on(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
+    diaryEvents.on(EVENTS.APP_FOREGROUND, handleAppForeground);
 
     return () => {
       diaryEvents.off(EVENTS.AI_COMMENT_RECEIVED, handleAICommentReceived);
+      diaryEvents.off(EVENTS.APP_FOREGROUND, handleAppForeground);
     };
-  }, []); // 빈 의존성 배열 - 한 번만 등록
+  }, [loadUnreadLetterCount]);
 
   const handleOnboardingComplete = useCallback(async () => {
     await OnboardingService.markOnboardingCompleted();

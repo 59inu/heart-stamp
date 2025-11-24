@@ -238,6 +238,9 @@ export default function App() {
         // 리텐션 지표 업데이트 (포그라운드 진입 시마다)
         await RetentionService.updateOnAppForeground();
 
+        // 포그라운드 진입 이벤트 발행 (읽지 않은 편지 개수 등 갱신용)
+        diaryEvents.emit(EVENTS.APP_FOREGROUND);
+
         // 마지막 동기화 후 30초 이상 지났을 때만 동기화
         if (timeSinceLastSync > SYNC_DEBOUNCE_MS) {
           logger.log(`📱 [App] App became active - syncing data (${Math.round(timeSinceLastSync/1000)}s since last sync)...`);

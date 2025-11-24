@@ -8,4 +8,5 @@ export const diaryEvents = new DiaryEventEmitter();
 export const EVENTS = {
   DIARY_UPDATED: 'diary_updated',
   AI_COMMENT_RECEIVED: 'ai_comment_received',
+  APP_FOREGROUND: 'app_foreground',
 } as const;
