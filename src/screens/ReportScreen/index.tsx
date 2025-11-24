@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -8,9 +8,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { subWeeks, subMonths } from 'date-fns';
+import { subWeeks, subMonths, startOfISOWeek } from 'date-fns';
 import { RootStackParamList } from '../../navigation/types';
 import { usePeriodDates } from './hooks/usePeriodDates';
 import { useDominantMood } from './hooks/useDominantMood';
@@ -71,12 +71,10 @@ export const ReportScreen: React.FC = () => {
     loadReport
   );
 
-  // 화면 포커스 시 리포트 로드 (loadReport가 period, currentDate를 의존하므로 자동으로 재로드됨)
-  useFocusEffect(
-    useCallback(() => {
-      loadReport();
-    }, [loadReport])
-  );
+  // 기간 변경 시에만 리포트 로드 (리포트는 불변이므로 매번 로드할 필요 없음)
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   // 기간 변경
   const handlePreviousPeriod = () => {
