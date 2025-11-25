@@ -159,19 +159,8 @@ ExportJob.startCleanup();
 LetterJob.initialize(claudeService);
 LetterJob.start();
 
-// TZ 환경변수 사용 (기본값: Asia/Seoul)
-const TZ = process.env.TZ || 'Asia/Seoul';
-
-// 환경변수로 cron job 제어 (Railway 여러 인스턴스에서 중복 실행 방지)
-const ENABLE_CRON_JOBS = process.env.ENABLE_CRON_JOBS === 'true';
-
-if (ENABLE_CRON_JOBS) {
-  // Start Backup Job
-  backupJob.start();
-  console.log(`✅ Backup job scheduled (daily at 4:00 AM, timezone: ${TZ})`);
-} else {
-  console.log(`⏭️  Backup job disabled (set ENABLE_CRON_JOBS=true to enable)`);
-}
+// Backup Job은 Railway Cron Worker로 이동됨
+// backupJob.triggerManually()는 관리 API에서 사용 가능
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
