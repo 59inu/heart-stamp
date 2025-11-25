@@ -18,14 +18,6 @@ export class AIAnalysisJob {
     // TZ 환경변수 사용 (기본값: Asia/Seoul)
     const TZ = process.env.TZ || 'Asia/Seoul';
 
-    // 새벽 3시 AI 코멘트 배치 생성 (어제 날짜 일기 분석)
-    cron.schedule('0 3 * * *', async () => {
-      console.log('🤖 Running scheduled batch analysis at 3:00 AM...');
-      await this.runBatchAnalysis();
-    }, {
-      timezone: TZ
-    });
-
     // 아침 8시 30분 일괄 푸시 알림 전송 (어제 일기 작성한 사용자만)
     cron.schedule('30 8 * * *', async () => {
       console.log('\n' + '📱'.repeat(40));
@@ -85,7 +77,6 @@ export class AIAnalysisJob {
 
     console.log('AI Analysis Job scheduler started.');
     console.log(`- Timezone: ${TZ}`);
-    console.log('- Batch Analysis: Every day at 3:00 AM (어제 날짜 일기)');
     console.log('- Morning Push: Every day at 8:30 AM (어제 일기 작성자만)');
     console.log('- Receipt Check: Every 15 minutes');
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
