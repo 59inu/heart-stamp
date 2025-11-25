@@ -3,11 +3,7 @@ import { PushNotificationService } from '../services/pushNotificationService';
 import { ClaudeService } from '../services/claudeService';
 
 /**
- * Letter Job
- *
- * 매월 1일 새벽 4시에 실행되어,
- * 월 5회 이상 일기를 작성한 사용자에게 AI로 개인화된 편지를 생성합니다.
- * 푸시 알림은 다음날 아침 9시에 별도로 발송됩니다.
+ * Letter Job - 월간 편지 생성 및 알림 발송
  */
 export class LetterJob {
   private static claudeService: ClaudeService;
@@ -181,13 +177,5 @@ ${diariesSummary}
     } catch (error) {
       console.error('❌ [LetterJob] Error in sendLetterNotifications:', error);
     }
-  }
-
-  // Cron jobs moved to separate workers (Railway Cron)
-  // This method is kept for backward compatibility but does nothing now
-  static start() {
-    console.log('📬 [LetterJob] Cron jobs moved to workers');
-    console.log('- Manual trigger: POST /api/jobs/trigger-letters');
-    console.log('- Manual trigger: POST /api/jobs/trigger-letter-notifications');
   }
 }

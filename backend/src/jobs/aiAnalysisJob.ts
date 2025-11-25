@@ -9,13 +9,6 @@ export class AIAnalysisJob {
     this.claudeService = claudeService;
   }
 
-  // Cron jobs moved to separate workers (Railway Cron)
-  // This method is kept for backward compatibility but does nothing now
-  start() {
-    console.log('AI Analysis Job initialized (cron jobs moved to workers)');
-    console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
-  }
-
   async runBatchAnalysis() {
     if (this.isRunning) {
       console.log('⏭️  [BATCH] Already running, skipping...');

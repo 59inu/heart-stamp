@@ -10,7 +10,6 @@ printEnvironmentInfo();
 import express, { Application } from 'express';
 import cors from 'cors';
 import path from 'path';
-import cron from 'node-cron';
 import { generalApiLimiter, adminLimiter } from './middleware/rateLimiter';
 import { requireFirebaseAuth, requireAdminToken } from './middleware/auth';
 import diaryRoutes, { initializeClaudeService, initializeImageGenerationService } from './routes/diaryRoutes';
@@ -144,23 +143,18 @@ if (NANOBANANA_API_KEY) {
   console.log('⚠️  NANOBANANA_API_KEY not set - Image generation disabled');
 }
 
-// Start AI Analysis Job
+// AI Analysis Job (관리 API에서 수동 트리거용)
 const aiAnalysisJob = new AIAnalysisJob(claudeService);
-aiAnalysisJob.start();
 
-// Backup Job 인스턴스 생성 (관리 엔드포인트에서 사용)
+// Backup Job (관리 API에서 수동 트리거용)
 const backupJob = new BackupJob();
 
-// Start Export Job
+// Letter Job (관리 API에서 수동 트리거용)
+LetterJob.initialize(claudeService);
+
+// Export Job
 ExportJob.start();
 ExportJob.startCleanup();
-
-// Start Letter Job (with ClaudeService for AI letter generation)
-LetterJob.initialize(claudeService);
-LetterJob.start();
-
-// Backup Job은 Railway Cron Worker로 이동됨
-// backupJob.triggerManually()는 관리 API에서 사용 가능
 
 // 푸시 토큰 등록 API
 app.post('/api/push/register', requireFirebaseAuth, async (req, res) => {
