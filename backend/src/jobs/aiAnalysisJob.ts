@@ -1,6 +1,4 @@
-import cron from 'node-cron';
 import { ClaudeService } from '../services/claudeService';
-import { PushNotificationService } from '../services/pushNotificationService';
 import { DiaryDatabase } from '../services/database';
 
 export class AIAnalysisJob {
@@ -11,74 +9,10 @@ export class AIAnalysisJob {
     this.claudeService = claudeService;
   }
 
-  // Schedule the job to run every night at 3 AM
+  // Cron jobs moved to separate workers (Railway Cron)
+  // This method is kept for backward compatibility but does nothing now
   start() {
-    console.log('Starting AI Analysis Job scheduler...');
-
-    // TZ 환경변수 사용 (기본값: Asia/Seoul)
-    const TZ = process.env.TZ || 'Asia/Seoul';
-
-    // 아침 8시 30분 일괄 푸시 알림 전송 (어제 일기 작성한 사용자만)
-    cron.schedule('30 8 * * *', async () => {
-      console.log('\n' + '📱'.repeat(40));
-      console.log('📬 [PUSH] TEACHER COMMENT NOTIFICATION STARTED');
-      console.log('📱'.repeat(40));
-      console.log(`⏰ Time: ${new Date().toISOString()}`);
-
-      // 어제 날짜 일기 중 AI 코멘트를 받은 사용자 목록 조회
-      const eligibleUserIds = await DiaryDatabase.getUsersWithAICommentYesterday();
-
-      console.log(`📊 Eligible users (wrote diary yesterday): ${eligibleUserIds.length}`);
-
-      if (eligibleUserIds.length === 0) {
-        console.log('ℹ️  [PUSH] No users wrote diary yesterday');
-        console.log('📱'.repeat(40) + '\n');
-        return;
-      }
-
-      // ✅ 알림 설정이 켜진 사용자만 필터링
-      const { NotificationPreferencesDatabase } = require('../services/database');
-      const targetUserIds = await NotificationPreferencesDatabase.filterEnabled(
-        eligibleUserIds,
-        'teacher_comment'
-      );
-
-      console.log(`📊 Target users (with notification enabled): ${targetUserIds.length}`);
-      console.log(`   Filtered out: ${eligibleUserIds.length - targetUserIds.length} users (notification disabled)`);
-
-      if (targetUserIds.length === 0) {
-        console.log('ℹ️  [PUSH] No users with notification enabled');
-        console.log('📱'.repeat(40) + '\n');
-        return;
-      }
-
-      // 필터링된 사용자에게만 알림 전송
-      await PushNotificationService.sendNotificationToUsers(
-        targetUserIds,
-        '선생님 코멘트 도착 ✨',
-        '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
-        { type: 'ai_comment_complete' }
-      );
-
-      console.log('📱'.repeat(40));
-      console.log(`✅ [PUSH] NOTIFICATION SENT to ${targetUserIds.length} users`);
-      console.log('📱'.repeat(40) + '\n');
-    }, {
-      timezone: TZ
-    });
-
-    // 15분마다 Push Notification Receipt 확인
-    cron.schedule('*/15 * * * *', async () => {
-      console.log('🔍 Push notification receipt check started...');
-      await PushNotificationService.checkReceipts();
-    }, {
-      timezone: TZ
-    });
-
-    console.log('AI Analysis Job scheduler started.');
-    console.log(`- Timezone: ${TZ}`);
-    console.log('- Morning Push: Every day at 8:30 AM (어제 일기 작성자만)');
-    console.log('- Receipt Check: Every 15 minutes');
+    console.log('AI Analysis Job initialized (cron jobs moved to workers)');
     console.log('- Manual trigger: POST http://localhost:3000/api/jobs/trigger-analysis');
   }
 
