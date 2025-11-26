@@ -305,4 +305,64 @@ router.get('/comments/stats',
   }
 );
 
+// ============================================
+// 일기 관련 API
+// ============================================
+
+/**
+ * 일기 목록 조회
+ * GET /api/admin/diaries
+ */
+router.get('/diaries',
+  query('startDate').optional().isISO8601().withMessage('Invalid startDate format (YYYY-MM-DD)'),
+  query('endDate').optional().isISO8601().withMessage('Invalid endDate format (YYYY-MM-DD)'),
+  query('hasComment').optional().isBoolean().withMessage('hasComment must be boolean'),
+  query('userId').optional().isString().trim(),
+  query('decrypt').optional().isBoolean().withMessage('decrypt must be boolean'),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const {
+        startDate,
+        endDate,
+        hasComment,
+        userId,
+        decrypt = 'false',
+      } = req.query;
+
+      const shouldDecrypt = decrypt === 'true';
+      const hasCommentFilter = hasComment === 'true' ? true : hasComment === 'false' ? false : undefined;
+
+      const diaries = await DiaryDatabase.getDiariesForAdmin({
+        startDate: startDate as string,
+        endDate: endDate as string,
+        hasComment: hasCommentFilter,
+        userId: userId as string,
+        decrypt: shouldDecrypt,
+      });
+
+      res.json({
+        success: true,
+        count: diaries.length,
+        data: diaries,
+      });
+    } catch (error) {
+      console.error('Error fetching diaries:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch diaries',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

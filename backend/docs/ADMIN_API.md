@@ -218,6 +218,56 @@ GET /comments/stats
 
 ---
 
+## 일기 API
+
+### 일기 목록 조회
+
+```
+GET /diaries
+```
+
+**Query Parameters:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---------|------|-----|-------|------|
+| startDate | string | X | - | 시작일 (YYYY-MM-DD) |
+| endDate | string | X | - | 종료일 (YYYY-MM-DD) |
+| hasComment | boolean | X | - | 코멘트 유무 필터 |
+| userId | string | X | - | 특정 유저 필터 |
+| decrypt | boolean | X | false | 내용 복호화 여부 |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "count": 10,
+  "data": [
+    {
+      "diaryId": "abc123",
+      "userId": "user1",
+      "content": "일기 내용",
+      "hasComment": true,
+      "hasImage": false,
+      "moodTag": "행복",
+      "createdAt": "2025-01-15T12:00:00"
+    }
+  ]
+}
+```
+
+| 필드 | 설명 |
+|-----|------|
+| diaryId | 일기 ID |
+| userId | 유저 ID |
+| content | 일기 내용 (`decrypt=false`일 경우 `[암호화됨]`) |
+| hasComment | AI 코멘트 존재 여부 |
+| hasImage | 그림일기(나노바나나) 이미지 존재 여부 |
+| moodTag | 감정 태그 (`decrypt=false`일 경우 `[암호화됨]`) |
+| createdAt | 생성일시 |
+
+---
+
 ## 공통 에러 응답
 
 **404 - 리소스 없음:**

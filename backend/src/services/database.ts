@@ -957,6 +957,80 @@ export class DiaryDatabase {
     }
   }
 
+  // [Admin] 일기 조회 (검색 조건 적용)
+  static async getDiariesForAdmin(options: {
+    startDate?: string;
+    endDate?: string;
+    hasComment?: boolean;
+    userId?: string;
+    decrypt?: boolean;
+  }): Promise<any[]> {
+    try {
+      const { startDate, endDate, hasComment, userId, decrypt = false } = options;
+
+      let query = `
+        SELECT
+          _id,
+          "userId",
+          content,
+          "moodTag",
+          "aiComment",
+          "imageUri",
+          "createdAt"
+        FROM diaries
+        WHERE "deletedAt" IS NULL
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      // 날짜 필터
+      if (startDate) {
+        query += ` AND "createdAt" >= $${paramIndex}`;
+        params.push(startDate);
+        paramIndex++;
+      }
+      if (endDate) {
+        query += ` AND "createdAt" <= $${paramIndex}`;
+        params.push(endDate + 'T23:59:59');
+        paramIndex++;
+      }
+
+      // 코멘트 유무 필터
+      if (hasComment === true) {
+        query += ` AND "aiComment" IS NOT NULL`;
+      } else if (hasComment === false) {
+        query += ` AND "aiComment" IS NULL`;
+      }
+
+      // 유저 필터
+      if (userId) {
+        query += ` AND "userId" = $${paramIndex}`;
+        params.push(userId);
+        paramIndex++;
+      }
+
+      query += ` ORDER BY "createdAt" DESC`;
+
+      const result = await pool.query(query, params);
+
+      return result.rows.map(row => {
+        const decrypted = decrypt ? decryptFields({ content: row.content, moodTag: row.moodTag }) : null;
+        return {
+          diaryId: row._id,
+          userId: row.userId,
+          content: decrypt ? decrypted?.content : '[암호화됨]',
+          hasComment: row.aiComment !== null,
+          hasImage: row.imageUri !== null && row.imageUri !== '',
+          moodTag: decrypt ? decrypted?.moodTag : (row.moodTag ? '[암호화됨]' : null),
+          createdAt: row.createdAt,
+        };
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getDiariesForAdmin');
+      return [];
+    }
+  }
+
   // 사용자의 모든 일기 삭제 (하드 삭제)
   static async deleteAllForUser(userId: string): Promise<number> {
     try {
