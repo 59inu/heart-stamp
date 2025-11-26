@@ -204,4 +204,28 @@ router.delete('/comments/:diaryId',
   }
 );
 
+/**
+ * 코멘트 통계 조회
+ * GET /api/admin/comments/stats
+ */
+router.get('/comments/stats',
+  async (req: Request, res: Response) => {
+    try {
+      const stats = await DiaryDatabase.getAdminStats();
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch stats',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

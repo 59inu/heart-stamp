@@ -694,6 +694,176 @@ export class DiaryDatabase {
     }
   }
 
+  // [Admin] 통계 조회
+  static async getAdminStats(): Promise<{
+    activeUserCount: number;
+    validUserCount: number;
+    modelStats: {
+      total: number;
+      sonnet: { count: number; percentage: number };
+      haiku: { count: number; percentage: number };
+      fallback: { count: number; percentage: number };
+    };
+    dailyTrend: Array<{
+      date: string;
+      sonnet: number;
+      haiku: number;
+      fallback: number;
+    }>;
+    weeklyTrend: Array<{
+      week: string;
+      sonnet: number;
+      haiku: number;
+      fallback: number;
+    }>;
+  }> {
+    try {
+      // 활성 사용자: 일기 작성 이력 있음 (삭제 포함)
+      const activeResult = await pool.query(
+        'SELECT COUNT(DISTINCT "userId") as count FROM diaries'
+      );
+
+      // 유효 사용자: 삭제 안 한 일기 있음
+      const validResult = await pool.query(
+        'SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL'
+      );
+
+      // 모델별 통계
+      const modelResult = await pool.query(`
+        SELECT
+          model,
+          COUNT(*) as count
+        FROM diaries
+        WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL
+        GROUP BY model
+      `);
+
+      let sonnetCount = 0;
+      let haikuCount = 0;
+      let fallbackCount = 0;
+
+      for (const row of modelResult.rows) {
+        if (row.model === 'sonnet') {
+          sonnetCount = parseInt(row.count, 10);
+        } else if (row.model === 'haiku') {
+          haikuCount = parseInt(row.count, 10);
+        } else {
+          fallbackCount = parseInt(row.count, 10);
+        }
+      }
+
+      const totalComments = sonnetCount + haikuCount + fallbackCount;
+
+      // 일별 추이 (최근 14일)
+      const dailyResult = await pool.query(`
+        SELECT
+          LEFT("createdAt", 10) as date,
+          model,
+          COUNT(*) as count
+        FROM diaries
+        WHERE "aiComment" IS NOT NULL
+          AND "deletedAt" IS NULL
+          AND "createdAt" >= (CURRENT_DATE - INTERVAL '14 days')::text
+        GROUP BY LEFT("createdAt", 10), model
+        ORDER BY date DESC
+      `);
+
+      // 일별 데이터 정리
+      const dailyMap = new Map<string, { sonnet: number; haiku: number; fallback: number }>();
+      for (const row of dailyResult.rows) {
+        const date = row.date;
+        if (!dailyMap.has(date)) {
+          dailyMap.set(date, { sonnet: 0, haiku: 0, fallback: 0 });
+        }
+        const entry = dailyMap.get(date)!;
+        const count = parseInt(row.count, 10);
+        if (row.model === 'sonnet') {
+          entry.sonnet = count;
+        } else if (row.model === 'haiku') {
+          entry.haiku = count;
+        } else {
+          entry.fallback = count;
+        }
+      }
+
+      const dailyTrend = Array.from(dailyMap.entries())
+        .map(([date, counts]) => ({ date, ...counts }))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      // 주별 추이 (최근 12주)
+      const weeklyResult = await pool.query(`
+        SELECT
+          TO_CHAR(DATE_TRUNC('week', "createdAt"::timestamp), 'YYYY-MM-DD') as week,
+          model,
+          COUNT(*) as count
+        FROM diaries
+        WHERE "aiComment" IS NOT NULL
+          AND "deletedAt" IS NULL
+          AND "createdAt" >= (CURRENT_DATE - INTERVAL '12 weeks')::text
+        GROUP BY DATE_TRUNC('week', "createdAt"::timestamp), model
+        ORDER BY week DESC
+      `);
+
+      // 주별 데이터 정리
+      const weeklyMap = new Map<string, { sonnet: number; haiku: number; fallback: number }>();
+      for (const row of weeklyResult.rows) {
+        const week = row.week;
+        if (!weeklyMap.has(week)) {
+          weeklyMap.set(week, { sonnet: 0, haiku: 0, fallback: 0 });
+        }
+        const entry = weeklyMap.get(week)!;
+        const count = parseInt(row.count, 10);
+        if (row.model === 'sonnet') {
+          entry.sonnet = count;
+        } else if (row.model === 'haiku') {
+          entry.haiku = count;
+        } else {
+          entry.fallback = count;
+        }
+      }
+
+      const weeklyTrend = Array.from(weeklyMap.entries())
+        .map(([week, counts]) => ({ week, ...counts }))
+        .sort((a, b) => b.week.localeCompare(a.week));
+
+      return {
+        activeUserCount: parseInt(activeResult.rows[0].count, 10),
+        validUserCount: parseInt(validResult.rows[0].count, 10),
+        modelStats: {
+          total: totalComments,
+          sonnet: {
+            count: sonnetCount,
+            percentage: totalComments > 0 ? Math.round((sonnetCount / totalComments) * 100) : 0,
+          },
+          haiku: {
+            count: haikuCount,
+            percentage: totalComments > 0 ? Math.round((haikuCount / totalComments) * 100) : 0,
+          },
+          fallback: {
+            count: fallbackCount,
+            percentage: totalComments > 0 ? Math.round((fallbackCount / totalComments) * 100) : 0,
+          },
+        },
+        dailyTrend,
+        weeklyTrend,
+      };
+    } catch (error) {
+      this.handleDatabaseError(error, 'getAdminStats');
+      return {
+        activeUserCount: 0,
+        validUserCount: 0,
+        modelStats: {
+          total: 0,
+          sonnet: { count: 0, percentage: 0 },
+          haiku: { count: 0, percentage: 0 },
+          fallback: { count: 0, percentage: 0 },
+        },
+        dailyTrend: [],
+        weeklyTrend: [],
+      };
+    }
+  }
+
   // [Admin] 코멘트 조회 (검색 조건 적용)
   static async getCommentsForAdmin(options: {
     startDate?: string;
@@ -748,7 +918,7 @@ export class DiaryDatabase {
           diaryId: row._id,
           userId: row.userId,
           model: row.model,
-          date: row.date,
+          createdAt: row.createdAt,
           isFallback,
           aiComment: decrypt ? decryptFields({ aiComment: row.aiComment }).aiComment : '[암호화됨]',
         };
