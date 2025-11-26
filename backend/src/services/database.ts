@@ -695,6 +695,10 @@ export class DiaryDatabase {
   }
 
   // [Admin] 통계 조회
+  // 비용 추정 단가 (USD per comment)
+  private static readonly COST_PER_SONNET = 0.01;
+  private static readonly COST_PER_HAIKU = 0.001;
+
   static async getAdminStats(): Promise<{
     activeUserCount: number;
     validUserCount: number;
@@ -703,6 +707,12 @@ export class DiaryDatabase {
       sonnet: { count: number; percentage: number };
       haiku: { count: number; percentage: number };
       fallback: { count: number; percentage: number };
+    };
+    costEstimate: {
+      total: number;
+      sonnet: number;
+      haiku: number;
+      currency: string;
     };
     dailyTrend: Array<{
       date: string;
@@ -826,6 +836,11 @@ export class DiaryDatabase {
         .map(([week, counts]) => ({ week, ...counts }))
         .sort((a, b) => b.week.localeCompare(a.week));
 
+      // 비용 추정
+      const sonnetCost = sonnetCount * this.COST_PER_SONNET;
+      const haikuCost = haikuCount * this.COST_PER_HAIKU;
+      const totalCost = sonnetCost + haikuCost;
+
       return {
         activeUserCount: parseInt(activeResult.rows[0].count, 10),
         validUserCount: parseInt(validResult.rows[0].count, 10),
@@ -844,6 +859,12 @@ export class DiaryDatabase {
             percentage: totalComments > 0 ? Math.round((fallbackCount / totalComments) * 100) : 0,
           },
         },
+        costEstimate: {
+          total: Math.round(totalCost * 1000) / 1000,
+          sonnet: Math.round(sonnetCost * 1000) / 1000,
+          haiku: Math.round(haikuCost * 1000) / 1000,
+          currency: 'USD',
+        },
         dailyTrend,
         weeklyTrend,
       };
@@ -857,6 +878,12 @@ export class DiaryDatabase {
           sonnet: { count: 0, percentage: 0 },
           haiku: { count: 0, percentage: 0 },
           fallback: { count: 0, percentage: 0 },
+        },
+        costEstimate: {
+          total: 0,
+          sonnet: 0,
+          haiku: 0,
+          currency: 'USD',
         },
         dailyTrend: [],
         weeklyTrend: [],
