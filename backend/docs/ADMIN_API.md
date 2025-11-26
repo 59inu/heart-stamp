@@ -60,6 +60,48 @@ GET /comments
 
 ---
 
+### 코멘트 생성
+
+```
+POST /comments/:diaryId
+```
+
+코멘트가 없는 일기에 수동으로 AI 코멘트를 생성합니다. (Sonnet 모델 사용)
+
+**Path Parameters:**
+
+| 파라미터 | 설명 |
+|---------|------|
+| diaryId | 일기 ID |
+
+**Response (201):**
+
+```json
+{
+  "success": true,
+  "message": "AI comment created successfully",
+  "data": {
+    "diaryId": "abc123",
+    "date": "2025-01-15",
+    "aiComment": "생성된 코멘트",
+    "model": "sonnet",
+    "importanceScore": 3,
+    "stampType": "heart"
+  }
+}
+```
+
+**Response (409 - 이미 코멘트 있음):**
+
+```json
+{
+  "success": false,
+  "message": "Diary already has an AI comment. Use PUT to regenerate."
+}
+```
+
+---
+
 ### 코멘트 수정 (재생성)
 
 ```

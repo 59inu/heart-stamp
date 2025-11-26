@@ -75,6 +75,83 @@ router.get('/comments',
 );
 
 /**
+ * 코멘트 생성
+ * POST /api/admin/comments/:diaryId
+ * 코멘트가 없는 일기에 수동으로 코멘트 생성
+ */
+router.post('/comments/:diaryId',
+  param('diaryId').isString().trim().notEmpty(),
+  aiAnalysisLimiter,
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { diaryId } = req.params;
+
+      const diary = await DiaryDatabase.getById(diaryId);
+
+      if (!diary) {
+        return res.status(404).json({
+          success: false,
+          message: `Diary not found: ${diaryId}`,
+        });
+      }
+
+      // 이미 코멘트가 있는 경우 409 Conflict
+      if (diary.aiComment) {
+        return res.status(409).json({
+          success: false,
+          message: 'Diary already has an AI comment. Use PUT to regenerate.',
+        });
+      }
+
+      // Generate AI comment (Admin용: 항상 Sonnet 사용)
+      console.log(`🤖 [Admin] Creating AI comment for diary ${diaryId} - SONNET FORCED`);
+      const result = await claudeService.generateComment(
+        diary.content,
+        diary.moodTag || '',
+        diary.date,
+        { forceModel: 'sonnet' }
+      );
+
+      await DiaryDatabase.update(diaryId, {
+        aiComment: result.comment,
+        model: result.model,
+        importanceScore: result.importanceScore,
+        stampType: result.stampType,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'AI comment created successfully',
+        data: {
+          diaryId,
+          date: diary.date,
+          aiComment: result.comment,
+          model: result.model,
+          importanceScore: result.importanceScore,
+          stampType: result.stampType,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating AI comment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create AI comment',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
  * 코멘트 수정 (재생성)
  * PUT /api/admin/comments/:diaryId
  */
