@@ -365,4 +365,28 @@ router.get('/diaries',
   }
 );
 
+/**
+ * 일기 통계 조회
+ * GET /api/admin/diaries/stats
+ */
+router.get('/diaries/stats',
+  async (req: Request, res: Response) => {
+    try {
+      const stats = await DiaryDatabase.getDiaryStats();
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error('Error fetching diary stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch diary stats',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

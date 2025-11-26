@@ -270,6 +270,53 @@ GET /diaries
 
 ---
 
+### 일기 통계 조회
+
+```
+GET /diaries/stats
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "totalDiaries": 150,
+    "withComment": 140,
+    "withoutComment": 10,
+    "withGeneratedImage": 25,
+    "avgDiariesPerUser": 3.2,
+    "writersThisWeek": 12,
+    "writersLastWeek": 15,
+    "moodDistribution": {
+      "red": 30,
+      "yellow": 50,
+      "green": 60,
+      "none": 10
+    },
+    "dailyTrend": [
+      { "date": "2025-01-27", "count": 8 },
+      { "date": "2025-01-26", "count": 12 }
+    ]
+  }
+}
+```
+
+| 필드 | 설명 |
+|-----|------|
+| totalDiaries | 총 일기 수 |
+| withComment | 코멘트 있는 일기 수 |
+| withoutComment | 코멘트 없는 일기 수 |
+| withGeneratedImage | 그림일기(나노바나나) 수 |
+| avgDiariesPerUser | 유저당 평균 일기 수 |
+| writersThisWeek | 이번 주 작성자 수 |
+| writersLastWeek | 지난 주 작성자 수 |
+| moodDistribution | 감정 분포 (red/yellow/green/none) |
+| dailyTrend | 일별 작성 추이 (최근 14일) |
+
+---
+
 ## 공통 에러 응답
 
 **404 - 리소스 없음:**

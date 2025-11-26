@@ -1033,6 +1033,127 @@ export class DiaryDatabase {
     }
   }
 
+  // [Admin] 일기 통계 조회
+  static async getDiaryStats(): Promise<{
+    // 기본 현황
+    totalDiaries: number;
+    withComment: number;
+    withoutComment: number;
+    withGeneratedImage: number;
+    // 사용자 활동
+    avgDiariesPerUser: number;
+    writersThisWeek: number;
+    writersLastWeek: number;
+    // 감정 분포
+    moodDistribution: {
+      red: number;
+      yellow: number;
+      green: number;
+      none: number;
+    };
+    // 일별 추이 (최근 14일)
+    dailyTrend: Array<{
+      date: string;
+      count: number;
+    }>;
+  }> {
+    try {
+      // 기본 현황
+      const totalResult = await pool.query(
+        'SELECT COUNT(*) as count FROM diaries WHERE "deletedAt" IS NULL'
+      );
+      const totalDiaries = parseInt(totalResult.rows[0].count, 10);
+
+      const withCommentResult = await pool.query(
+        'SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL'
+      );
+      const withComment = parseInt(withCommentResult.rows[0].count, 10);
+
+      const withImageResult = await pool.query(
+        `SELECT COUNT(*) as count FROM diaries WHERE "imageGenerationStatus" = 'completed' AND "deletedAt" IS NULL`
+      );
+      const withGeneratedImage = parseInt(withImageResult.rows[0].count, 10);
+
+      // 사용자 활동
+      const userCountResult = await pool.query(
+        'SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL'
+      );
+      const userCount = parseInt(userCountResult.rows[0].count, 10);
+      const avgDiariesPerUser = userCount > 0 ? Math.round((totalDiaries / userCount) * 10) / 10 : 0;
+
+      // 이번 주 작성자 (월요일 기준)
+      const thisWeekResult = await pool.query(`
+        SELECT COUNT(DISTINCT "userId") as count FROM diaries
+        WHERE date >= DATE_TRUNC('week', CURRENT_DATE)::text
+          AND "deletedAt" IS NULL
+      `);
+      const writersThisWeek = parseInt(thisWeekResult.rows[0].count, 10);
+
+      // 지난 주 작성자
+      const lastWeekResult = await pool.query(`
+        SELECT COUNT(DISTINCT "userId") as count FROM diaries
+        WHERE date >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days')::text
+          AND date < DATE_TRUNC('week', CURRENT_DATE)::text
+          AND "deletedAt" IS NULL
+      `);
+      const writersLastWeek = parseInt(lastWeekResult.rows[0].count, 10);
+
+      // 감정 분포
+      const moodResult = await pool.query(`
+        SELECT mood, COUNT(*) as count
+        FROM diaries
+        WHERE "deletedAt" IS NULL
+        GROUP BY mood
+      `);
+      const moodDistribution = { red: 0, yellow: 0, green: 0, none: 0 };
+      for (const row of moodResult.rows) {
+        if (row.mood === 'red') moodDistribution.red = parseInt(row.count, 10);
+        else if (row.mood === 'yellow') moodDistribution.yellow = parseInt(row.count, 10);
+        else if (row.mood === 'green') moodDistribution.green = parseInt(row.count, 10);
+        else moodDistribution.none = parseInt(row.count, 10);
+      }
+
+      // 일별 추이 (최근 14일)
+      const dailyResult = await pool.query(`
+        SELECT LEFT(date, 10) as date, COUNT(*) as count
+        FROM diaries
+        WHERE "deletedAt" IS NULL
+          AND date >= (CURRENT_DATE - INTERVAL '14 days')::text
+        GROUP BY LEFT(date, 10)
+        ORDER BY date DESC
+      `);
+      const dailyTrend = dailyResult.rows.map(row => ({
+        date: row.date,
+        count: parseInt(row.count, 10),
+      }));
+
+      return {
+        totalDiaries,
+        withComment,
+        withoutComment: totalDiaries - withComment,
+        withGeneratedImage,
+        avgDiariesPerUser,
+        writersThisWeek,
+        writersLastWeek,
+        moodDistribution,
+        dailyTrend,
+      };
+    } catch (error) {
+      this.handleDatabaseError(error, 'getDiaryStats');
+      return {
+        totalDiaries: 0,
+        withComment: 0,
+        withoutComment: 0,
+        withGeneratedImage: 0,
+        avgDiariesPerUser: 0,
+        writersThisWeek: 0,
+        writersLastWeek: 0,
+        moodDistribution: { red: 0, yellow: 0, green: 0, none: 0 },
+        dailyTrend: [],
+      };
+    }
+  }
+
   // 사용자의 모든 일기 삭제 (하드 삭제)
   static async deleteAllForUser(userId: string): Promise<number> {
     try {
