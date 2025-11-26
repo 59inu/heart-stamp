@@ -694,6 +694,72 @@ export class DiaryDatabase {
     }
   }
 
+  // [Admin] 코멘트 조회 (검색 조건 적용)
+  static async getCommentsForAdmin(options: {
+    startDate?: string;
+    endDate?: string;
+    status?: 'normal' | 'fallback' | 'all';
+    decrypt?: boolean;
+  }): Promise<any[]> {
+    try {
+      const { startDate, endDate, status = 'all', decrypt = false } = options;
+
+      let query = `
+        SELECT
+          _id,
+          "userId",
+          date,
+          model,
+          "aiComment",
+          "createdAt"
+        FROM diaries
+        WHERE "aiComment" IS NOT NULL
+          AND "deletedAt" IS NULL
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      // 날짜 필터
+      if (startDate) {
+        query += ` AND date >= $${paramIndex}`;
+        params.push(startDate);
+        paramIndex++;
+      }
+      if (endDate) {
+        query += ` AND date <= $${paramIndex}`;
+        params.push(endDate + 'T23:59:59');
+        paramIndex++;
+      }
+
+      // 상태 필터
+      if (status === 'normal') {
+        query += ` AND model IS NOT NULL`;
+      } else if (status === 'fallback') {
+        query += ` AND model IS NULL`;
+      }
+
+      query += ` ORDER BY date DESC`;
+
+      const result = await pool.query(query, params);
+
+      return result.rows.map(row => {
+        const isFallback = row.model === null;
+        const entry = {
+          diaryId: row._id,
+          userId: row.userId,
+          model: row.model,
+          date: row.date,
+          isFallback,
+          aiComment: decrypt ? decryptFields({ aiComment: row.aiComment }).aiComment : '[암호화됨]',
+        };
+        return entry;
+      });
+    } catch (error) {
+      this.handleDatabaseError(error, 'getCommentsForAdmin');
+      return [];
+    }
+  }
+
   // 사용자의 모든 일기 삭제 (하드 삭제)
   static async deleteAllForUser(userId: string): Promise<number> {
     try {

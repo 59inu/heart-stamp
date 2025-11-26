@@ -19,6 +19,7 @@ import exportRoutes from './routes/exportRoutes';
 import nanobananaRoutes from './routes/nanobananaRoutes';
 import imageGenerationRoutes from './routes/imageGenerationRoutes';
 import letterRoutes from './routes/letterRoutes';
+import adminRoutes, { initializeAdminClaudeService } from './routes/adminRoutes';
 import { ClaudeService } from './services/claudeService';
 import { AIAnalysisJob } from './jobs/aiAnalysisJob';
 import { BackupJob } from './jobs/backupJob';
@@ -104,6 +105,9 @@ app.use('/api', generalApiLimiter, exportRoutes);
 app.use('/api', generalApiLimiter, imageGenerationRoutes);
 app.use('/api/letters', generalApiLimiter, letterRoutes);
 
+// Admin Routes (adminLimiter 적용, 인증은 라우터 내부에서 처리)
+app.use('/api/admin', adminLimiter, adminRoutes);
+
 // Nanobanana callback (레이트리미트 없음 - 외부 API 호출)
 app.use('/api', nanobananaRoutes);
 
@@ -121,6 +125,7 @@ if (!process.env.CLAUDE_API_KEY) {
 
 initializeClaudeService(CLAUDE_API_KEY);
 initializeReportService(CLAUDE_API_KEY);
+initializeAdminClaudeService(CLAUDE_API_KEY);
 const claudeService = new ClaudeService(CLAUDE_API_KEY);
 
 // Initialize Image Generation Service
