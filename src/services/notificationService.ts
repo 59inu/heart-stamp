@@ -11,7 +11,6 @@ import { logger } from '../utils/logger';
 const PUSH_TOKEN_KEY = '@stamp_diary:push_token';
 const DAILY_REMINDER_KEY = '@stamp_diary:daily_reminder_enabled';
 const TEACHER_COMMENT_NOTIFICATION_KEY = '@stamp_diary:teacher_comment_notification_enabled';
-const DAILY_REMINDER_NOTIFICATION_ID = 'daily-diary-reminder';
 
 // 알림 핸들러 설정: 포그라운드에서도 알림 표시
 Notifications.setNotificationHandler({
@@ -222,52 +221,6 @@ export class NotificationService {
   }
 
   /**
-   * 매일 반복되는 일기 작성 알림 예약
-   * @param hour - 알림 시간 (0-23)
-   * @param minute - 알림 분 (0-59)
-   */
-  static async scheduleDailyReminder(hour: number = 21, minute: number = 0): Promise<void> {
-    try {
-      // 기존 알림 취소
-      await this.cancelDailyReminder();
-
-      // 매일 반복 알림 예약
-      await Notifications.scheduleNotificationAsync({
-        identifier: DAILY_REMINDER_NOTIFICATION_ID,
-        content: {
-          title: '오늘의 일기를 써볼까요? 📝',
-          body: '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요',
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-          hour,
-          minute,
-          repeats: true,
-        },
-      });
-
-      logger.log(`✅ Daily reminder scheduled at ${hour}:${String(minute).padStart(2, '0')}`);
-    } catch (error) {
-      logger.error('❌ Failed to schedule daily reminder:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 일기 작성 알림 취소
-   */
-  static async cancelDailyReminder(): Promise<void> {
-    try {
-      await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_NOTIFICATION_ID);
-      logger.log('✅ Daily reminder canceled');
-    } catch (error) {
-      logger.error('❌ Failed to cancel daily reminder:', error);
-    }
-  }
-
-  /**
    * 일기 작성 알림 설정 상태 불러오기
    * 권한이 없으면 자동으로 false 반환
    */
@@ -292,10 +245,7 @@ export class NotificationService {
 
   /**
    * 일기 작성 알림 설정 저장
-   *
-   * 이제 서버 푸시 알림만 사용하므로, 로컬 설정만 저장하고
-   * 백엔드 API를 통해 서버 설정을 업데이트합니다.
-   * (로컬 알림 scheduleDailyReminder는 더 이상 사용하지 않음)
+   * 로컬 설정 저장 후 백엔드 API를 통해 서버 설정을 동기화합니다.
    */
   static async setDailyReminderEnabled(enabled: boolean): Promise<void> {
     try {
