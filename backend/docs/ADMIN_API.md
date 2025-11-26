@@ -248,7 +248,7 @@ GET /diaries
       "userId": "user1",
       "content": "일기 내용",
       "hasComment": true,
-      "hasImage": false,
+      "hasGeneratedImage": false,
       "moodTag": "행복",
       "createdAt": "2025-01-15T12:00:00"
     }
@@ -262,7 +262,7 @@ GET /diaries
 | userId | 유저 ID |
 | content | 일기 내용 (`decrypt=false`일 경우 `[암호화됨]`) |
 | hasComment | AI 코멘트 존재 여부 |
-| hasImage | 그림일기(나노바나나) 이미지 존재 여부 |
+| hasGeneratedImage | AI 생성 이미지(나노바나나) 여부 |
 | moodTag | 감정 태그 (`decrypt=false`일 경우 `[암호화됨]`) |
 | createdAt | 생성일시 |
 

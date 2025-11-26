@@ -975,7 +975,7 @@ export class DiaryDatabase {
           content,
           "moodTag",
           "aiComment",
-          "imageUri",
+          "imageGenerationStatus",
           "createdAt"
         FROM diaries
         WHERE "deletedAt" IS NULL
@@ -1020,7 +1020,7 @@ export class DiaryDatabase {
           userId: row.userId,
           content: decrypt ? decrypted?.content : '[암호화됨]',
           hasComment: row.aiComment !== null,
-          hasImage: row.imageUri !== null && row.imageUri !== '',
+          hasGeneratedImage: row.imageGenerationStatus === 'completed',
           moodTag: decrypt ? decrypted?.moodTag : (row.moodTag ? '[암호화됨]' : null),
           createdAt: row.createdAt,
         };
