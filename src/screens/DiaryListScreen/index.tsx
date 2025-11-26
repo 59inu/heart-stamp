@@ -88,8 +88,8 @@ export const DiaryListScreen: React.FC = () => {
     }
   }, []);
 
-  // 오늘 날짜를 한 번만 계산 (성능 최적화)
-  const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  // 오늘 날짜 (화면 포커스/앱 포그라운드 시 갱신)
+  const [today, setToday] = useState(() => format(new Date(), 'yyyy-MM-dd'));
 
   // Calendar marking
   const markedDates = useCalendarMarking(diaries, selectedDate, today);
@@ -113,6 +113,9 @@ export const DiaryListScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      // 오늘 날짜 갱신 (자정 넘김 대응)
+      setToday(format(new Date(), 'yyyy-MM-dd'));
+
       loadDiaries();
       checkPrivacyPolicyUpdate();
 
@@ -143,7 +146,9 @@ export const DiaryListScreen: React.FC = () => {
     };
 
     const handleAppForeground = async () => {
-      logger.log('📱 [DiaryListScreen] App foreground event - checking unread letters...');
+      logger.log('📱 [DiaryListScreen] App foreground event - updating today & checking unread letters...');
+      // 오늘 날짜 갱신 (자정 넘김 대응)
+      setToday(format(new Date(), 'yyyy-MM-dd'));
       await loadUnreadLetterCount();
     };
 
