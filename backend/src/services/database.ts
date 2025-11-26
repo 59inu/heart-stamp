@@ -972,6 +972,7 @@ export class DiaryDatabase {
         SELECT
           _id,
           "userId",
+          date,
           content,
           "moodTag",
           "aiComment",
@@ -983,14 +984,14 @@ export class DiaryDatabase {
       const params: any[] = [];
       let paramIndex = 1;
 
-      // 날짜 필터
+      // 날짜 필터 (일기 날짜 기준)
       if (startDate) {
-        query += ` AND "createdAt" >= $${paramIndex}`;
+        query += ` AND date >= $${paramIndex}`;
         params.push(startDate);
         paramIndex++;
       }
       if (endDate) {
-        query += ` AND "createdAt" <= $${paramIndex}`;
+        query += ` AND date <= $${paramIndex}`;
         params.push(endDate + 'T23:59:59');
         paramIndex++;
       }
@@ -1018,6 +1019,7 @@ export class DiaryDatabase {
         return {
           diaryId: row._id,
           userId: row.userId,
+          date: row.date,
           content: decrypt ? decrypted?.content : '[암호화됨]',
           hasComment: row.aiComment !== null,
           hasGeneratedImage: row.imageGenerationStatus === 'completed',

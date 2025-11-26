@@ -230,8 +230,8 @@ GET /diaries
 
 | 파라미터 | 타입 | 필수 | 기본값 | 설명 |
 |---------|------|-----|-------|------|
-| startDate | string | X | - | 시작일 (YYYY-MM-DD) |
-| endDate | string | X | - | 종료일 (YYYY-MM-DD) |
+| startDate | string | X | - | 일기 날짜 시작 (YYYY-MM-DD) |
+| endDate | string | X | - | 일기 날짜 종료 (YYYY-MM-DD) |
 | hasComment | boolean | X | - | 코멘트 유무 필터 |
 | userId | string | X | - | 특정 유저 필터 |
 | decrypt | boolean | X | false | 내용 복호화 여부 |
@@ -246,6 +246,7 @@ GET /diaries
     {
       "diaryId": "abc123",
       "userId": "user1",
+      "date": "2025-01-15",
       "content": "일기 내용",
       "hasComment": true,
       "hasGeneratedImage": false,
@@ -260,6 +261,7 @@ GET /diaries
 |-----|------|
 | diaryId | 일기 ID |
 | userId | 유저 ID |
+| date | 일기 날짜 (YYYY-MM-DD) |
 | content | 일기 내용 (`decrypt=false`일 경우 `[암호화됨]`) |
 | hasComment | AI 코멘트 존재 여부 |
 | hasGeneratedImage | AI 생성 이미지(나노바나나) 여부 |
