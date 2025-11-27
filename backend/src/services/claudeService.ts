@@ -150,7 +150,7 @@ export class ClaudeService {
     try {
       // 🎨 [2단계] 선택된 모델로 코멘트 생성 (30초 타임아웃)
       // DB에서 프롬프트 로드 (없으면 기본값 사용)
-      let promptTemplate = await PromptDatabase.get('comment');
+      let promptTemplate = await PromptDatabase.getContent('comment');
       if (!promptTemplate) {
         console.log('⚠️ [Claude] Comment prompt not found in DB, using default');
         promptTemplate = `당신은 따뜻한 초등학교 담임 선생님입니다.
@@ -244,7 +244,7 @@ export class ClaudeService {
 
     try {
       // DB에서 프롬프트 로드 (없으면 기본값 사용)
-      let promptTemplate = await PromptDatabase.get('importance');
+      let promptTemplate = await PromptDatabase.getContent('importance');
       if (!promptTemplate) {
         console.log('⚠️ [Claude] Importance prompt not found in DB, using default');
         promptTemplate = `당신은 일기 분석 전문가입니다.
@@ -355,7 +355,7 @@ export class ClaudeService {
 
     try {
       // DB에서 프롬프트 로드 (없으면 기본값 사용)
-      let promptTemplate = await PromptDatabase.get('scene');
+      let promptTemplate = await PromptDatabase.getContent('scene');
       if (!promptTemplate) {
         console.log('⚠️ [Claude] Scene prompt not found in DB, using default');
         promptTemplate = `당신은 일기를 읽고 그림일기로 표현할 핵심 장면을 추출하는 전문가입니다.

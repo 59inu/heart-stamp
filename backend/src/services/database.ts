@@ -1456,31 +1456,57 @@ export class PromptDatabase {
   /**
    * 프롬프트 조회 (캐시 우선)
    */
-  static async get(id: string): Promise<string | null> {
-    // 캐시에 있으면 캐시에서 반환
-    if (this.cache.has(id)) {
-      return this.cache.get(id)!.content;
-    }
-
+  static async get(id: string): Promise<{
+    content: string;
+    variables: string[];
+    version: number;
+    name: string;
+    updatedAt: string;
+    updatedBy: string | null;
+  } | null> {
     try {
       const result = await pool.query(
-        'SELECT content, variables FROM prompts WHERE id = $1',
+        'SELECT id, name, content, variables, version, "updatedAt", "updatedBy" FROM prompts WHERE id = $1',
         [id]
       );
 
       if (result.rows.length === 0) return null;
 
-      const { content, variables } = result.rows[0];
+      const row = result.rows[0];
+      const parsedVariables = row.variables ? JSON.parse(row.variables) : [];
+
+      // 캐시 갱신
       this.cache.set(id, {
-        content,
-        variables: variables ? JSON.parse(variables) : [],
+        content: row.content,
+        variables: parsedVariables,
       });
 
-      return content;
+      return {
+        content: row.content,
+        variables: parsedVariables,
+        version: row.version,
+        name: row.name,
+        updatedAt: row.updatedAt,
+        updatedBy: row.updatedBy,
+      };
     } catch (error) {
       console.error(`❌ [PromptDatabase] Failed to get prompt ${id}:`, error);
       return null;
     }
+  }
+
+  /**
+   * 프롬프트 내용만 조회 (캐시 우선, claudeService용)
+   */
+  static async getContent(id: string): Promise<string | null> {
+    // 캐시에 있으면 캐시에서 반환
+    if (this.cache.has(id)) {
+      return this.cache.get(id)!.content;
+    }
+
+    // 전체 정보 조회 후 content만 반환
+    const prompt = await this.get(id);
+    return prompt ? prompt.content : null;
   }
 
   /**
