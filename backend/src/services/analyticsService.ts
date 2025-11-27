@@ -1329,7 +1329,7 @@ export class AnalyticsService {
             "userId",
             COUNT(*) as total_diaries,
             COUNT(CASE WHEN mood = 'green' THEN 1 END)::decimal / NULLIF(COUNT(*), 0) as green_ratio,
-            COUNT(*) / NULLIF(EXTRACT(EPOCH FROM (MAX("createdAt") - MIN("createdAt"))) / 604800, 0) as diaries_per_week
+            COUNT(*) / NULLIF(EXTRACT(EPOCH FROM (MAX("createdAt"::timestamp) - MIN("createdAt"::timestamp))) / 604800, 0) as diaries_per_week
           FROM diaries
           WHERE mood IS NOT NULL
             AND "deletedAt" IS NULL
