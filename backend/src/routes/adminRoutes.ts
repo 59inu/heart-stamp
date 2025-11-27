@@ -5,6 +5,7 @@ import { requireAdminToken } from '../middleware/auth';
 import { aiAnalysisLimiter } from '../middleware/rateLimiter';
 import { ClaudeService } from '../services/claudeService';
 import { decryptFields } from '../services/encryptionService';
+import { AnalyticsService } from '../services/analyticsService';
 
 const router = Router();
 
@@ -633,6 +634,106 @@ router.post('/prompts/:id/restore/:version',
       res.status(500).json({
         success: false,
         message: 'Failed to restore prompt version',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+// ============================================
+// Analytics API (Phase 1)
+// ============================================
+
+/**
+ * 시간대별/요일별 작성 패턴 분석
+ * GET /api/admin/analytics/time-patterns
+ */
+router.get('/analytics/time-patterns',
+  async (req: Request, res: Response) => {
+    try {
+      const data = await AnalyticsService.getTimePatterns();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error fetching time patterns:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch time patterns',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 사용자 세그멘테이션 & 리텐션 분석
+ * GET /api/admin/analytics/user-cohorts
+ */
+router.get('/analytics/user-cohorts',
+  async (req: Request, res: Response) => {
+    try {
+      const data = await AnalyticsService.getUserCohorts();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error fetching user cohorts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch user cohorts',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 비용 예측 및 최적화 분석
+ * GET /api/admin/analytics/cost-forecast
+ */
+router.get('/analytics/cost-forecast',
+  async (req: Request, res: Response) => {
+    try {
+      const data = await AnalyticsService.getCostForecast();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error fetching cost forecast:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch cost forecast',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 그림일기 사용 vs 일기 작성량 상관관계 분석
+ * GET /api/admin/analytics/image-correlation
+ */
+router.get('/analytics/image-correlation',
+  async (req: Request, res: Response) => {
+    try {
+      const data = await AnalyticsService.getImageCorrelation();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error fetching image correlation:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch image correlation',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

@@ -548,6 +548,395 @@ POST /prompts/:id/restore/:version
 
 ---
 
+## Analytics API (Phase 1)
+
+운영 인사이트를 위한 고급 통계 API입니다.
+
+### 시간대/요일별 작성 패턴 분석
+
+```
+GET /analytics/time-patterns
+```
+
+사용자들이 일기를 작성하는 시간대와 요일 패턴을 분석합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "hourly": [
+      { "hour": 0, "count": 5, "percentage": 2.3 },
+      { "hour": 1, "count": 2, "percentage": 0.9 },
+      { "hour": 22, "count": 45, "percentage": 20.5 }
+    ],
+    "weekday": [
+      { "day": 0, "dayName": "일요일", "count": 30, "percentage": 14.2 },
+      { "day": 1, "dayName": "월요일", "count": 35, "percentage": 16.5 },
+      { "day": 6, "dayName": "토요일", "count": 25, "percentage": 11.8 }
+    ]
+  }
+}
+```
+
+**필드 설명:**
+
+| 필드 | 설명 |
+|-----|------|
+| hourly | 시간대별 작성 패턴 (0-23시) |
+| hour | 시간 (0-23) |
+| weekday | 요일별 작성 패턴 |
+| day | 요일 (0=일요일, 6=토요일) |
+| dayName | 요일 이름 |
+| count | 해당 시간대/요일 작성 수 |
+| percentage | 전체 대비 비율 (%) |
+
+**활용:**
+- 사용자가 주로 일기를 작성하는 시간대 파악
+- 푸시 알림 최적 시간 결정
+- 요일별 트래픽 패턴 분석 (주말 vs 평일)
+
+---
+
+### 사용자 세그멘테이션 & 리텐션 분석
+
+```
+GET /analytics/user-cohorts
+```
+
+사용자 건강도, 리텐션율, 코호트 분석을 제공합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "segments": {
+      "power_users": 15,
+      "active_users": 42,
+      "new_users": 128,
+      "churned_users": 23
+    },
+    "retention": {
+      "week1": 65,
+      "week2": 45,
+      "week4": 32,
+      "allTime": 28
+    },
+    "cohortAnalysis": [
+      {
+        "cohortWeek": "2025-W48",
+        "newUsers": 25,
+        "week1Retention": 68,
+        "week2Retention": 48,
+        "week4Retention": 36
+      },
+      {
+        "cohortWeek": "2025-W47",
+        "newUsers": 30,
+        "week1Retention": 70,
+        "week2Retention": 50,
+        "week4Retention": 40
+      }
+    ]
+  }
+}
+```
+
+**필드 설명:**
+
+**segments** (사용자 세그먼트):
+| 필드 | 설명 |
+|-----|------|
+| power_users | 파워 유저 (10개 이상 작성) |
+| active_users | 활성 유저 (3-9개 작성) |
+| new_users | 신규 유저 (1-2개 작성) |
+| churned_users | 이탈 유저 (최근 30일 미작성) |
+
+**retention** (전체 리텐션):
+| 필드 | 설명 |
+|-----|------|
+| week1 | 1주 후 리텐션율 (%) |
+| week2 | 2주 후 리텐션율 (%) |
+| week4 | 4주 후 리텐션율 (%) |
+| allTime | 전체 활성 사용자 비율 (%) |
+
+**cohortAnalysis** (코호트 분석, 최근 12주):
+| 필드 | 설명 |
+|-----|------|
+| cohortWeek | 코호트 주차 (YYYY-W##) |
+| newUsers | 해당 주 신규 사용자 수 |
+| week1Retention | 1주 후 리텐션율 (%) |
+| week2Retention | 2주 후 리텐션율 (%) |
+| week4Retention | 4주 후 리텐션율 (%) |
+
+**활용:**
+- 사용자 건강도 모니터링 (파워/액티브/신규/이탈 비율)
+- 리텐션 추이 파악 (개선/악화 여부)
+- 주차별 코호트 비교로 제품 개선 효과 측정
+
+---
+
+### 비용 예측 및 최적화 분석
+
+```
+GET /analytics/cost-forecast
+```
+
+현재 비용, 예측, 최적화 제안을 제공합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "current": {
+      "daily": 0.45,
+      "weekly": 3.15,
+      "monthly": 13.5
+    },
+    "forecast": {
+      "nextWeek": 3.2,
+      "nextMonth": 14.1
+    },
+    "breakdown": {
+      "comments": {
+        "total": 125.5,
+        "sonnet": 98.4,
+        "haiku": 27.1
+      },
+      "reports": {
+        "total": 12.5,
+        "weekly": 7.5,
+        "monthly": 5.0
+      }
+    },
+    "optimization": {
+      "potentialSavings": 88.56,
+      "recommendedThreshold": 12
+    }
+  }
+}
+```
+
+**필드 설명:**
+
+**current** (현재 비용, USD):
+| 필드 | 설명 |
+|-----|------|
+| daily | 일평균 비용 (최근 30일 기준) |
+| weekly | 주평균 비용 |
+| monthly | 월평균 비용 |
+
+**forecast** (예측 비용, USD):
+| 필드 | 설명 |
+|-----|------|
+| nextWeek | 다음 주 예상 비용 (최근 7일 평균 기준) |
+| nextMonth | 다음 달 예상 비용 |
+
+**breakdown** (비용 분해, USD):
+| 필드 | 설명 |
+|-----|------|
+| comments.total | 코멘트 총 비용 (누적) |
+| comments.sonnet | Sonnet 코멘트 비용 ($0.01/건) |
+| comments.haiku | Haiku 코멘트 비용 ($0.001/건) |
+| reports.total | 리포트 총 비용 (누적) |
+| reports.weekly | 주간 리포트 비용 ($0.015/건) |
+| reports.monthly | 월간 리포트 비용 ($0.02/건) |
+
+**optimization** (최적화 제안):
+| 필드 | 설명 |
+|-----|------|
+| potentialSavings | 절감 가능 금액 (USD) - 모든 코멘트를 Haiku로 전환 시 |
+| recommendedThreshold | 추천 importanceScore 임계값 (Sonnet 평균의 80%) |
+
+**비용 단가:**
+- Sonnet 코멘트: $0.01/건
+- Haiku 코멘트: $0.001/건
+- 주간 리포트: $0.015/건
+- 월간 리포트: $0.02/건
+
+**활용:**
+- 실시간 비용 모니터링
+- 향후 비용 예측으로 예산 관리
+- Sonnet/Haiku 밸런스 최적화
+- importanceScore 임계값 조정으로 비용 절감
+
+---
+
+### 그림일기 사용 vs 일기 작성량 상관관계 분석
+
+```
+GET /analytics/image-correlation
+```
+
+그림일기(AI 이미지 생성) 기능 사용과 일기 작성량의 상관관계를 다각도로 분석합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "basic": {
+      "withImage": {
+        "userCount": 45,
+        "avgDiaries": 8.5,
+        "avgImagesPerUser": 5.2
+      },
+      "withoutImage": {
+        "userCount": 123,
+        "avgDiaries": 4.2
+      },
+      "difference": {
+        "avgDiariesDiff": 4.3,
+        "percentage": 102.4
+      }
+    },
+    "bySegment": {
+      "power_users": {
+        "withImage": 12,
+        "withoutImage": 2,
+        "imageUsageRate": 85.7
+      },
+      "active_users": {
+        "withImage": 25,
+        "withoutImage": 17,
+        "imageUsageRate": 59.5
+      },
+      "new_users": {
+        "withImage": 8,
+        "withoutImage": 104,
+        "imageUsageRate": 7.1
+      }
+    },
+    "retention": {
+      "withImage": {
+        "week1": 72,
+        "week2": 58,
+        "week4": 45
+      },
+      "withoutImage": {
+        "week1": 58,
+        "week2": 38,
+        "week4": 25
+      }
+    },
+    "firstUsageImpact": {
+      "before30Days": 2.1,
+      "after30Days": 4.5,
+      "increaseRate": 114.3
+    },
+    "byUsageRate": [
+      {
+        "imageRateRange": "0%",
+        "userCount": 123,
+        "avgDiaries": 4.2
+      },
+      {
+        "imageRateRange": "1-25%",
+        "userCount": 25,
+        "avgDiaries": 6.5
+      },
+      {
+        "imageRateRange": "26-50%",
+        "userCount": 10,
+        "avgDiaries": 9.8
+      },
+      {
+        "imageRateRange": "51-75%",
+        "userCount": 5,
+        "avgDiaries": 12.3
+      },
+      {
+        "imageRateRange": "76-100%",
+        "userCount": 5,
+        "avgDiaries": 15.7
+      }
+    ],
+    "correlation": {
+      "coefficient": 0.68,
+      "strength": "strong"
+    }
+  }
+}
+```
+
+**필드 설명:**
+
+**basic** (기본 비교):
+| 필드 | 설명 |
+|-----|------|
+| withImage.userCount | 그림일기 사용자 수 |
+| withImage.avgDiaries | 그림일기 사용자 평균 일기 수 |
+| withImage.avgImagesPerUser | 사용자당 평균 그림일기 수 |
+| withoutImage.userCount | 그림일기 미사용자 수 |
+| withoutImage.avgDiaries | 미사용자 평균 일기 수 |
+| difference.avgDiariesDiff | 평균 일기 수 차이 |
+| difference.percentage | 차이 비율 (%) |
+
+**bySegment** (세그먼트별 분석):
+| 필드 | 설명 |
+|-----|------|
+| power_users | 파워 유저 (10개 이상) |
+| active_users | 액티브 유저 (3-9개) |
+| new_users | 신규 유저 (1-2개) |
+| withImage | 그림일기 사용자 수 |
+| withoutImage | 미사용자 수 |
+| imageUsageRate | 그림일기 사용률 (%) |
+
+**retention** (리텐션 비교):
+| 필드 | 설명 |
+|-----|------|
+| withImage | 그림일기 사용자 리텐션 (%) |
+| withoutImage | 미사용자 리텐션 (%) |
+| week1/week2/week4 | 1주/2주/4주 후 리텐션율 |
+
+**firstUsageImpact** (첫 사용 전후 영향):
+| 필드 | 설명 |
+|-----|------|
+| before30Days | 첫 사용 30일 전 평균 일기 수/주 |
+| after30Days | 첫 사용 30일 후 평균 일기 수/주 |
+| increaseRate | 증가율 (%) |
+
+**byUsageRate** (사용 빈도별 분석):
+| 필드 | 설명 |
+|-----|------|
+| imageRateRange | 그림일기 비율 범위 (0%, 1-25%, 26-50%, 51-75%, 76-100%) |
+| userCount | 해당 범위 사용자 수 |
+| avgDiaries | 평균 총 일기 수 |
+
+**correlation** (상관계수):
+| 필드 | 설명 |
+|-----|------|
+| coefficient | 피어슨 상관계수 (-1 ~ 1) |
+| strength | 상관관계 강도 (weak/moderate/strong) |
+
+**상관계수 해석:**
+- `coefficient > 0`: 양의 상관관계 (그림일기 ↑ → 일기 작성 ↑)
+- `coefficient < 0`: 음의 상관관계
+- `|coefficient| >= 0.7`: 강한 상관관계 (strong)
+- `0.4 <= |coefficient| < 0.7`: 중간 상관관계 (moderate)
+- `|coefficient| < 0.4`: 약한 상관관계 (weak)
+
+**활용:**
+- 그림일기 기능의 사용자 참여도 영향 측정
+- 파워 유저가 그림일기를 더 많이 사용하는지 검증
+- 그림일기 첫 사용 후 행동 변화 분석
+- 그림일기 사용률과 일기 작성량의 선형 관계 파악
+- 제품 개선 우선순위 결정 (그림일기 기능 강화 vs 다른 기능)
+
+**인사이트 예시:**
+- "그림일기 사용자는 비사용자보다 평균 2배 더 많이 일기를 씁니다"
+- "파워 유저의 85%가 그림일기를 사용합니다"
+- "그림일기를 처음 써본 후 작성 빈도가 114% 증가했습니다"
+- "상관계수 0.68 (strong) → 그림일기 사용과 일기 작성량은 강한 양의 상관관계"
+
+---
+
 ## 공통 에러 응답
 
 **404 - 리소스 없음:**
