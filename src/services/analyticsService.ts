@@ -127,16 +127,17 @@ export class AnalyticsService {
 
   /**
    * 앱 첫 실행 (리텐션 코호트 분석의 시작점)
+   * 주의: 'first_open'은 Firebase 자동 수집 예약 이벤트이므로 'app_first_open' 사용
    */
   static async logFirstOpen(): Promise<void> {
-    await this.logEvent('first_open', {
-      platform: Platform.OS,
-      timestamp: new Date().toISOString(),
-    });
-
     // 코호트 분석을 위한 첫 실행일 저장
     const cohort = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    await this.setUserProperty('user_cohort', cohort);
+
+    await this.logEvent('app_first_open', {
+      platform: Platform.OS,
+      cohort,
+    });
+
     await this.setUserProperty('first_open_date', cohort);
   }
 
@@ -147,6 +148,13 @@ export class AnalyticsService {
     await this.logEvent('onboarding_complete', {
       time_to_complete_seconds: timeToCompleteSeconds,
     });
+  }
+
+  /**
+   * 첫 방문 가이드 - 일기 쓰러 가기 버튼 탭
+   */
+  static async logFirstVisitGuideWriteTap(): Promise<void> {
+    await this.logEvent('first_visit_guide_write_tap');
   }
 
   /**
@@ -179,9 +187,9 @@ export class AnalyticsService {
 
     await this.logEvent('ai_comment_viewed', {
       stamp_type: diary.stampType,
-      view_source: viewSource,
-      days_since_written: daysSinceWritten,
-      time_since_notification_minutes: timeSinceNotificationMinutes,
+      source: viewSource,
+      days_since: daysSinceWritten,
+      minutes_since_noti: timeSinceNotificationMinutes,
     });
   }
 
@@ -213,7 +221,7 @@ export class AnalyticsService {
     await this.logEvent('diary_delete', {
       has_ai_comment: !!diary.aiComment,
       character_count: diary.content.length,
-      days_since_written: daysSinceWritten,
+      days_since: daysSinceWritten,
       user_confirmed: userConfirmed,
     });
   }
@@ -403,8 +411,8 @@ export class AnalyticsService {
   ): Promise<void> {
     await this.logEvent('yearly_emotion_flow_open', {
       source,
-      total_diary_count: totalDiaryCount,
-      current_year: currentYear,
+      diary_count: totalDiaryCount,
+      year: currentYear,
     });
   }
 
@@ -419,7 +427,7 @@ export class AnalyticsService {
     await this.logEvent('yearly_emotion_flow_year_change', {
       from_year: fromYear,
       to_year: toYear,
-      diary_count_in_year: diaryCountInYear,
+      diary_count: diaryCountInYear,
     });
   }
 
@@ -434,7 +442,7 @@ export class AnalyticsService {
     await this.logEvent('yearly_emotion_flow_view_mode_toggle', {
       from_mode: fromMode,
       to_mode: toMode,
-      current_year: currentYear,
+      year: currentYear,
     });
   }
 
@@ -448,7 +456,7 @@ export class AnalyticsService {
     isEditMode: boolean
   ): Promise<void> {
     await this.logEvent('picture_generate_request', {
-      diary_character_count: diaryCharacterCount,
+      character_count: diaryCharacterCount,
       has_mood: hasMood,
       has_weather: hasWeather,
       is_edit_mode: isEditMode,
@@ -460,13 +468,13 @@ export class AnalyticsService {
    */
   static async logPictureGenerateComplete(
     success: boolean,
-    generationTimeSeconds: number,
+    generationTimeMs: number,
     errorType?: 'network' | 'server' | 'timeout',
     retryCount?: number
   ): Promise<void> {
     await this.logEvent('picture_generate_complete', {
       success,
-      generation_time_seconds: generationTimeSeconds,
+      generation_time_ms: generationTimeMs,
       error_type: errorType,
       retry_count: retryCount,
     });
@@ -480,8 +488,8 @@ export class AnalyticsService {
     daysSinceGenerated: number
   ): Promise<void> {
     await this.logEvent('picture_view', {
-      view_source: viewSource,
-      days_since_generated: daysSinceGenerated,
+      source: viewSource,
+      days_since: daysSinceGenerated,
     });
   }
 
@@ -498,7 +506,7 @@ export class AnalyticsService {
       source,
       has_ai_comment: hasAiComment,
       has_picture: hasPicture,
-      diary_age_days: diaryAgeDays,
+      days_since: diaryAgeDays,
     });
   }
 
