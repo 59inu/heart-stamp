@@ -1102,7 +1102,7 @@ export class AnalyticsService {
           SELECT
             "moodTag" as tag,
             COUNT(*) as total_count,
-            MAX("createdAt") as last_used
+            MAX("createdAt"::timestamp) as last_used
           FROM diaries
           WHERE "moodTag" IS NOT NULL
             AND "deletedAt" IS NULL
@@ -1115,7 +1115,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE "moodTag" IS NOT NULL
             AND "deletedAt" IS NULL
-            AND "createdAt" >= NOW() - INTERVAL '90 days'
+            AND "createdAt"::timestamp >= NOW() - INTERVAL '90 days'
           GROUP BY "moodTag"
         )
         SELECT
@@ -1145,7 +1145,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE "moodTag" IS NOT NULL
             AND "deletedAt" IS NULL
-            AND "createdAt" >= DATE_TRUNC('week', NOW())
+            AND "createdAt"::timestamp >= DATE_TRUNC('week', NOW())
           GROUP BY "moodTag"
         ),
         last_week AS (
@@ -1155,8 +1155,8 @@ export class AnalyticsService {
           FROM diaries
           WHERE "moodTag" IS NOT NULL
             AND "deletedAt" IS NULL
-            AND "createdAt" >= DATE_TRUNC('week', NOW() - INTERVAL '7 days')
-            AND "createdAt" < DATE_TRUNC('week', NOW())
+            AND "createdAt"::timestamp >= DATE_TRUNC('week', NOW() - INTERVAL '7 days')
+            AND "createdAt"::timestamp < DATE_TRUNC('week', NOW())
           GROUP BY "moodTag"
         )
         SELECT
@@ -1333,7 +1333,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE mood IS NOT NULL
             AND "deletedAt" IS NULL
-            AND "createdAt" >= NOW() - INTERVAL '90 days'
+            AND "createdAt"::timestamp >= NOW() - INTERVAL '90 days'
           GROUP BY "userId"
           HAVING COUNT(*) >= 3
         )
