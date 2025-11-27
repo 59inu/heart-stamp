@@ -762,7 +762,8 @@ export class AnalyticsService {
 
         const userTypeRow = userTypeResult.rows[0];
 
-        // AI 코멘트 통계 (오늘 생성된 코멘트 = aiCommentGeneratedAt 기준)
+        // AI 코멘트 통계 (오늘 업데이트된 코멘트 = updatedAt 기준)
+        // 주의: updatedAt이 오늘이고 aiComment가 있는 일기 = 오늘 AI 코멘트가 생성된 일기
         const aiCommentResult = await pool.query(`
           SELECT
             COUNT(CASE WHEN "aiComment" IS NOT NULL THEN 1 END) as total,
@@ -771,7 +772,8 @@ export class AnalyticsService {
             COUNT(CASE WHEN "aiComment" IS NOT NULL AND model IS NULL THEN 1 END) as fallback,
             AVG(CASE WHEN "importanceScore" IS NOT NULL THEN "importanceScore" END) as avg_score
           FROM diaries
-          WHERE "aiCommentGeneratedAt"::date = $1::date
+          WHERE "updatedAt"::date = $1::date
+            AND "aiComment" IS NOT NULL
             AND "deletedAt" IS NULL
         `, [dateStr]);
 
