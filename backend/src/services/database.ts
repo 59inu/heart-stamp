@@ -1045,6 +1045,7 @@ export class DiaryDatabase {
           "moodTag",
           "aiComment",
           "imageGenerationStatus",
+          "imageUri",
           "createdAt"
         FROM diaries
         WHERE "deletedAt" IS NULL
@@ -1094,6 +1095,7 @@ export class DiaryDatabase {
           content: decryptedContent,
           hasComment: row.aiComment !== null,
           hasGeneratedImage: row.imageGenerationStatus === 'completed',
+          imageUri: row.imageUri || null,
           moodTag: decryptedMoodTag,
           createdAt: row.createdAt,
         };

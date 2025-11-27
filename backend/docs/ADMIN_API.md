@@ -249,7 +249,8 @@ GET /diaries
       "date": "2025-01-15",
       "content": "일기 내용",
       "hasComment": true,
-      "hasGeneratedImage": false,
+      "hasGeneratedImage": true,
+      "imageUri": "https://example.com/images/abc123.png",
       "moodTag": "행복",
       "createdAt": "2025-01-15T12:00:00"
     }
@@ -264,8 +265,9 @@ GET /diaries
 | date | 일기 날짜 (YYYY-MM-DD) |
 | content | 일기 내용 (`decrypt=false`일 경우 `[암호화됨]`) |
 | hasComment | AI 코멘트 존재 여부 |
-| hasGeneratedImage | AI 생성 이미지(나노바나나) 여부 |
-| moodTag | 감정 태그 (`decrypt=false`일 경우 `[암호화됨]`) |
+| hasGeneratedImage | AI 생성 이미지(나노바나나) 완료 여부 |
+| imageUri | 이미지 URL (없으면 null) |
+| moodTag | 감정 태그 (항상 복호화되어 반환) |
 | createdAt | 생성일시 |
 
 ---
