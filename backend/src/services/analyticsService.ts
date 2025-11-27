@@ -1068,6 +1068,7 @@ export class AnalyticsService {
 
   /**
    * 감정 태그 사용 빈도 분석
+   * moodTag가 암호화되어 있어 복호화 후 집계 필요
    */
   static async getMoodTagStats(): Promise<{
     topTags: Array<{ tag: string; count: number; percentage: number }>;
@@ -1075,115 +1076,114 @@ export class AnalyticsService {
     weeklyTrend: Array<{ tag: string; thisWeek: number; lastWeek: number; changePercent: number }>;
   }> {
     try {
-      // TOP 20 감정 태그
-      const topTagsResult = await pool.query(`
+      const { decrypt } = require('./encryptionService');
+
+      // 모든 일기의 moodTag와 createdAt 가져오기 (암호화됨)
+      const allDiariesResult = await pool.query(`
         SELECT
-          "moodTag" as tag,
-          COUNT(*) as count
+          "moodTag",
+          "createdAt"::timestamp as created_at
         FROM diaries
         WHERE "moodTag" IS NOT NULL
           AND "deletedAt" IS NULL
-        GROUP BY "moodTag"
-        ORDER BY count DESC
-        LIMIT 20
+        ORDER BY "createdAt"::timestamp DESC
       `);
 
-      const totalTags = topTagsResult.rows.reduce((sum, row) => sum + parseInt(row.count, 10), 0);
+      // 복호화 및 집계
+      const tagCountMap: { [key: string]: { count: number; lastUsed: Date } } = {};
+      const thisWeekStart = new Date();
+      thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay()); // 이번 주 일요일
+      thisWeekStart.setHours(0, 0, 0, 0);
 
-      const topTags = topTagsResult.rows.map(row => ({
-        tag: row.tag,
-        count: parseInt(row.count, 10),
-        percentage: totalTags > 0 ? Math.round((parseInt(row.count, 10) / totalTags) * 100 * 10) / 10 : 0,
-      }));
+      const lastWeekStart = new Date(thisWeekStart);
+      lastWeekStart.setDate(lastWeekStart.getDate() - 7);
 
-      // 미사용 태그 (최근 90일 기준) - 일단 전체 태그 대비 사용 빈도가 매우 낮은 것
-      const unusedTagsResult = await pool.query(`
-        WITH tag_stats AS (
-          SELECT
-            "moodTag" as tag,
-            COUNT(*) as total_count,
-            MAX("createdAt"::timestamp) as last_used
-          FROM diaries
-          WHERE "moodTag" IS NOT NULL
-            AND "deletedAt" IS NULL
-          GROUP BY "moodTag"
-        ),
-        recent_usage AS (
-          SELECT
-            "moodTag" as tag,
-            COUNT(*) as recent_count
-          FROM diaries
-          WHERE "moodTag" IS NOT NULL
-            AND "deletedAt" IS NULL
-            AND "createdAt"::timestamp >= NOW() - INTERVAL '90 days'
-          GROUP BY "moodTag"
-        )
-        SELECT
-          ts.tag,
-          ts.last_used,
-          ts.total_count
-        FROM tag_stats ts
-        LEFT JOIN recent_usage ru ON ts.tag = ru.tag
-        WHERE (ru.recent_count IS NULL OR ru.recent_count = 0)
-          AND ts.total_count < 10
-        ORDER BY ts.total_count ASC
-        LIMIT 20
-      `);
+      const lastWeekEnd = new Date(thisWeekStart);
 
-      const unusedTags = unusedTagsResult.rows.map(row => ({
-        tag: row.tag,
-        lastUsed: row.last_used,
-        totalCount: parseInt(row.total_count, 10),
-      }));
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-      // 주간 트렌드 (이번주 vs 지난주)
-      const weeklyTrendResult = await pool.query(`
-        WITH this_week AS (
-          SELECT
-            "moodTag" as tag,
-            COUNT(*) as count
-          FROM diaries
-          WHERE "moodTag" IS NOT NULL
-            AND "deletedAt" IS NULL
-            AND "createdAt"::timestamp >= DATE_TRUNC('week', NOW())
-          GROUP BY "moodTag"
-        ),
-        last_week AS (
-          SELECT
-            "moodTag" as tag,
-            COUNT(*) as count
-          FROM diaries
-          WHERE "moodTag" IS NOT NULL
-            AND "deletedAt" IS NULL
-            AND "createdAt"::timestamp >= DATE_TRUNC('week', NOW() - INTERVAL '7 days')
-            AND "createdAt"::timestamp < DATE_TRUNC('week', NOW())
-          GROUP BY "moodTag"
-        )
-        SELECT
-          COALESCE(tw.tag, lw.tag) as tag,
-          COALESCE(tw.count, 0) as this_week,
-          COALESCE(lw.count, 0) as last_week
-        FROM this_week tw
-        FULL OUTER JOIN last_week lw ON tw.tag = lw.tag
-        WHERE COALESCE(tw.count, 0) > 0 OR COALESCE(lw.count, 0) > 0
-        ORDER BY ABS(COALESCE(tw.count, 0) - COALESCE(lw.count, 0)) DESC
-        LIMIT 20
-      `);
+      const thisWeekMap: { [key: string]: number } = {};
+      const lastWeekMap: { [key: string]: number } = {};
 
-      const weeklyTrend = weeklyTrendResult.rows.map(row => {
-        const thisWeek = parseInt(row.this_week, 10);
-        const lastWeek = parseInt(row.last_week, 10);
-        const changePercent = lastWeek > 0
-          ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
-          : (thisWeek > 0 ? 100 : 0);
+      for (const row of allDiariesResult.rows) {
+        const encryptedTag = row.moodTag;
+        const createdAt = new Date(row.created_at);
 
-        return {
-          tag: row.tag,
+        let decryptedTag: string;
+        try {
+          decryptedTag = decrypt(encryptedTag);
+        } catch (error) {
+          console.warn('Failed to decrypt moodTag, skipping:', encryptedTag);
+          continue;
+        }
+
+        // 전체 집계
+        if (!tagCountMap[decryptedTag]) {
+          tagCountMap[decryptedTag] = { count: 0, lastUsed: createdAt };
+        }
+        tagCountMap[decryptedTag].count++;
+        if (createdAt > tagCountMap[decryptedTag].lastUsed) {
+          tagCountMap[decryptedTag].lastUsed = createdAt;
+        }
+
+        // 주간 트렌드
+        if (createdAt >= thisWeekStart) {
+          thisWeekMap[decryptedTag] = (thisWeekMap[decryptedTag] || 0) + 1;
+        } else if (createdAt >= lastWeekStart && createdAt < lastWeekEnd) {
+          lastWeekMap[decryptedTag] = (lastWeekMap[decryptedTag] || 0) + 1;
+        }
+      }
+
+      // TOP 20 태그
+      const totalTags = Object.values(tagCountMap).reduce((sum, item) => sum + item.count, 0);
+      const topTags = Object.entries(tagCountMap)
+        .sort(([, a], [, b]) => b.count - a.count)
+        .slice(0, 20)
+        .map(([tag, data]) => ({
+          tag,
+          count: data.count,
+          percentage: totalTags > 0 ? Math.round((data.count / totalTags) * 100 * 10) / 10 : 0,
+        }));
+
+      // 미사용 태그 (90일 이상 미사용 + 총 10회 미만)
+      const unusedTags = Object.entries(tagCountMap)
+        .filter(([tag, data]) => data.count < 10 && data.lastUsed < ninetyDaysAgo)
+        .sort(([, a], [, b]) => a.count - b.count)
+        .slice(0, 20)
+        .map(([tag, data]) => ({
+          tag,
+          lastUsed: data.lastUsed.toISOString(),
+          totalCount: data.count,
+        }));
+
+      // 주간 트렌드 (변화량 큰 순서대로 TOP 20)
+      const allTags = new Set([...Object.keys(thisWeekMap), ...Object.keys(lastWeekMap)]);
+      const weeklyTrend = Array.from(allTags)
+        .map(tag => {
+          const thisWeek = thisWeekMap[tag] || 0;
+          const lastWeek = lastWeekMap[tag] || 0;
+          const changePercent = lastWeek > 0
+            ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
+            : (thisWeek > 0 ? 100 : 0);
+
+          return {
+            tag,
+            thisWeek,
+            lastWeek,
+            changePercent,
+            absChange: Math.abs(thisWeek - lastWeek),
+          };
+        })
+        .filter(item => item.thisWeek > 0 || item.lastWeek > 0)
+        .sort((a, b) => b.absChange - a.absChange)
+        .slice(0, 20)
+        .map(({ tag, thisWeek, lastWeek, changePercent }) => ({
+          tag,
           thisWeek,
           lastWeek,
           changePercent,
-        };
-      });
+        }));
 
       return {
         topTags,
@@ -1198,6 +1198,7 @@ export class AnalyticsService {
 
   /**
    * 신호등 × 감정 태그 매핑
+   * moodTag가 암호화되어 있어 복호화 후 집계 필요
    */
   static async getMoodTagMapping(): Promise<{
     byMood: Array<{
@@ -1206,55 +1207,63 @@ export class AnalyticsService {
     }>;
   }> {
     try {
+      const { decrypt } = require('./encryptionService');
+
+      // mood와 moodTag 모두 가져오기
       const mappingResult = await pool.query(`
-        WITH mood_tag_counts AS (
-          SELECT
-            mood,
-            "moodTag" as tag,
-            COUNT(*) as count
-          FROM diaries
-          WHERE mood IS NOT NULL
-            AND "moodTag" IS NOT NULL
-            AND "deletedAt" IS NULL
-          GROUP BY mood, "moodTag"
-        ),
-        mood_totals AS (
-          SELECT
-            mood,
-            SUM(count) as total
-          FROM mood_tag_counts
-          GROUP BY mood
-        )
         SELECT
-          mtc.mood,
-          mtc.tag,
-          mtc.count,
-          mt.total,
-          ROUND((mtc.count::decimal / mt.total) * 100, 1) as percentage
-        FROM mood_tag_counts mtc
-        JOIN mood_totals mt ON mtc.mood = mt.mood
-        ORDER BY mtc.mood, mtc.count DESC
+          mood,
+          "moodTag"
+        FROM diaries
+        WHERE mood IS NOT NULL
+          AND "moodTag" IS NOT NULL
+          AND "deletedAt" IS NULL
       `);
 
-      const byMoodMap: { [key: string]: Array<{ tag: string; count: number; percentage: number }> } = {};
+      // 복호화 및 집계
+      const moodTagMap: { [mood: string]: { [tag: string]: number } } = {};
+      const moodTotals: { [mood: string]: number } = {};
 
       for (const row of mappingResult.rows) {
-        if (!byMoodMap[row.mood]) {
-          byMoodMap[row.mood] = [];
+        const mood = row.mood;
+        const encryptedTag = row.moodTag;
+
+        let decryptedTag: string;
+        try {
+          decryptedTag = decrypt(encryptedTag);
+        } catch (error) {
+          console.warn('Failed to decrypt moodTag, skipping:', encryptedTag);
+          continue;
         }
-        if (byMoodMap[row.mood].length < 5) { // TOP 5만
-          byMoodMap[row.mood].push({
-            tag: row.tag,
-            count: parseInt(row.count, 10),
-            percentage: parseFloat(row.percentage),
-          });
+
+        if (!moodTagMap[mood]) {
+          moodTagMap[mood] = {};
+          moodTotals[mood] = 0;
         }
+
+        moodTagMap[mood][decryptedTag] = (moodTagMap[mood][decryptedTag] || 0) + 1;
+        moodTotals[mood]++;
       }
 
-      const byMood = Object.keys(byMoodMap).map(mood => ({
-        mood,
-        topTags: byMoodMap[mood],
-      }));
+      // TOP 5 태그 추출
+      const byMood = Object.keys(moodTagMap).map(mood => {
+        const tagCounts = moodTagMap[mood];
+        const total = moodTotals[mood];
+
+        const topTags = Object.entries(tagCounts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([tag, count]) => ({
+            tag,
+            count,
+            percentage: total > 0 ? Math.round((count / total) * 100 * 10) / 10 : 0,
+          }));
+
+        return {
+          mood,
+          topTags,
+        };
+      });
 
       return { byMood };
     } catch (error) {
