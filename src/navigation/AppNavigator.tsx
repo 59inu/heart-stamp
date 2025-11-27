@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer, NavigationState } from '@react-navigation/native';
+import { NavigationContainer, NavigationState, NavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from './types';
@@ -25,7 +25,8 @@ interface AppNavigatorProps {
   onNavigationStateChange?: (routeName: string) => void;
 }
 
-export const AppNavigator: React.FC<AppNavigatorProps> = ({ onNavigationStateChange }) => {
+export const AppNavigator = forwardRef<NavigationContainerRef<RootStackParamList>, AppNavigatorProps>(
+  ({ onNavigationStateChange }, ref) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasAgreed, setHasAgreed] = useState(false);
 
@@ -79,6 +80,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ onNavigationStateCha
 
   return (
     <NavigationContainer
+      ref={ref}
       onStateChange={(state) => {
         const routeName = getCurrentRouteName(state);
         onNavigationStateChange?.(routeName);
@@ -172,4 +174,4 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ onNavigationStateCha
       </Stack.Navigator>
     </NavigationContainer>
   );
-};
+});

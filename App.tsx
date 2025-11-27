@@ -4,7 +4,10 @@ import { AppState, AppStateStatus, Alert, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import * as Updates from 'expo-updates';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import { NavigationContainerRef } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { RootStackParamList } from './src/navigation/types';
 import { NotificationService } from './src/services/notificationService';
 import { DiaryStorage } from './src/services/diaryStorage';
 import { SyncQueue } from './src/services/syncQueue';
@@ -28,6 +31,9 @@ export default function App() {
   const SYNC_DEBOUNCE_MS = 180000; // 3분 디바운스 (홈 화면 자동 동기화 제거로 여유 확보)
   const [appIsReady, setAppIsReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+
+  // 네비게이션 ref
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
 
   // 업데이트 관련 ref
   const currentRouteNameRef = useRef<string>('');
@@ -175,6 +181,35 @@ export default function App() {
         logger.log('✅ [App] Push notification registration succeeded');
       }
 
+      // 알림 탭 핸들러 (재사용)
+      const handleNotificationTap = async (diaryId: string) => {
+        logger.log('👆 [App] Notification tapped - navigating to diary:', diaryId);
+
+        // 동기화 먼저 수행 (서버에서 최신 데이터 가져오기)
+        const syncResult = await DiaryStorage.syncWithServer();
+        if (syncResult.success) {
+          logger.log('✅ [App] Sync completed before navigation');
+        }
+
+        // 네비게이션 실행 (준비될 때까지 대기)
+        const waitForNavigation = async (retries = 10) => {
+          if (navigationRef.current?.isReady()) {
+            navigationRef.current.navigate('DiaryDetail', { entryId: diaryId });
+            logger.log('✅ [App] Navigated to DiaryDetail');
+            return;
+          }
+
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return waitForNavigation(retries - 1);
+          }
+
+          logger.warn('⚠️ [App] Navigation not ready after retries');
+        };
+
+        await waitForNavigation();
+      };
+
       // 알림 리스너 설정 - AI 코멘트 완료 알림 수신 시 동기화
       NotificationService.setupNotificationListeners(
         async (notification) => {
@@ -201,8 +236,19 @@ export default function App() {
               // 알림 수신 시에는 사용자가 직접 요청한 것이 아니므로 Alert 표시 안 함
             }
           }
-        }
+        },
+        handleNotificationTap
       );
+
+      // 앱이 종료된 상태에서 알림 탭으로 실행된 경우 처리
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastResponse) {
+        const data = lastResponse.notification.request.content.data;
+        if ((data?.type === 'ai_comment_complete' || data?.type === 'image_generated') && data?.diaryId) {
+          logger.log('📬 [App] App launched from notification tap:', data.diaryId);
+          await handleNotificationTap(String(data.diaryId));
+        }
+      }
       };
 
       await initPushNotifications();
@@ -294,7 +340,7 @@ export default function App() {
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <ErrorBoundary level="app">
-        <AppNavigator onNavigationStateChange={handleRouteChange} />
+        <AppNavigator ref={navigationRef} onNavigationStateChange={handleRouteChange} />
         <StatusBar style="auto" />
         <Toast />
         <OfflineBanner />

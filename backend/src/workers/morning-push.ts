@@ -20,8 +20,9 @@ async function main() {
   console.log(`⏰ Time: ${new Date().toISOString()}`);
 
   try {
-    // 어제 날짜 일기 중 AI 코멘트를 받은 사용자 목록 조회
-    const eligibleUserIds = await DiaryDatabase.getUsersWithAICommentYesterday();
+    // 어제 날짜 일기 중 AI 코멘트를 받은 사용자별 일기 ID 조회
+    const userDiaryMap = await DiaryDatabase.getUserDiaryMapYesterday();
+    const eligibleUserIds = Array.from(userDiaryMap.keys());
 
     console.log(`📊 Eligible users (wrote diary yesterday): ${eligibleUserIds.length}`);
 
@@ -46,16 +47,31 @@ async function main() {
       process.exit(0);
     }
 
-    // 필터링된 사용자에게만 알림 전송
-    await PushNotificationService.sendNotificationToUsers(
-      targetUserIds,
-      '선생님 코멘트 도착 ✨',
-      '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
-      { type: 'ai_comment_complete' }
-    );
+    // 필터링된 사용자에게 개별적으로 diaryId 포함하여 알림 전송
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const userId of targetUserIds) {
+      const diaryId = userDiaryMap.get(userId);
+      const success = await PushNotificationService.sendNotification(
+        userId,
+        '선생님 코멘트 도착 ✨',
+        '밤 사이 선생님이 일기를 읽고 코멘트를 남겼어요',
+        { type: 'ai_comment_complete', diaryId }
+      );
+
+      if (success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+
+      // Rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
     console.log('📱'.repeat(40));
-    console.log(`✅ [Morning Push Worker] NOTIFICATION SENT to ${targetUserIds.length} users`);
+    console.log(`✅ [Morning Push Worker] NOTIFICATION SENT: ${successCount} succeeded, ${failCount} failed`);
     console.log('📱'.repeat(40) + '\n');
 
     process.exit(0);

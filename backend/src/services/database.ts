@@ -480,6 +480,38 @@ export class DiaryDatabase {
     }
   }
 
+  // 어제 날짜 일기 중 AI 코멘트가 있는 사용자별 일기 ID 조회
+  static async getUserDiaryMapYesterday(): Promise<Map<string, string>> {
+    try {
+      // 어제 날짜 계산 (TZ 환경변수 영향받음)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const day = String(yesterday.getDate()).padStart(2, '0');
+      const yesterdayStr = `${year}-${month}-${day}`;
+
+      console.log(`📅 [DiaryDatabase] 사용자별 일기 ID 조회: ${yesterdayStr} 날짜 (TZ=${process.env.TZ || 'UTC'})`);
+
+      const result = await pool.query(
+        'SELECT "userId", _id FROM diaries WHERE date LIKE $1 AND "aiComment" IS NOT NULL AND "deletedAt" IS NULL',
+        [`${yesterdayStr}%`]
+      );
+
+      const userDiaryMap = new Map<string, string>();
+      for (const row of result.rows) {
+        userDiaryMap.set(row.userId, row._id);
+      }
+
+      console.log(`👥 [DiaryDatabase] ${yesterdayStr} 일기 사용자-ID 매핑: ${userDiaryMap.size}개`);
+
+      return userDiaryMap;
+    } catch (error) {
+      this.handleDatabaseError(error, 'getUserDiaryMapYesterday');
+      return new Map();
+    }
+  }
+
   // 특정 사용자가 오늘 일기를 작성했는지 확인
   static async hasUserWrittenToday(userId: string): Promise<boolean> {
     try {

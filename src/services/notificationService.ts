@@ -179,9 +179,11 @@ export class NotificationService {
   /**
    * 알림 리스너 설정
    * @param onNotification - 알림 수신 시 호출되는 콜백
+   * @param onNotificationTap - 알림 탭 시 호출되는 콜백 (diaryId 전달)
    */
   static setupNotificationListeners(
-    onNotification?: (notification: Notifications.Notification) => void
+    onNotification?: (notification: Notifications.Notification) => void,
+    onNotificationTap?: (diaryId: string) => void
   ): void {
     // 알림 수신 리스너 (앱이 포그라운드/백그라운드일 때)
     this.notificationListener = Notifications.addNotificationReceivedListener((notification) => {
@@ -195,13 +197,12 @@ export class NotificationService {
       logger.log('👆 Notification tapped:', response);
 
       const data = response.notification.request.content.data;
-      if (data?.type === 'ai_comment_complete') {
-        logger.log('📖 Navigate to diary list to see new comments');
-        // 필요시 네비게이션 처리
-      } else if (data?.type === 'image_generated') {
-        logger.log('🎨 Image generated notification - Navigate to diary:', data.diaryId);
-        // TODO: Navigate to specific diary detail screen
-        // navigation.navigate('DiaryDetail', { diaryId: data.diaryId });
+      if (data?.type === 'ai_comment_complete' && data?.diaryId) {
+        logger.log('📖 Navigate to diary detail:', data.diaryId);
+        onNotificationTap?.(String(data.diaryId));
+      } else if (data?.type === 'image_generated' && data?.diaryId) {
+        logger.log('🎨 Image generated - Navigate to diary:', data.diaryId);
+        onNotificationTap?.(String(data.diaryId));
       }
     });
   }
