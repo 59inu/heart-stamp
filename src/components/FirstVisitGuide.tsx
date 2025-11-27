@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
+import { AnalyticsService } from '../services/analyticsService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -59,7 +60,10 @@ export const FirstVisitGuide: React.FC<FirstVisitGuideProps> = ({
         {/* 오늘 일기 쓰러 가기 버튼 */}
         <TouchableOpacity
           style={styles.button}
-          onPress={onComplete}
+          onPress={() => {
+            AnalyticsService.logFirstVisitGuideWriteTap();
+            onComplete();
+          }}
           activeOpacity={0.8}
         >
           <Text style={styles.buttonText}>오늘 일기 쓰러 가기</Text>
