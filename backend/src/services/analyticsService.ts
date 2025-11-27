@@ -773,10 +773,10 @@ export class AnalyticsService {
             AVG(CASE WHEN "importanceScore" IS NOT NULL THEN "importanceScore" END) as avg_score
           FROM diaries
           WHERE date LIKE $1
-            AND "createdAt"::date = $1::date
+            AND ("createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')::date::text = $2
             AND "aiComment" IS NOT NULL
             AND "deletedAt" IS NULL
-        `, [`${dateStr}%`]);
+        `, [`${dateStr}%`, dateStr]);
 
         const aiRow = aiCommentResult.rows[0];
 
