@@ -762,20 +762,31 @@ export class AnalyticsService {
 
         const userTypeRow = userTypeResult.rows[0];
 
-        // AI 코멘트 통계
+        // AI 코멘트 통계 (오늘 생성된 코멘트 = aiCommentGeneratedAt 기준)
         const aiCommentResult = await pool.query(`
           SELECT
             COUNT(CASE WHEN "aiComment" IS NOT NULL THEN 1 END) as total,
             COUNT(CASE WHEN model = 'sonnet' THEN 1 END) as sonnet,
             COUNT(CASE WHEN model = 'haiku' THEN 1 END) as haiku,
             COUNT(CASE WHEN "aiComment" IS NOT NULL AND model IS NULL THEN 1 END) as fallback,
-            COUNT(CASE WHEN "aiComment" IS NULL THEN 1 END) as pending,
             AVG(CASE WHEN "importanceScore" IS NOT NULL THEN "importanceScore" END) as avg_score
           FROM diaries
-          WHERE date LIKE $1 AND "deletedAt" IS NULL
-        `, [`${dateStr}%`]);
+          WHERE "aiCommentGeneratedAt"::date = $1::date
+            AND "deletedAt" IS NULL
+        `, [dateStr]);
 
         const aiRow = aiCommentResult.rows[0];
+
+        // 코멘트 대기 중인 일기 (오늘 작성된 일기 중 코멘트 없는 것)
+        const pendingResult = await pool.query(`
+          SELECT COUNT(*) as pending
+          FROM diaries
+          WHERE date LIKE $1
+            AND "aiComment" IS NULL
+            AND "deletedAt" IS NULL
+        `, [`${dateStr}%`]);
+
+        const pendingRow = pendingResult.rows[0];
 
         // 이미지 생성 통계
         const imageResult = await pool.query(`
@@ -789,7 +800,7 @@ export class AnalyticsService {
 
         const imageRow = imageResult.rows[0];
 
-        // 비용 계산
+        // 비용 계산 (오늘 생성된 AI 코멘트 기준)
         const COST_PER_SONNET = 0.01;
         const COST_PER_HAIKU = 0.001;
         const sonnetCount = parseInt(aiRow.sonnet || 0, 10);
@@ -811,7 +822,7 @@ export class AnalyticsService {
             sonnet: parseInt(aiRow.sonnet || 0, 10),
             haiku: parseInt(aiRow.haiku || 0, 10),
             fallback: parseInt(aiRow.fallback || 0, 10),
-            pending: parseInt(aiRow.pending || 0, 10),
+            pending: parseInt(pendingRow.pending || 0, 10),
             avgImportanceScore: aiRow.avg_score ? Math.round(parseFloat(aiRow.avg_score) * 10) / 10 : null,
           },
           images: {
