@@ -762,8 +762,8 @@ export class AnalyticsService {
 
         const userTypeRow = userTypeResult.rows[0];
 
-        // AI 코멘트 통계 (오늘 업데이트된 코멘트 = updatedAt 기준)
-        // 주의: updatedAt이 오늘이고 aiComment가 있는 일기 = 오늘 AI 코멘트가 생성된 일기
+        // AI 코멘트 통계 (어제 작성된 어제 날짜의 일기 = 오늘 새벽 코멘트 생성됨)
+        // 배치 작업: "어제 날짜"의 일기 중 "어제 생성"된 일기에만 코멘트 생성
         const aiCommentResult = await pool.query(`
           SELECT
             COUNT(CASE WHEN "aiComment" IS NOT NULL THEN 1 END) as total,
@@ -772,10 +772,11 @@ export class AnalyticsService {
             COUNT(CASE WHEN "aiComment" IS NOT NULL AND model IS NULL THEN 1 END) as fallback,
             AVG(CASE WHEN "importanceScore" IS NOT NULL THEN "importanceScore" END) as avg_score
           FROM diaries
-          WHERE "updatedAt"::date = $1::date
+          WHERE date LIKE $1
+            AND "createdAt"::date = $1::date
             AND "aiComment" IS NOT NULL
             AND "deletedAt" IS NULL
-        `, [dateStr]);
+        `, [`${dateStr}%`]);
 
         const aiRow = aiCommentResult.rows[0];
 
@@ -840,11 +841,32 @@ export class AnalyticsService {
         };
       };
 
+      // 날짜 계산: AI 코멘트는 하루 전 일기에 생성됨
+      const twoDaysAgoDate = new Date(kstNow);
+      twoDaysAgoDate.setDate(twoDaysAgoDate.getDate() - 2);
+      const twoDaysAgoStr = twoDaysAgoDate.toISOString().split('T')[0];
+
       // 오늘/어제 데이터 조회
-      const [today, yesterday] = await Promise.all([
-        getDayData(todayStr),
-        getDayData(yesterdayStr),
+      // 주의: AI 코멘트는 전날 일기를 참조 (오늘 코멘트 = 어제 일기, 어제 코멘트 = 2일전 일기)
+      const [todayDiary, yesterdayDiary, todayAiComments, yesterdayAiComments] = await Promise.all([
+        getDayData(todayStr),      // 오늘 일기
+        getDayData(yesterdayStr),  // 어제 일기
+        getDayData(yesterdayStr),  // 오늘 생성된 코멘트 (어제 일기에 달림)
+        getDayData(twoDaysAgoStr), // 어제 생성된 코멘트 (2일전 일기에 달림)
       ]);
+
+      // 오늘/어제 데이터 재구성
+      const today = {
+        ...todayDiary,
+        aiComments: todayAiComments.aiComments,
+        cost: todayAiComments.cost,
+      };
+
+      const yesterday = {
+        ...yesterdayDiary,
+        aiComments: yesterdayAiComments.aiComments,
+        cost: yesterdayAiComments.cost,
+      };
 
       // 비교 계산
       const calcComparison = (todayVal: number, yesterdayVal: number) => {
