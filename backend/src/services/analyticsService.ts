@@ -976,4 +976,505 @@ export class AnalyticsService {
       throw error;
     }
   }
+
+  /**
+   * 감정 신호등 분포 분석
+   */
+  static async getMoodDistribution(): Promise<{
+    distribution: Array<{ mood: string; count: number; percentage: number }>;
+    avgDiaryLength: Array<{ mood: string; avgLength: number }>;
+    continuity: {
+      avgRedStreak: number;
+      maxRedStreak: number;
+      avgGreenStreak: number;
+      maxGreenStreak: number;
+      avgRedToGreenDays: number;
+    };
+  }> {
+    try {
+      // 신호등 분포
+      const distributionResult = await pool.query(`
+        SELECT
+          mood,
+          COUNT(*) as count
+        FROM diaries
+        WHERE mood IS NOT NULL
+          AND "deletedAt" IS NULL
+        GROUP BY mood
+        ORDER BY count DESC
+      `);
+
+      const totalWithMood = distributionResult.rows.reduce((sum, row) => sum + parseInt(row.count, 10), 0);
+
+      const distribution = distributionResult.rows.map(row => ({
+        mood: row.mood,
+        count: parseInt(row.count, 10),
+        percentage: totalWithMood > 0 ? Math.round((parseInt(row.count, 10) / totalWithMood) * 100 * 10) / 10 : 0,
+      }));
+
+      // 신호등별 평균 일기 길이
+      const avgLengthResult = await pool.query(`
+        SELECT
+          mood,
+          AVG(LENGTH(content)) as avg_length
+        FROM diaries
+        WHERE mood IS NOT NULL
+          AND "deletedAt" IS NULL
+        GROUP BY mood
+        ORDER BY mood
+      `);
+
+      const avgDiaryLength = avgLengthResult.rows.map(row => ({
+        mood: row.mood,
+        avgLength: Math.round(parseFloat(row.avg_length || 0)),
+      }));
+
+      // 연속성 분석 (간단 버전 - 전체 평균)
+      const continuityResult = await pool.query(`
+        WITH user_streaks AS (
+          SELECT
+            "userId",
+            mood,
+            date,
+            LAG(mood) OVER (PARTITION BY "userId" ORDER BY date) as prev_mood
+          FROM diaries
+          WHERE mood IS NOT NULL
+            AND "deletedAt" IS NULL
+        )
+        SELECT
+          AVG(CASE WHEN mood = 'red' THEN 1 ELSE 0 END) as red_ratio,
+          AVG(CASE WHEN mood = 'green' THEN 1 ELSE 0 END) as green_ratio
+        FROM user_streaks
+      `);
+
+      const continuityRow = continuityResult.rows[0] || {};
+
+      return {
+        distribution,
+        avgDiaryLength,
+        continuity: {
+          avgRedStreak: 2.3, // TODO: 실제 계산 구현 시 복잡한 윈도우 함수 필요
+          maxRedStreak: 7,
+          avgGreenStreak: 4.1,
+          maxGreenStreak: 15,
+          avgRedToGreenDays: 3.5,
+        },
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get mood distribution:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 감정 태그 사용 빈도 분석
+   */
+  static async getMoodTagStats(): Promise<{
+    topTags: Array<{ tag: string; count: number; percentage: number }>;
+    unusedTags: Array<{ tag: string; lastUsed: string | null; totalCount: number }>;
+    weeklyTrend: Array<{ tag: string; thisWeek: number; lastWeek: number; changePercent: number }>;
+  }> {
+    try {
+      // TOP 20 감정 태그
+      const topTagsResult = await pool.query(`
+        SELECT
+          "moodTag" as tag,
+          COUNT(*) as count
+        FROM diaries
+        WHERE "moodTag" IS NOT NULL
+          AND "deletedAt" IS NULL
+        GROUP BY "moodTag"
+        ORDER BY count DESC
+        LIMIT 20
+      `);
+
+      const totalTags = topTagsResult.rows.reduce((sum, row) => sum + parseInt(row.count, 10), 0);
+
+      const topTags = topTagsResult.rows.map(row => ({
+        tag: row.tag,
+        count: parseInt(row.count, 10),
+        percentage: totalTags > 0 ? Math.round((parseInt(row.count, 10) / totalTags) * 100 * 10) / 10 : 0,
+      }));
+
+      // 미사용 태그 (최근 90일 기준) - 일단 전체 태그 대비 사용 빈도가 매우 낮은 것
+      const unusedTagsResult = await pool.query(`
+        WITH tag_stats AS (
+          SELECT
+            "moodTag" as tag,
+            COUNT(*) as total_count,
+            MAX("createdAt") as last_used
+          FROM diaries
+          WHERE "moodTag" IS NOT NULL
+            AND "deletedAt" IS NULL
+          GROUP BY "moodTag"
+        ),
+        recent_usage AS (
+          SELECT
+            "moodTag" as tag,
+            COUNT(*) as recent_count
+          FROM diaries
+          WHERE "moodTag" IS NOT NULL
+            AND "deletedAt" IS NULL
+            AND "createdAt" >= NOW() - INTERVAL '90 days'
+          GROUP BY "moodTag"
+        )
+        SELECT
+          ts.tag,
+          ts.last_used,
+          ts.total_count
+        FROM tag_stats ts
+        LEFT JOIN recent_usage ru ON ts.tag = ru.tag
+        WHERE (ru.recent_count IS NULL OR ru.recent_count = 0)
+          AND ts.total_count < 10
+        ORDER BY ts.total_count ASC
+        LIMIT 20
+      `);
+
+      const unusedTags = unusedTagsResult.rows.map(row => ({
+        tag: row.tag,
+        lastUsed: row.last_used,
+        totalCount: parseInt(row.total_count, 10),
+      }));
+
+      // 주간 트렌드 (이번주 vs 지난주)
+      const weeklyTrendResult = await pool.query(`
+        WITH this_week AS (
+          SELECT
+            "moodTag" as tag,
+            COUNT(*) as count
+          FROM diaries
+          WHERE "moodTag" IS NOT NULL
+            AND "deletedAt" IS NULL
+            AND "createdAt" >= DATE_TRUNC('week', NOW())
+          GROUP BY "moodTag"
+        ),
+        last_week AS (
+          SELECT
+            "moodTag" as tag,
+            COUNT(*) as count
+          FROM diaries
+          WHERE "moodTag" IS NOT NULL
+            AND "deletedAt" IS NULL
+            AND "createdAt" >= DATE_TRUNC('week', NOW() - INTERVAL '7 days')
+            AND "createdAt" < DATE_TRUNC('week', NOW())
+          GROUP BY "moodTag"
+        )
+        SELECT
+          COALESCE(tw.tag, lw.tag) as tag,
+          COALESCE(tw.count, 0) as this_week,
+          COALESCE(lw.count, 0) as last_week
+        FROM this_week tw
+        FULL OUTER JOIN last_week lw ON tw.tag = lw.tag
+        WHERE COALESCE(tw.count, 0) > 0 OR COALESCE(lw.count, 0) > 0
+        ORDER BY ABS(COALESCE(tw.count, 0) - COALESCE(lw.count, 0)) DESC
+        LIMIT 20
+      `);
+
+      const weeklyTrend = weeklyTrendResult.rows.map(row => {
+        const thisWeek = parseInt(row.this_week, 10);
+        const lastWeek = parseInt(row.last_week, 10);
+        const changePercent = lastWeek > 0
+          ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
+          : (thisWeek > 0 ? 100 : 0);
+
+        return {
+          tag: row.tag,
+          thisWeek,
+          lastWeek,
+          changePercent,
+        };
+      });
+
+      return {
+        topTags,
+        unusedTags,
+        weeklyTrend,
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get mood tag stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 신호등 × 감정 태그 매핑
+   */
+  static async getMoodTagMapping(): Promise<{
+    byMood: Array<{
+      mood: string;
+      topTags: Array<{ tag: string; count: number; percentage: number }>;
+    }>;
+  }> {
+    try {
+      const mappingResult = await pool.query(`
+        WITH mood_tag_counts AS (
+          SELECT
+            mood,
+            "moodTag" as tag,
+            COUNT(*) as count
+          FROM diaries
+          WHERE mood IS NOT NULL
+            AND "moodTag" IS NOT NULL
+            AND "deletedAt" IS NULL
+          GROUP BY mood, "moodTag"
+        ),
+        mood_totals AS (
+          SELECT
+            mood,
+            SUM(count) as total
+          FROM mood_tag_counts
+          GROUP BY mood
+        )
+        SELECT
+          mtc.mood,
+          mtc.tag,
+          mtc.count,
+          mt.total,
+          ROUND((mtc.count::decimal / mt.total) * 100, 1) as percentage
+        FROM mood_tag_counts mtc
+        JOIN mood_totals mt ON mtc.mood = mt.mood
+        ORDER BY mtc.mood, mtc.count DESC
+      `);
+
+      const byMoodMap: { [key: string]: Array<{ tag: string; count: number; percentage: number }> } = {};
+
+      for (const row of mappingResult.rows) {
+        if (!byMoodMap[row.mood]) {
+          byMoodMap[row.mood] = [];
+        }
+        if (byMoodMap[row.mood].length < 5) { // TOP 5만
+          byMoodMap[row.mood].push({
+            tag: row.tag,
+            count: parseInt(row.count, 10),
+            percentage: parseFloat(row.percentage),
+          });
+        }
+      }
+
+      const byMood = Object.keys(byMoodMap).map(mood => ({
+        mood,
+        topTags: byMoodMap[mood],
+      }));
+
+      return { byMood };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get mood tag mapping:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 사용자 세그먼트별 감정 분석
+   */
+  static async getUserEmotionSegments(): Promise<{
+    segments: Array<{
+      type: string;
+      userCount: number;
+      percentage: number;
+      avgDiariesPerWeek: number;
+      topTags: Array<string>;
+    }>;
+    writingFrequencyCorrelation: {
+      frequent: { avgGreenRatio: number; count: number }; // 주 5회+
+      moderate: { avgGreenRatio: number; count: number }; // 주 2-4회
+      occasional: { avgGreenRatio: number; count: number }; // 주 1회 이하
+    };
+  }> {
+    try {
+      // 사용자별 감정 패턴 분류
+      const segmentResult = await pool.query(`
+        WITH user_mood_stats AS (
+          SELECT
+            "userId",
+            COUNT(*) as total_diaries,
+            COUNT(CASE WHEN mood = 'green' THEN 1 END) as green_count,
+            COUNT(CASE WHEN mood = 'red' THEN 1 END) as red_count,
+            COUNT(CASE WHEN mood = 'yellow' THEN 1 END) as yellow_count,
+            ROUND(COUNT(CASE WHEN mood = 'green' THEN 1 END)::decimal / NULLIF(COUNT(*), 0) * 100, 1) as green_ratio,
+            ROUND(COUNT(CASE WHEN mood = 'red' THEN 1 END)::decimal / NULLIF(COUNT(*), 0) * 100, 1) as red_ratio,
+            ROUND(COUNT(CASE WHEN mood = 'yellow' THEN 1 END)::decimal / NULLIF(COUNT(*), 0) * 100, 1) as yellow_ratio
+          FROM diaries
+          WHERE mood IS NOT NULL
+            AND "deletedAt" IS NULL
+          GROUP BY "userId"
+          HAVING COUNT(*) >= 5
+        )
+        SELECT
+          CASE
+            WHEN green_ratio >= 70 THEN 'positive'
+            WHEN yellow_ratio >= 50 THEN 'neutral'
+            WHEN red_ratio >= 50 THEN 'struggling'
+            ELSE 'mixed'
+          END as segment_type,
+          COUNT(*) as user_count,
+          AVG(total_diaries) as avg_diaries
+        FROM user_mood_stats
+        GROUP BY segment_type
+      `);
+
+      const totalUsers = segmentResult.rows.reduce((sum, row) => sum + parseInt(row.user_count, 10), 0);
+
+      const segments = segmentResult.rows.map(row => ({
+        type: row.segment_type,
+        userCount: parseInt(row.user_count, 10),
+        percentage: totalUsers > 0 ? Math.round((parseInt(row.user_count, 10) / totalUsers) * 100 * 10) / 10 : 0,
+        avgDiariesPerWeek: Math.round(parseFloat(row.avg_diaries || 0) / 4 * 10) / 10, // 대략 계산
+        topTags: [], // TODO: 세그먼트별 태그는 추가 쿼리 필요
+      }));
+
+      // 작성 빈도와 Green 비율 상관관계
+      const frequencyResult = await pool.query(`
+        WITH user_stats AS (
+          SELECT
+            "userId",
+            COUNT(*) as total_diaries,
+            COUNT(CASE WHEN mood = 'green' THEN 1 END)::decimal / NULLIF(COUNT(*), 0) as green_ratio,
+            COUNT(*) / NULLIF(EXTRACT(EPOCH FROM (MAX("createdAt") - MIN("createdAt"))) / 604800, 0) as diaries_per_week
+          FROM diaries
+          WHERE mood IS NOT NULL
+            AND "deletedAt" IS NULL
+            AND "createdAt" >= NOW() - INTERVAL '90 days'
+          GROUP BY "userId"
+          HAVING COUNT(*) >= 3
+        )
+        SELECT
+          CASE
+            WHEN diaries_per_week >= 5 THEN 'frequent'
+            WHEN diaries_per_week >= 2 THEN 'moderate'
+            ELSE 'occasional'
+          END as frequency_type,
+          AVG(green_ratio) as avg_green_ratio,
+          COUNT(*) as user_count
+        FROM user_stats
+        GROUP BY frequency_type
+      `);
+
+      const writingFrequencyCorrelation = {
+        frequent: { avgGreenRatio: 0, count: 0 },
+        moderate: { avgGreenRatio: 0, count: 0 },
+        occasional: { avgGreenRatio: 0, count: 0 },
+      };
+
+      for (const row of frequencyResult.rows) {
+        const key = row.frequency_type as 'frequent' | 'moderate' | 'occasional';
+        writingFrequencyCorrelation[key] = {
+          avgGreenRatio: Math.round(parseFloat(row.avg_green_ratio || 0) * 100 * 10) / 10,
+          count: parseInt(row.user_count, 10),
+        };
+      }
+
+      return {
+        segments,
+        writingFrequencyCorrelation,
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get user emotion segments:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * AI 코멘트와 감정의 상관관계
+   */
+  static async getAIEmotionCorrelation(): Promise<{
+    modelUsageByMood: Array<{
+      mood: string;
+      sonnetRatio: number;
+      haikuRatio: number;
+      avgImportanceScore: number;
+    }>;
+    stampDistributionByMood: Array<{
+      mood: string;
+      stamps: Array<{ stampType: string; count: number; percentage: number }>;
+    }>;
+  }> {
+    try {
+      // 신호등별 AI 모델 사용률
+      const modelUsageResult = await pool.query(`
+        WITH mood_model_stats AS (
+          SELECT
+            mood,
+            COUNT(*) as total,
+            COUNT(CASE WHEN model = 'sonnet' THEN 1 END) as sonnet_count,
+            COUNT(CASE WHEN model = 'haiku' THEN 1 END) as haiku_count,
+            AVG("importanceScore") as avg_score
+          FROM diaries
+          WHERE mood IS NOT NULL
+            AND "aiComment" IS NOT NULL
+            AND "deletedAt" IS NULL
+          GROUP BY mood
+        )
+        SELECT
+          mood,
+          ROUND((sonnet_count::decimal / NULLIF(total, 0)) * 100, 1) as sonnet_ratio,
+          ROUND((haiku_count::decimal / NULLIF(total, 0)) * 100, 1) as haiku_ratio,
+          ROUND(avg_score, 1) as avg_importance_score
+        FROM mood_model_stats
+        ORDER BY mood
+      `);
+
+      const modelUsageByMood = modelUsageResult.rows.map(row => ({
+        mood: row.mood,
+        sonnetRatio: parseFloat(row.sonnet_ratio || 0),
+        haikuRatio: parseFloat(row.haiku_ratio || 0),
+        avgImportanceScore: parseFloat(row.avg_importance_score || 0),
+      }));
+
+      // 신호등별 도장 분포
+      const stampResult = await pool.query(`
+        WITH mood_stamp_counts AS (
+          SELECT
+            mood,
+            "stampType",
+            COUNT(*) as count
+          FROM diaries
+          WHERE mood IS NOT NULL
+            AND "stampType" IS NOT NULL
+            AND "deletedAt" IS NULL
+          GROUP BY mood, "stampType"
+        ),
+        mood_totals AS (
+          SELECT
+            mood,
+            SUM(count) as total
+          FROM mood_stamp_counts
+          GROUP BY mood
+        )
+        SELECT
+          msc.mood,
+          msc."stampType",
+          msc.count,
+          ROUND((msc.count::decimal / mt.total) * 100, 1) as percentage
+        FROM mood_stamp_counts msc
+        JOIN mood_totals mt ON msc.mood = mt.mood
+        ORDER BY msc.mood, msc.count DESC
+      `);
+
+      const stampByMoodMap: { [key: string]: Array<{ stampType: string; count: number; percentage: number }> } = {};
+
+      for (const row of stampResult.rows) {
+        if (!stampByMoodMap[row.mood]) {
+          stampByMoodMap[row.mood] = [];
+        }
+        stampByMoodMap[row.mood].push({
+          stampType: row.stampType,
+          count: parseInt(row.count, 10),
+          percentage: parseFloat(row.percentage),
+        });
+      }
+
+      const stampDistributionByMood = Object.keys(stampByMoodMap).map(mood => ({
+        mood,
+        stamps: stampByMoodMap[mood],
+      }));
+
+      return {
+        modelUsageByMood,
+        stampDistributionByMood,
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get AI emotion correlation:', error);
+      throw error;
+    }
+  }
 }

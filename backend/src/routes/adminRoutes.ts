@@ -764,4 +764,113 @@ router.get('/analytics/daily-snapshot',
   }
 );
 
+// ============================================
+// 감정 분석 API (Emotion Analytics)
+// ============================================
+
+/**
+ * 감정 신호등 분포 분석
+ * GET /api/admin/analytics/emotion/mood-distribution
+ */
+router.get('/analytics/emotion/mood-distribution', async (req: Request, res: Response) => {
+  try {
+    const data = await AnalyticsService.getMoodDistribution();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching mood distribution:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch mood distribution',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * 감정 태그 사용 빈도 분석
+ * GET /api/admin/analytics/emotion/mood-tags
+ */
+router.get('/analytics/emotion/mood-tags', async (req: Request, res: Response) => {
+  try {
+    const data = await AnalyticsService.getMoodTagStats();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching mood tag stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch mood tag stats',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * 신호등 × 감정 태그 매핑
+ * GET /api/admin/analytics/emotion/mood-tag-mapping
+ */
+router.get('/analytics/emotion/mood-tag-mapping', async (req: Request, res: Response) => {
+  try {
+    const data = await AnalyticsService.getMoodTagMapping();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching mood tag mapping:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch mood tag mapping',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * 사용자 감정 세그먼트 분석
+ * GET /api/admin/analytics/emotion/user-segments
+ */
+router.get('/analytics/emotion/user-segments', async (req: Request, res: Response) => {
+  try {
+    const data = await AnalyticsService.getUserEmotionSegments();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching user emotion segments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user emotion segments',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * AI 코멘트와 감정의 상관관계
+ * GET /api/admin/analytics/emotion/ai-correlation
+ */
+router.get('/analytics/emotion/ai-correlation', async (req: Request, res: Response) => {
+  try {
+    const data = await AnalyticsService.getAIEmotionCorrelation();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Error fetching AI emotion correlation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch AI emotion correlation',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 export default router;

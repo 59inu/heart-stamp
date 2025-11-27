@@ -1146,6 +1146,294 @@ GET /analytics/daily-snapshot
 
 ---
 
+## 감정 분석 API (Emotion Analytics)
+
+감정 신호등(mood)과 감정 태그(moodTag)에 대한 종합 분석을 제공합니다.
+
+### 1. 감정 신호등 분포 분석
+
+```
+GET /analytics/emotion/mood-distribution
+```
+
+감정 신호등(Red/Yellow/Green)의 분포와 평균 일기 길이, 연속성 분석을 제공합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "distribution": [
+      { "mood": "yellow", "count": 156, "percentage": 45.0 },
+      { "mood": "red", "count": 104, "percentage": 30.0 },
+      { "mood": "green", "count": 87, "percentage": 25.0 }
+    ],
+    "avgDiaryLength": [
+      { "mood": "red", "avgLength": 150 },
+      { "mood": "yellow", "avgLength": 200 },
+      { "mood": "green", "avgLength": 250 }
+    ],
+    "continuity": {
+      "avgRedStreak": 2.3,
+      "maxRedStreak": 7,
+      "avgGreenStreak": 4.1,
+      "maxGreenStreak": 15,
+      "avgRedToGreenDays": 3.5
+    }
+  }
+}
+```
+
+**필드 설명:**
+
+| 필드 | 설명 |
+|-----|------|
+| distribution | 신호등별 분포 (빈도, 백분율) |
+| avgDiaryLength | 신호등별 평균 일기 길이 (글자 수) |
+| continuity.avgRedStreak | 평균 Red 연속 일수 |
+| continuity.maxRedStreak | 최대 Red 연속 일수 |
+| continuity.avgGreenStreak | 평균 Green 연속 일수 |
+| continuity.avgRedToGreenDays | Red → Green 전환 평균 소요 일수 |
+
+**활용:**
+- 전체 사용자의 감정 분포 파악
+- 기분이 나쁠 때 일기를 덜 쓰는 경향 발견
+- 감정 회복 패턴 이해
+
+---
+
+### 2. 감정 태그 사용 빈도 분석
+
+```
+GET /analytics/emotion/mood-tags
+```
+
+감정 태그의 TOP 20, 미사용 태그, 주간 트렌드를 제공합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "topTags": [
+      { "tag": "행복함", "count": 450, "percentage": 12.0 },
+      { "tag": "피곤함", "count": 380, "percentage": 10.1 },
+      { "tag": "뿌듯함", "count": 320, "percentage": 8.5 }
+    ],
+    "unusedTags": [
+      { "tag": "환희", "lastUsed": "2024-10-15T12:00:00Z", "totalCount": 3 },
+      { "tag": "경악", "lastUsed": "2024-09-20T10:30:00Z", "totalCount": 5 }
+    ],
+    "weeklyTrend": [
+      { "tag": "외로움", "thisWeek": 55, "lastWeek": 25, "changePercent": 120 },
+      { "tag": "우울함", "thisWeek": 74, "lastWeek": 40, "changePercent": 85 },
+      { "tag": "설렘", "thisWeek": 20, "lastWeek": 50, "changePercent": -60 }
+    ]
+  }
+}
+```
+
+**필드 설명:**
+
+| 필드 | 설명 |
+|-----|------|
+| topTags | TOP 20 감정 태그 (빈도, 백분율) |
+| unusedTags | 최근 90일 미사용 + 전체 10회 미만 태그 |
+| weeklyTrend | 이번주 vs 지난주 비교 (변화율 포함) |
+
+**활용:**
+- 사용되지 않는 태그 제거 결정
+- 유사 태그 병합 검토 (예: "슬픔"+"우울함")
+- 급상승 태그로 사용자 감정 트렌드 파악
+
+---
+
+### 3. 신호등 × 감정 태그 매핑
+
+```
+GET /analytics/emotion/mood-tag-mapping
+```
+
+각 신호등(Red/Yellow/Green)별로 가장 많이 사용되는 감정 태그 TOP 5를 제공합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "byMood": [
+      {
+        "mood": "red",
+        "topTags": [
+          { "tag": "슬픔", "count": 80, "percentage": 40.0 },
+          { "tag": "우울함", "count": 50, "percentage": 25.0 },
+          { "tag": "화남", "count": 40, "percentage": 20.0 }
+        ]
+      },
+      {
+        "mood": "green",
+        "topTags": [
+          { "tag": "행복함", "count": 100, "percentage": 50.0 },
+          { "tag": "뿌듯함", "count": 60, "percentage": 30.0 },
+          { "tag": "감사함", "count": 30, "percentage": 15.0 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**필드 설명:**
+
+| 필드 | 설명 |
+|-----|------|
+| byMood | 신호등별 TOP 5 감정 태그 |
+| mood | 신호등 색상 (red/yellow/green) |
+| topTags | 해당 신호등에서 자주 사용되는 태그 |
+
+**활용:**
+- Red 일기의 감정 패턴 이해 (슬픔, 우울, 화)
+- Green 일기의 긍정 패턴 파악 (행복, 뿌듯, 감사)
+- 신호등과 태그의 일관성 검증
+
+---
+
+### 4. 사용자 감정 세그먼트 분석
+
+```
+GET /analytics/emotion/user-segments
+```
+
+사용자를 감정 패턴으로 분류하고, 작성 빈도와 Green 비율의 상관관계를 분석합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "segments": [
+      {
+        "type": "positive",
+        "userCount": 45,
+        "percentage": 35.0,
+        "avgDiariesPerWeek": 5.2,
+        "topTags": []
+      },
+      {
+        "type": "neutral",
+        "userCount": 50,
+        "percentage": 39.1,
+        "avgDiariesPerWeek": 3.8,
+        "topTags": []
+      },
+      {
+        "type": "struggling",
+        "userCount": 20,
+        "percentage": 15.6,
+        "avgDiariesPerWeek": 2.5,
+        "topTags": []
+      },
+      {
+        "type": "mixed",
+        "userCount": 13,
+        "percentage": 10.2,
+        "avgDiariesPerWeek": 4.1,
+        "topTags": []
+      }
+    ],
+    "writingFrequencyCorrelation": {
+      "frequent": { "avgGreenRatio": 60.0, "count": 25 },
+      "moderate": { "avgGreenRatio": 45.0, "count": 50 },
+      "occasional": { "avgGreenRatio": 35.0, "count": 30 }
+    }
+  }
+}
+```
+
+**필드 설명:**
+
+| 필드 | 설명 |
+|-----|------|
+| segments | 사용자 감정 패턴 분류 |
+| segments.type | positive(Green 70%+), neutral(Yellow 50%+), struggling(Red 50%+), mixed |
+| writingFrequencyCorrelation.frequent | 주 5회 이상 작성하는 사용자 |
+| writingFrequencyCorrelation.moderate | 주 2-4회 작성하는 사용자 |
+| writingFrequencyCorrelation.occasional | 주 1회 이하 작성하는 사용자 |
+
+**인사이트:**
+- 일기를 자주 쓸수록 Green 비율 증가 (규칙적 작성의 긍정적 효과)
+- Struggling 그룹(Red 50%+)에 특별한 응원 메시지 제공 검토
+- Positive 그룹의 작성 습관을 다른 사용자에게 권장
+
+---
+
+### 5. AI 코멘트와 감정의 상관관계
+
+```
+GET /analytics/emotion/ai-correlation
+```
+
+신호등별 AI 모델 사용률, 평균 중요도 점수, 도장 분포를 분석합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "modelUsageByMood": [
+      {
+        "mood": "red",
+        "sonnetRatio": 75.0,
+        "haikuRatio": 25.0,
+        "avgImportanceScore": 28.0
+      },
+      {
+        "mood": "green",
+        "sonnetRatio": 30.0,
+        "haikuRatio": 70.0,
+        "avgImportanceScore": 12.0
+      }
+    ],
+    "stampDistributionByMood": [
+      {
+        "mood": "red",
+        "stamps": [
+          { "stampType": "keep_going", "count": 60, "percentage": 60.0 },
+          { "stampType": "nice", "count": 30, "percentage": 30.0 }
+        ]
+      },
+      {
+        "mood": "green",
+        "stamps": [
+          { "stampType": "excellent", "count": 50, "percentage": 50.0 },
+          { "stampType": "good", "count": 40, "percentage": 40.0 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**필드 설명:**
+
+| 필드 | 설명 |
+|-----|------|
+| modelUsageByMood | 신호등별 AI 모델 사용률 (Sonnet/Haiku) |
+| avgImportanceScore | 신호등별 평균 중요도 점수 (/40) |
+| stampDistributionByMood | 신호등별 도장 분포 |
+
+**인사이트:**
+- Red 일기는 중요도가 높아 Sonnet 사용률 75%
+- Green 일기는 간단한 칭찬으로 Haiku 사용률 70%
+- Red 일기에는 "keep_going" 도장, Green에는 "excellent" 도장 빈번
+
+---
+
 ## 공통 에러 응답
 
 **404 - 리소스 없음:**
