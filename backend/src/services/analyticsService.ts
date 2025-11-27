@@ -291,8 +291,8 @@ export class AnalyticsService {
       // 2. 주간/월간 리포트 비용 (전체 누적)
       const reportCostResult = await pool.query(`
         SELECT
-          (SELECT COUNT(*) FROM reports WHERE type = 'weekly') as weekly_reports,
-          (SELECT COUNT(*) FROM reports WHERE type = 'monthly') as monthly_reports
+          (SELECT COUNT(*) FROM reports WHERE period = 'weekly' AND "deletedAt" IS NULL) as weekly_reports,
+          (SELECT COUNT(*) FROM reports WHERE period = 'monthly' AND "deletedAt" IS NULL) as monthly_reports
       `);
 
       const weeklyReports = parseInt(reportCostResult.rows[0]?.weekly_reports || 0, 10);
