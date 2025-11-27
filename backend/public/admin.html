@@ -375,6 +375,51 @@
       <div id="userDiariesResult" class="result"></div>
     </div>
 
+    <!-- 🎯 프롬프트 관리 섹션 -->
+    <div class="section-header">🎯 프롬프트 관리 (Prompt Management)</div>
+
+    <!-- Prompts List -->
+    <div class="card" style="margin-bottom: 20px;">
+      <h2>AI 프롬프트 목록</h2>
+      <button class="btn btn-primary" onclick="loadPrompts()">프롬프트 조회</button>
+      <button class="btn btn-danger" onclick="clearPromptCache()" style="background: #f56565;">캐시 초기화</button>
+      <div id="promptsList" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Prompt Editor -->
+    <div class="card" style="margin-bottom: 20px;">
+      <h2>프롬프트 편집</h2>
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 14px; color: #666;">프롬프트 ID</label>
+        <select id="promptId" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; margin-top: 5px;">
+          <option value="">-- 프롬프트 선택 --</option>
+          <option value="comment">comment (코멘트 생성)</option>
+          <option value="importance">importance (중요도 분석)</option>
+          <option value="scene">scene (장면 추출)</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 14px; color: #666;">프롬프트 이름</label>
+        <input type="text" id="promptName" placeholder="예: 코멘트 생성 프롬프트" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; margin-top: 5px;">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 14px; color: #666;">
+          변수 (쉼표로 구분)
+          <span style="color: #999; font-size: 12px;"> - 프롬프트에서 {{변수명}} 형태로 사용</span>
+        </label>
+        <input type="text" id="promptVariables" placeholder="예: responseLength, emotionTag, diaryContent" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; margin-top: 5px;">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 14px; color: #666;">프롬프트 내용</label>
+        <textarea id="promptContent" placeholder="프롬프트 내용을 입력하세요... {{변수명}} 형태로 변수 사용 가능" style="min-height: 300px; margin-top: 5px;"></textarea>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="loadPromptById()" style="flex: 1;">불러오기</button>
+        <button class="btn btn-success" onclick="savePrompt()" style="flex: 1;">저장하기</button>
+      </div>
+      <div id="promptEditResult" class="result"></div>
+    </div>
+
     </div><!-- End of mainContent -->
   </div>
 
@@ -969,6 +1014,173 @@ ${data.reason}</pre>
         document.getElementById('pushBody').value = '';
       } catch (error) {
         resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    // ============================================
+    // 프롬프트 관리 함수
+    // ============================================
+
+    async function loadPrompts() {
+      const container = document.getElementById('promptsList');
+      container.innerHTML = '<div class="loading">프롬프트 로딩 중...</div>';
+
+      try {
+        const result = await apiCall('/api/admin/prompts');
+        const prompts = result.data;
+
+        if (!prompts || prompts.length === 0) {
+          container.innerHTML = '<div class="loading">등록된 프롬프트가 없습니다</div>';
+          return;
+        }
+
+        const promptsHtml = prompts.map(prompt => {
+          const updatedAt = prompt.updatedAt ? new Date(prompt.updatedAt).toLocaleString('ko-KR') : 'N/A';
+          const variables = prompt.variables && prompt.variables.length > 0
+            ? prompt.variables.map(v => `<code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{{${v}}}</code>`).join(' ')
+            : '<span style="color: #999;">없음</span>';
+
+          return `
+            <div style="padding: 16px; margin: 12px 0; background: #f7fafc; border-radius: 8px; border-left: 4px solid #667eea;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 15px;">${prompt.name}</strong>
+                <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${prompt.id}</span>
+              </div>
+
+              <div style="color: #666; font-size: 13px; margin-bottom: 8px;">
+                <strong>변수:</strong> ${variables}
+              </div>
+
+              <div style="color: #999; font-size: 12px; margin-bottom: 8px;">
+                버전: ${prompt.version || 1} | 수정: ${updatedAt} ${prompt.updatedBy ? `by ${prompt.updatedBy}` : ''}
+              </div>
+
+              <div style="color: #333; line-height: 1.4; padding: 12px; background: white; border-radius: 6px; font-size: 13px; max-height: 150px; overflow-y: auto; white-space: pre-wrap;">
+${prompt.content.substring(0, 500)}${prompt.content.length > 500 ? '...' : ''}
+              </div>
+
+              <button class="btn btn-primary" onclick="selectPromptForEdit('${prompt.id}')" style="margin-top: 10px; padding: 8px 16px;">
+                편집하기
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = promptsHtml;
+      } catch (error) {
+        container.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function loadPromptById() {
+      const promptId = document.getElementById('promptId').value;
+      const resultDiv = document.getElementById('promptEditResult');
+
+      if (!promptId) {
+        alert('프롬프트를 선택하세요');
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">프롬프트 로딩 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall(`/api/admin/prompts/${promptId}`);
+        const prompt = result.data;
+
+        document.getElementById('promptName').value = prompt.name || '';
+        document.getElementById('promptVariables').value = (prompt.variables || []).join(', ');
+        document.getElementById('promptContent').value = prompt.content || '';
+
+        resultDiv.innerHTML = `
+          <div style="background: #f0fff4; padding: 12px; border-radius: 8px; border-left: 4px solid #48bb78;">
+            ✅ 프롬프트 "${prompt.name}" 불러오기 완료
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    function selectPromptForEdit(promptId) {
+      document.getElementById('promptId').value = promptId;
+      loadPromptById();
+
+      // Scroll to editor
+      document.getElementById('promptId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function savePrompt() {
+      const promptId = document.getElementById('promptId').value;
+      const name = document.getElementById('promptName').value.trim();
+      const variablesInput = document.getElementById('promptVariables').value.trim();
+      const content = document.getElementById('promptContent').value;
+      const resultDiv = document.getElementById('promptEditResult');
+
+      if (!promptId) {
+        alert('프롬프트 ID를 선택하세요');
+        return;
+      }
+
+      if (!name) {
+        alert('프롬프트 이름을 입력하세요');
+        return;
+      }
+
+      if (!content) {
+        alert('프롬프트 내용을 입력하세요');
+        return;
+      }
+
+      // Parse variables
+      const variables = variablesInput
+        ? variablesInput.split(',').map(v => v.trim()).filter(v => v)
+        : [];
+
+      if (!confirm(`프롬프트 "${name}"을(를) 저장하시겠습니까?\n\n⚠️ 저장 후 캐시가 자동으로 초기화됩니다.`)) {
+        return;
+      }
+
+      resultDiv.innerHTML = '<div class="loading">저장 중...</div>';
+      resultDiv.classList.add('show');
+
+      try {
+        const result = await apiCall(`/api/admin/prompts/${promptId}`, 'PUT', {
+          name,
+          content,
+          variables,
+        });
+
+        resultDiv.innerHTML = `
+          <div style="background: #f0fff4; padding: 16px; border-radius: 8px; border-left: 4px solid #48bb78;">
+            <div style="margin-bottom: 8px;">
+              <strong style="font-size: 16px; color: #22543d;">✅ 프롬프트 저장 완료</strong>
+            </div>
+            <div style="color: #2d3748; font-size: 14px;">
+              <div><strong>ID:</strong> ${promptId}</div>
+              <div style="margin-top: 4px;"><strong>이름:</strong> ${name}</div>
+              <div style="margin-top: 4px;"><strong>변수:</strong> ${variables.length > 0 ? variables.join(', ') : '없음'}</div>
+            </div>
+          </div>
+        `;
+
+        // Reload prompts list
+        loadPrompts();
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    async function clearPromptCache() {
+      if (!confirm('프롬프트 캐시를 초기화하시겠습니까?\n\n캐시 초기화 후 다음 API 호출 시 DB에서 최신 프롬프트를 다시 로드합니다.')) {
+        return;
+      }
+
+      try {
+        await apiCall('/api/admin/prompts/cache/clear', 'POST');
+        alert('✅ 프롬프트 캐시가 초기화되었습니다');
+      } catch (error) {
+        alert(`❌ 에러: ${error.message}`);
       }
     }
   </script>

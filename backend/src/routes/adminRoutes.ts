@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { param, query, validationResult } from 'express-validator';
-import { DiaryDatabase } from '../services/database';
+import { param, query, body, validationResult } from 'express-validator';
+import { DiaryDatabase, PromptDatabase } from '../services/database';
 import { requireAdminToken } from '../middleware/auth';
 import { aiAnalysisLimiter } from '../middleware/rateLimiter';
 import { ClaudeService } from '../services/claudeService';
@@ -383,6 +383,161 @@ router.get('/diaries/stats',
       res.status(500).json({
         success: false,
         message: 'Failed to fetch diary stats',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+// ============================================
+// 프롬프트 관련 API
+// ============================================
+
+/**
+ * 프롬프트 목록 조회
+ * GET /api/admin/prompts
+ */
+router.get('/prompts',
+  async (req: Request, res: Response) => {
+    try {
+      const prompts = await PromptDatabase.getAll();
+
+      res.json({
+        success: true,
+        count: prompts.length,
+        data: prompts,
+      });
+    } catch (error) {
+      console.error('Error fetching prompts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch prompts',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 특정 프롬프트 조회
+ * GET /api/admin/prompts/:id
+ */
+router.get('/prompts/:id',
+  param('id').isString().trim().notEmpty(),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { id } = req.params;
+      const prompts = await PromptDatabase.getAll();
+      const prompt = prompts.find(p => p.id === id);
+
+      if (!prompt) {
+        return res.status(404).json({
+          success: false,
+          message: `Prompt not found: ${id}`,
+        });
+      }
+
+      res.json({
+        success: true,
+        data: prompt,
+      });
+    } catch (error) {
+      console.error('Error fetching prompt:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch prompt',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 프롬프트 생성/수정
+ * PUT /api/admin/prompts/:id
+ */
+router.put('/prompts/:id',
+  param('id').isString().trim().notEmpty(),
+  body('name').isString().trim().notEmpty().withMessage('name is required'),
+  body('content').isString().notEmpty().withMessage('content is required'),
+  body('variables').optional().isArray().withMessage('variables must be an array'),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { id } = req.params;
+      const { name, content, variables = [] } = req.body;
+
+      const success = await PromptDatabase.upsert(
+        id,
+        name,
+        content,
+        variables,
+        'admin' // updatedBy
+      );
+
+      if (!success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to save prompt',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Prompt saved successfully',
+        data: {
+          id,
+          name,
+          content,
+          variables,
+        },
+      });
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to save prompt',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 프롬프트 캐시 초기화
+ * POST /api/admin/prompts/cache/clear
+ */
+router.post('/prompts/cache/clear',
+  async (req: Request, res: Response) => {
+    try {
+      PromptDatabase.clearCache();
+
+      res.json({
+        success: true,
+        message: 'Prompt cache cleared successfully',
+      });
+    } catch (error) {
+      console.error('Error clearing prompt cache:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to clear prompt cache',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

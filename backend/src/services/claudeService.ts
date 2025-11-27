@@ -2,6 +2,16 @@ import Anthropic from '@anthropic-ai/sdk';
 import { AIAnalysisResult, StampType, ImportanceScore } from '../types/diary';
 import { CircuitBreaker } from '../utils/circuitBreaker';
 import { retryWithCondition, withTimeout, isRetryableError } from '../utils/retry';
+import { PromptDatabase } from './database';
+
+/**
+ * 프롬프트 템플릿의 {{변수}} 플레이스홀더를 실제 값으로 치환
+ */
+function substituteVariables(template: string, variables: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
+    return variables[varName] !== undefined ? variables[varName] : match;
+  });
+}
 
 /**
  * Claude API 에러 클래스
@@ -139,17 +149,13 @@ export class ClaudeService {
 
     try {
       // 🎨 [2단계] 선택된 모델로 코멘트 생성 (30초 타임아웃)
-      const response = await withTimeout(
-        this.client.messages.create({
-          model: selectedModel,
-          max_tokens: maxTokens,
-          temperature: 0.8,
-          messages: [
-            {
-              role: 'user',
-              content: `당신은 따뜻한 초등학교 담임 선생님입니다.
-학생의 일기를 읽고 ${responseLength}로 구체적이고 깊이 있게 반응해주세요.
-학생이 선택한 감정: "${emotionTag}"
+      // DB에서 프롬프트 로드 (없으면 기본값 사용)
+      let promptTemplate = await PromptDatabase.get('comment');
+      if (!promptTemplate) {
+        console.log('⚠️ [Claude] Comment prompt not found in DB, using default');
+        promptTemplate = `당신은 따뜻한 초등학교 담임 선생님입니다.
+학생의 일기를 읽고 {{responseLength}}로 구체적이고 깊이 있게 반응해주세요.
+학생이 선택한 감정: "{{emotionTag}}"
 
 규칙:
 - "그렇구나", "그러게", "응", "맞아", "그렇지" 등으로 시작해 학생의 말을 먼저 수용하되 늘 새로운 표현으로 시작하도록 노력
@@ -167,7 +173,25 @@ export class ClaudeService {
 
 
 일기:
-${diaryContent}`,
+{{diaryContent}}`;
+      }
+
+      // 변수 치환
+      const prompt = substituteVariables(promptTemplate, {
+        responseLength,
+        emotionTag,
+        diaryContent,
+      });
+
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: selectedModel,
+          max_tokens: maxTokens,
+          temperature: 0.8,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
             },
           ],
         }),
@@ -219,15 +243,11 @@ ${diaryContent}`,
     console.log('📊 [IMPORTANCE] Analyzing diary importance with Haiku...');
 
     try {
-      const response = await withTimeout(
-        this.client.messages.create({
-          model: 'claude-haiku-4-5',
-          max_tokens: 300,
-          temperature: 0.3, // 낮은 temperature로 일관성 확보
-          messages: [
-            {
-              role: 'user',
-              content: `당신은 일기 분석 전문가입니다.
+      // DB에서 프롬프트 로드 (없으면 기본값 사용)
+      let promptTemplate = await PromptDatabase.get('importance');
+      if (!promptTemplate) {
+        console.log('⚠️ [Claude] Importance prompt not found in DB, using default');
+        promptTemplate = `당신은 일기 분석 전문가입니다.
 아래 일기를 읽고, AI 코멘트 생성 시 더 뛰어난 모델(Sonnet)이 필요한지 판단해주세요.
 
 다음 4가지 기준으로 각각 0-10점을 매겨주세요:
@@ -263,7 +283,21 @@ ${diaryContent}`,
 }
 
 일기:
-${diaryContent}`,
+{{diaryContent}}`;
+      }
+
+      // 변수 치환
+      const prompt = substituteVariables(promptTemplate, { diaryContent });
+
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: 'claude-haiku-4-5',
+          max_tokens: 300,
+          temperature: 0.3, // 낮은 temperature로 일관성 확보
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
             },
           ],
         }),
@@ -320,15 +354,11 @@ ${diaryContent}`,
     console.log('🎨 [Scene Extraction] Extracting key scene from diary...');
 
     try {
-      const response = await withTimeout(
-        this.client.messages.create({
-          model: 'claude-haiku-4-5', // Haiku 사용 (빠르고 저렴)
-          max_tokens: 200,
-          temperature: 0.5,
-          messages: [
-            {
-              role: 'user',
-              content: `당신은 일기를 읽고 그림일기로 표현할 핵심 장면을 추출하는 전문가입니다.
+      // DB에서 프롬프트 로드 (없으면 기본값 사용)
+      let promptTemplate = await PromptDatabase.get('scene');
+      if (!promptTemplate) {
+        console.log('⚠️ [Claude] Scene prompt not found in DB, using default');
+        promptTemplate = `당신은 일기를 읽고 그림일기로 표현할 핵심 장면을 추출하는 전문가입니다.
 
 아래 일기를 읽고, 가장 중요하고 그림으로 표현하기 좋은 한 장면을 선택해 단순하게 설명해주세요.
 
@@ -343,7 +373,21 @@ ${diaryContent}`,
 - 영어로 응답하세요 (이미지 생성 API용)
 
 일기:
-${diaryContent}`,
+{{diaryContent}}`;
+      }
+
+      // 변수 치환
+      const prompt = substituteVariables(promptTemplate, { diaryContent });
+
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: 'claude-haiku-4-5', // Haiku 사용 (빠르고 저렴)
+          max_tokens: 200,
+          temperature: 0.5,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
             },
           ],
         }),

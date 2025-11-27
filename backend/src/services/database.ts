@@ -138,6 +138,19 @@ async function initializeDatabase() {
       ON CONFLICT ("userId") DO NOTHING
     `);
 
+    // prompts 테이블 생성 (AI 프롬프트 관리용)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS prompts (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        variables TEXT,
+        version INTEGER DEFAULT 1,
+        "updatedAt" TIMESTAMP DEFAULT NOW(),
+        "updatedBy" TEXT
+      )
+    `);
+
     console.log('✅ PostgreSQL database initialized');
   } catch (error) {
     console.error('❌ Failed to initialize PostgreSQL database:', error);
@@ -146,7 +159,13 @@ async function initializeDatabase() {
 }
 
 // 초기화 실행
-initializeDatabase().catch(console.error);
+initializeDatabase()
+  .then(async () => {
+    // 기본 프롬프트 초기화
+    await PromptDatabase.initializeDefaultPrompts();
+    console.log('✅ Default prompts initialized');
+  })
+  .catch(console.error);
 
 export class DiaryDatabase {
   /**
@@ -1407,6 +1426,235 @@ export class NotificationPreferencesDatabase {
       return enabledUserIds;
     } catch (error) {
       this.handleDatabaseError(error, 'filterEnabled');
+    }
+  }
+}
+
+export class PromptDatabase {
+  // 프롬프트 캐시 (메모리)
+  private static cache: Map<string, { content: string; variables: string[] }> = new Map();
+
+  /**
+   * 프롬프트 조회 (캐시 우선)
+   */
+  static async get(id: string): Promise<string | null> {
+    // 캐시에 있으면 캐시에서 반환
+    if (this.cache.has(id)) {
+      return this.cache.get(id)!.content;
+    }
+
+    try {
+      const result = await pool.query(
+        'SELECT content, variables FROM prompts WHERE id = $1',
+        [id]
+      );
+
+      if (result.rows.length === 0) return null;
+
+      const { content, variables } = result.rows[0];
+      this.cache.set(id, {
+        content,
+        variables: variables ? JSON.parse(variables) : [],
+      });
+
+      return content;
+    } catch (error) {
+      console.error(`❌ [PromptDatabase] Failed to get prompt ${id}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 모든 프롬프트 조회
+   */
+  static async getAll(): Promise<Array<{
+    id: string;
+    name: string;
+    content: string;
+    variables: string[];
+    version: number;
+    updatedAt: string;
+    updatedBy: string | null;
+  }>> {
+    try {
+      const result = await pool.query(
+        'SELECT id, name, content, variables, version, "updatedAt", "updatedBy" FROM prompts ORDER BY id'
+      );
+
+      return result.rows.map(row => ({
+        ...row,
+        variables: row.variables ? JSON.parse(row.variables) : [],
+      }));
+    } catch (error) {
+      console.error('❌ [PromptDatabase] Failed to get all prompts:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 프롬프트 저장/업데이트
+   */
+  static async upsert(
+    id: string,
+    name: string,
+    content: string,
+    variables: string[],
+    updatedBy?: string
+  ): Promise<boolean> {
+    try {
+      await pool.query(
+        `INSERT INTO prompts (id, name, content, variables, version, "updatedAt", "updatedBy")
+         VALUES ($1, $2, $3, $4, 1, NOW(), $5)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           content = EXCLUDED.content,
+           variables = EXCLUDED.variables,
+           version = prompts.version + 1,
+           "updatedAt" = NOW(),
+           "updatedBy" = EXCLUDED."updatedBy"`,
+        [id, name, content, JSON.stringify(variables), updatedBy || null]
+      );
+
+      // 캐시 갱신
+      this.cache.set(id, { content, variables });
+
+      console.log(`✅ [PromptDatabase] Prompt '${id}' saved (by ${updatedBy || 'system'})`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [PromptDatabase] Failed to upsert prompt ${id}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * 캐시 초기화 (서버 시작 시 호출)
+   */
+  static async loadCache(): Promise<void> {
+    try {
+      const prompts = await this.getAll();
+      for (const prompt of prompts) {
+        this.cache.set(prompt.id, {
+          content: prompt.content,
+          variables: prompt.variables,
+        });
+      }
+      console.log(`✅ [PromptDatabase] Loaded ${prompts.length} prompts into cache`);
+    } catch (error) {
+      console.error('❌ [PromptDatabase] Failed to load cache:', error);
+    }
+  }
+
+  /**
+   * 캐시 클리어
+   */
+  static clearCache(): void {
+    this.cache.clear();
+    console.log('🗑️ [PromptDatabase] Cache cleared');
+  }
+
+  /**
+   * 초기 프롬프트 데이터 삽입 (없는 경우에만)
+   */
+  static async initializeDefaultPrompts(): Promise<void> {
+    const defaultPrompts = [
+      {
+        id: 'comment',
+        name: '코멘트 생성',
+        variables: ['responseLength', 'emotionTag', 'diaryContent'],
+        content: `당신은 따뜻한 초등학교 담임 선생님입니다.
+학생의 일기를 읽고 {{responseLength}}로 구체적이고 깊이 있게 반응해주세요.
+학생이 선택한 감정: "{{emotionTag}}"
+
+규칙:
+- "그렇구나", "그러게", "응", "맞아", "그렇지" 등으로 시작해 학생의 말을 먼저 수용하되 늘 새로운 표현으로 시작하도록 노력
+- 톤: 연상 느낌의 반말로 친근하게 (~겠네, ~구나, ~지, ~겠다)
+- 비속어: 순화 (예: "개빡쳤다" → "짜증 났겠다")
+- 일기 속 구체적 사건 2개 이상 언급하되, ""로 직접 인용하지 말고 자연스럽게 언급
+- 학생의 감정을 자연스럽게 표현 ("힘들었겠다", "속상했지", "짜증 났겠다")
+- 자연스러운 일임을 확인 ("당연해", "다들 그래")
+- 조언보다는 학생의 생각이나 행동을 긍정적으로 관찰하고 칭찬 ("멋진 생각이야", "잘했어", "대단한데?")
+- 청유형은 가끔만, 주로 관찰과 지지로
+- 판단하지 말고 학생이 겪은 일 존중하며 지지
+- 학생의 나이를 알 수 없습니다. 성인일 수도 있으므로 연령을 전제로 한 표현을 사용하지 마세요
+- 이모지는 사용하지 마세요
+- **중요: 반드시 완전한 문장으로 끝내세요. 문장 중간에서 끊기지 않도록 주의하세요. 마지막 문장은 마침표(.), 물음표(?), 느낌표(!)로 끝나야 합니다.**
+
+
+일기:
+{{diaryContent}}`,
+      },
+      {
+        id: 'importance',
+        name: '중요도 분석',
+        variables: ['diaryContent'],
+        content: `당신은 일기 분석 전문가입니다.
+아래 일기를 읽고, AI 코멘트 생성 시 더 뛰어난 모델(Sonnet)이 필요한지 판단해주세요.
+
+다음 4가지 기준으로 각각 0-10점을 매겨주세요:
+
+1. **감정적 강도** (0-10점)
+   - 감정 변화의 폭과 깊이
+   - 복잡한 감정이나 양가감정의 존재
+   - 감정 표현의 생생함
+
+2. **의미있는 사건** (0-10점)
+   - 관계적 전환점이나 중요한 상호작용
+   - 개인적 성취나 도전
+   - 건강/치료 관련 진전
+
+3. **성찰의 깊이** (0-10점)
+   - 자기 자신에 대한 새로운 발견
+   - 삶의 패턴이나 의미에 대한 통찰
+   - 미래에 대한 구체적 계획이나 결심
+
+4. **변화의 신호** (0-10점)
+   - 새로운 시도나 첫 경험
+   - 증상, 상태, 습관의 변화
+   - 관점이나 태도의 전환
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요:
+{
+  "emotional_intensity": 5,
+  "significant_event": 3,
+  "depth_of_reflection": 2,
+  "change_signal": 4,
+  "total": 14,
+  "reason": "일상적인 하루에 대한 담담한 기록. 특별한 감정 변화나 의미있는 사건 없음."
+}
+
+일기:
+{{diaryContent}}`,
+      },
+      {
+        id: 'scene',
+        name: '장면 추출',
+        variables: ['diaryContent'],
+        content: `당신은 일기를 읽고 그림일기로 표현할 핵심 장면을 추출하는 전문가입니다.
+
+아래 일기를 읽고, 가장 중요하고 그림으로 표현하기 좋은 한 장면을 선택해 단순하게 설명해주세요.
+
+규칙:
+- 구체적인 장면 하나만 선택 (예: "친구와 카페에서 이야기하는 모습", "공원에서 산책하는 모습")
+- 어린이 그림일기 스타일로 표현 가능하도록 단순화
+- 불필요한 세부사항 제거
+- 1-2문장으로 간결하게
+- 표현해야하는 감정이나 분위기 형용
+- **사람 이름을 절대 표기하지 마세요** (예: "지연이" → "friend", "엄마" → "family member")
+- **성별을 모호하게 표현하세요** (예: "a person", "someone", "a friend" 등 성별 중립적 표현 사용)
+- 영어로 응답하세요 (이미지 생성 API용)
+
+일기:
+{{diaryContent}}`,
+      },
+    ];
+
+    for (const prompt of defaultPrompts) {
+      // 이미 존재하는지 확인
+      const existing = await this.get(prompt.id);
+      if (!existing) {
+        await this.upsert(prompt.id, prompt.name, prompt.content, prompt.variables, 'system');
+        console.log(`✅ [PromptDatabase] Default prompt '${prompt.id}' initialized`);
+      }
     }
   }
 }

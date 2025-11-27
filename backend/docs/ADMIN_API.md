@@ -317,6 +317,154 @@ GET /diaries/stats
 
 ---
 
+## 프롬프트 API
+
+AI 코멘트 생성, 중요도 분석, 장면 추출에 사용되는 프롬프트를 관리합니다.
+
+### 프롬프트 목록 조회
+
+```
+GET /prompts
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "count": 3,
+  "data": [
+    {
+      "id": "comment",
+      "name": "코멘트 생성",
+      "content": "당신은 따뜻한 초등학교 담임 선생님입니다...",
+      "variables": ["responseLength", "emotionTag", "diaryContent"],
+      "version": 1,
+      "updatedAt": "2025-01-15T12:00:00",
+      "updatedBy": "admin"
+    }
+  ]
+}
+```
+
+---
+
+### 특정 프롬프트 조회
+
+```
+GET /prompts/:id
+```
+
+**Path Parameters:**
+
+| 파라미터 | 설명 |
+|---------|------|
+| id | 프롬프트 ID (`comment`, `importance`, `scene`) |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "comment",
+    "name": "코멘트 생성",
+    "content": "프롬프트 내용...",
+    "variables": ["responseLength", "emotionTag", "diaryContent"],
+    "version": 1,
+    "updatedAt": "2025-01-15T12:00:00",
+    "updatedBy": "admin"
+  }
+}
+```
+
+**Response (404 - 프롬프트 없음):**
+
+```json
+{
+  "success": false,
+  "message": "Prompt not found: comment"
+}
+```
+
+---
+
+### 프롬프트 저장/수정
+
+```
+PUT /prompts/:id
+```
+
+**Path Parameters:**
+
+| 파라미터 | 설명 |
+|---------|------|
+| id | 프롬프트 ID |
+
+**Request Body:**
+
+```json
+{
+  "name": "코멘트 생성",
+  "content": "당신은 따뜻한 초등학교 담임 선생님입니다.\n학생의 일기를 읽고 {{responseLength}}로...",
+  "variables": ["responseLength", "emotionTag", "diaryContent"]
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|-----|------|-----|------|
+| name | string | O | 프롬프트 이름 |
+| content | string | O | 프롬프트 내용 (`{{변수}}` 형태로 변수 사용) |
+| variables | string[] | X | 사용되는 변수 목록 |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Prompt saved successfully",
+  "data": {
+    "id": "comment",
+    "name": "코멘트 생성",
+    "content": "...",
+    "variables": ["responseLength", "emotionTag", "diaryContent"]
+  }
+}
+```
+
+> 저장 시 캐시가 자동으로 초기화되며, 다음 API 호출부터 새 프롬프트가 적용됩니다.
+
+---
+
+### 프롬프트 캐시 초기화
+
+```
+POST /prompts/cache/clear
+```
+
+서버 메모리에 캐시된 프롬프트를 초기화합니다. 다음 API 호출 시 DB에서 다시 로드합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Prompt cache cleared successfully"
+}
+```
+
+---
+
+### 기본 프롬프트 목록
+
+| ID | 이름 | 변수 | 용도 |
+|---|---|---|---|
+| `comment` | 코멘트 생성 | responseLength, emotionTag, diaryContent | AI 코멘트 생성 |
+| `importance` | 중요도 분석 | diaryContent | Sonnet/Haiku 모델 선택용 분석 |
+| `scene` | 장면 추출 | diaryContent | 그림일기 이미지 생성용 장면 추출 |
+
+---
+
 ## 공통 에러 응답
 
 **404 - 리소스 없음:**
