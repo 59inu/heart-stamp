@@ -544,4 +544,99 @@ router.post('/prompts/cache/clear',
   }
 );
 
+/**
+ * 프롬프트 버전 히스토리 조회
+ * GET /api/admin/prompts/:id/history
+ */
+router.get('/prompts/:id/history',
+  param('id').isString().trim().notEmpty(),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { id } = req.params;
+      const history = await PromptDatabase.getHistory(id);
+
+      res.json({
+        success: true,
+        count: history.length,
+        data: history,
+      });
+    } catch (error) {
+      console.error('Error fetching prompt history:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch prompt history',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
+ * 프롬프트 특정 버전으로 복원
+ * POST /api/admin/prompts/:id/restore/:version
+ */
+router.post('/prompts/:id/restore/:version',
+  param('id').isString().trim().notEmpty(),
+  param('version').isInt({ min: 1 }).withMessage('version must be a positive integer'),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { id, version } = req.params;
+      const versionNum = parseInt(version, 10);
+
+      // 해당 버전이 존재하는지 확인
+      const oldVersion = await PromptDatabase.getVersion(id, versionNum);
+      if (!oldVersion) {
+        return res.status(404).json({
+          success: false,
+          message: `Version ${version} of prompt '${id}' not found`,
+        });
+      }
+
+      // 복원 실행
+      const success = await PromptDatabase.restoreVersion(id, versionNum, 'admin');
+      if (!success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to restore prompt version',
+        });
+      }
+
+      // 복원 후 현재 프롬프트 조회
+      const prompts = await PromptDatabase.getAll();
+      const current = prompts.find(p => p.id === id);
+
+      res.json({
+        success: true,
+        message: `Prompt '${id}' restored to version ${version}`,
+        data: current,
+      });
+    } catch (error) {
+      console.error('Error restoring prompt version:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to restore prompt version',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

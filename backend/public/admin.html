@@ -262,6 +262,115 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* 모달 스타일 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .history-item {
+      padding: 16px;
+      margin: 12px 0;
+      background: #f7fafc;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .history-item:hover {
+      background: #edf2f7;
+    }
+
+    .history-item .version-badge {
+      background: #667eea;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .history-item .meta {
+      color: #718096;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .history-item .content-preview {
+      margin-top: 12px;
+      padding: 12px;
+      background: white;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #4a5568;
+      max-height: 100px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .history-item .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .history-item .btn-small {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -416,11 +525,25 @@
       <div style="display: flex; gap: 10px;">
         <button class="btn btn-primary" onclick="loadPromptById()" style="flex: 1;">불러오기</button>
         <button class="btn btn-success" onclick="savePrompt()" style="flex: 1;">저장하기</button>
+        <button class="btn" onclick="showPromptHistory()" style="flex: 1; background: #805ad5; color: white;">버전 히스토리</button>
       </div>
       <div id="promptEditResult" class="result"></div>
     </div>
 
     </div><!-- End of mainContent -->
+  </div>
+
+  <!-- 버전 히스토리 모달 -->
+  <div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="historyModalTitle">버전 히스토리</h3>
+        <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="historyModalBody">
+        <div class="loading">로딩 중...</div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1182,6 +1305,165 @@ ${prompt.content.substring(0, 500)}${prompt.content.length > 500 ? '...' : ''}
       } catch (error) {
         alert(`❌ 에러: ${error.message}`);
       }
+    }
+
+    // ============================================
+    // 프롬프트 버전 히스토리 함수
+    // ============================================
+
+    async function showPromptHistory() {
+      const promptId = document.getElementById('promptId').value;
+
+      if (!promptId) {
+        alert('먼저 프롬프트를 선택하세요');
+        return;
+      }
+
+      const modal = document.getElementById('historyModal');
+      const modalTitle = document.getElementById('historyModalTitle');
+      const modalBody = document.getElementById('historyModalBody');
+
+      modalTitle.textContent = `버전 히스토리 - ${promptId}`;
+      modalBody.innerHTML = '<div class="loading">히스토리 로딩 중...</div>';
+      modal.classList.add('show');
+
+      try {
+        const result = await apiCall(`/api/admin/prompts/${promptId}/history`);
+        const history = result.data;
+
+        if (!history || history.length === 0) {
+          modalBody.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #718096;">
+              <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+              <div>아직 버전 히스토리가 없습니다</div>
+              <div style="font-size: 13px; margin-top: 8px;">프롬프트를 수정하면 이전 버전이 여기에 저장됩니다</div>
+            </div>
+          `;
+          return;
+        }
+
+        const historyHtml = history.map(item => {
+          const createdAt = new Date(item.createdAt).toLocaleString('ko-KR');
+          const variables = item.variables && item.variables.length > 0
+            ? item.variables.map(v => `<code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{{${v}}}</code>`).join(' ')
+            : '<span style="color: #999;">없음</span>';
+
+          return `
+            <div class="history-item">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span class="version-badge">v${item.version}</span>
+                  <strong style="margin-left: 10px;">${item.name}</strong>
+                </div>
+              </div>
+              <div class="meta">
+                수정: ${createdAt} ${item.createdBy ? `by ${item.createdBy}` : ''}
+              </div>
+              <div style="margin-top: 8px; font-size: 13px; color: #666;">
+                <strong>변수:</strong> ${variables}
+              </div>
+              <div class="content-preview">${escapeHtml(item.content.substring(0, 300))}${item.content.length > 300 ? '...' : ''}</div>
+              <div class="actions">
+                <button class="btn btn-primary btn-small" onclick="previewHistoryVersion('${item.promptId}', ${item.version})">미리보기</button>
+                <button class="btn btn-success btn-small" onclick="restorePromptVersion('${item.promptId}', ${item.version})">이 버전으로 복원</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        modalBody.innerHTML = `
+          <div style="margin-bottom: 16px; padding: 12px; background: #f7fafc; border-radius: 8px; font-size: 13px; color: #4a5568;">
+            💡 버전을 복원하면 현재 버전이 히스토리에 저장되고, 선택한 버전이 새 버전으로 적용됩니다.
+          </div>
+          ${historyHtml}
+        `;
+      } catch (error) {
+        modalBody.innerHTML = `<div class="error">❌ 에러: ${error.message}</div>`;
+      }
+    }
+
+    function closeHistoryModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('historyModal').classList.remove('show');
+    }
+
+    async function previewHistoryVersion(promptId, version) {
+      try {
+        const result = await apiCall(`/api/admin/prompts/${promptId}/history`);
+        const history = result.data;
+        const item = history.find(h => h.version === version);
+
+        if (!item) {
+          alert('버전을 찾을 수 없습니다');
+          return;
+        }
+
+        // 편집기에 내용 로드 (저장은 안 함)
+        document.getElementById('promptName').value = item.name;
+        document.getElementById('promptVariables').value = (item.variables || []).join(', ');
+        document.getElementById('promptContent').value = item.content;
+
+        // 모달 닫기
+        closeHistoryModal();
+
+        // 결과 메시지 표시
+        const resultDiv = document.getElementById('promptEditResult');
+        resultDiv.innerHTML = `
+          <div style="background: #faf5ff; padding: 12px; border-radius: 8px; border-left: 4px solid #805ad5;">
+            👀 <strong>v${version} 미리보기 중</strong> - 저장하려면 "저장하기" 버튼을 클릭하세요
+          </div>
+        `;
+        resultDiv.classList.add('show');
+
+        // 편집기로 스크롤
+        document.getElementById('promptId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (error) {
+        alert(`❌ 에러: ${error.message}`);
+      }
+    }
+
+    async function restorePromptVersion(promptId, version) {
+      if (!confirm(`v${version}으로 복원하시겠습니까?\n\n현재 버전은 히스토리에 저장됩니다.`)) {
+        return;
+      }
+
+      try {
+        const result = await apiCall(`/api/admin/prompts/${promptId}/restore/${version}`, 'POST');
+
+        // 모달 닫기
+        closeHistoryModal();
+
+        // 편집기에 복원된 내용 로드
+        const restored = result.data;
+        document.getElementById('promptId').value = restored.id;
+        document.getElementById('promptName').value = restored.name;
+        document.getElementById('promptVariables').value = (restored.variables || []).join(', ');
+        document.getElementById('promptContent').value = restored.content;
+
+        // 결과 메시지 표시
+        const resultDiv = document.getElementById('promptEditResult');
+        resultDiv.innerHTML = `
+          <div style="background: #f0fff4; padding: 12px; border-radius: 8px; border-left: 4px solid #48bb78;">
+            ✅ <strong>v${version}에서 v${restored.version}으로 복원 완료</strong>
+          </div>
+        `;
+        resultDiv.classList.add('show');
+
+        // 프롬프트 목록 새로고침
+        loadPrompts();
+
+        // 편집기로 스크롤
+        document.getElementById('promptId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (error) {
+        alert(`❌ 에러: ${error.message}`);
+      }
+    }
+
+    // HTML 이스케이프 함수
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
   </script>
 </body>

@@ -151,6 +151,23 @@ async function initializeDatabase() {
       )
     `);
 
+    // prompt_history 테이블 생성 (프롬프트 버전 히스토리)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS prompt_history (
+        id SERIAL PRIMARY KEY,
+        "promptId" TEXT NOT NULL,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        variables TEXT,
+        version INTEGER NOT NULL,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "createdBy" TEXT
+      )
+    `);
+
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_prompt_history_promptId ON prompt_history("promptId")`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_prompt_history_version ON prompt_history("promptId", version)`);
+
     console.log('✅ PostgreSQL database initialized');
   } catch (error) {
     console.error('❌ Failed to initialize PostgreSQL database:', error);
@@ -1492,7 +1509,7 @@ export class PromptDatabase {
   }
 
   /**
-   * 프롬프트 저장/업데이트
+   * 프롬프트 저장/업데이트 (기존 버전은 히스토리에 저장)
    */
   static async upsert(
     id: string,
@@ -1502,6 +1519,24 @@ export class PromptDatabase {
     updatedBy?: string
   ): Promise<boolean> {
     try {
+      // 기존 프롬프트 조회 (히스토리 저장용)
+      const existing = await pool.query(
+        'SELECT name, content, variables, version, "updatedBy" FROM prompts WHERE id = $1',
+        [id]
+      );
+
+      // 기존 버전이 있으면 히스토리에 저장
+      if (existing.rows.length > 0) {
+        const old = existing.rows[0];
+        await pool.query(
+          `INSERT INTO prompt_history ("promptId", name, content, variables, version, "createdAt", "createdBy")
+           VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
+          [id, old.name, old.content, old.variables, old.version, old.updatedBy]
+        );
+        console.log(`📜 [PromptDatabase] Saved version ${old.version} of '${id}' to history`);
+      }
+
+      // 새 버전 저장
       await pool.query(
         `INSERT INTO prompts (id, name, content, variables, version, "updatedAt", "updatedBy")
          VALUES ($1, $2, $3, $4, 1, NOW(), $5)
@@ -1522,6 +1557,101 @@ export class PromptDatabase {
       return true;
     } catch (error) {
       console.error(`❌ [PromptDatabase] Failed to upsert prompt ${id}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * 프롬프트 버전 히스토리 조회
+   */
+  static async getHistory(promptId: string): Promise<Array<{
+    id: number;
+    promptId: string;
+    name: string;
+    content: string;
+    variables: string[];
+    version: number;
+    createdAt: string;
+    createdBy: string | null;
+  }>> {
+    try {
+      const result = await pool.query(
+        `SELECT id, "promptId", name, content, variables, version, "createdAt", "createdBy"
+         FROM prompt_history
+         WHERE "promptId" = $1
+         ORDER BY version DESC`,
+        [promptId]
+      );
+
+      return result.rows.map(row => ({
+        ...row,
+        variables: row.variables ? JSON.parse(row.variables) : [],
+      }));
+    } catch (error) {
+      console.error(`❌ [PromptDatabase] Failed to get history for ${promptId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 특정 버전의 프롬프트 조회 (히스토리에서)
+   */
+  static async getVersion(promptId: string, version: number): Promise<{
+    name: string;
+    content: string;
+    variables: string[];
+    version: number;
+    createdAt: string;
+    createdBy: string | null;
+  } | null> {
+    try {
+      const result = await pool.query(
+        `SELECT name, content, variables, version, "createdAt", "createdBy"
+         FROM prompt_history
+         WHERE "promptId" = $1 AND version = $2`,
+        [promptId, version]
+      );
+
+      if (result.rows.length === 0) return null;
+
+      const row = result.rows[0];
+      return {
+        ...row,
+        variables: row.variables ? JSON.parse(row.variables) : [],
+      };
+    } catch (error) {
+      console.error(`❌ [PromptDatabase] Failed to get version ${version} of ${promptId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 특정 버전으로 복원 (새 버전으로 저장)
+   */
+  static async restoreVersion(promptId: string, version: number, restoredBy?: string): Promise<boolean> {
+    try {
+      const oldVersion = await this.getVersion(promptId, version);
+      if (!oldVersion) {
+        console.error(`❌ [PromptDatabase] Version ${version} of ${promptId} not found`);
+        return false;
+      }
+
+      // 복원 시 upsert 호출 (현재 버전을 히스토리에 저장 후 복원)
+      const success = await this.upsert(
+        promptId,
+        oldVersion.name,
+        oldVersion.content,
+        oldVersion.variables,
+        restoredBy || 'system'
+      );
+
+      if (success) {
+        console.log(`🔄 [PromptDatabase] Restored '${promptId}' to version ${version}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error(`❌ [PromptDatabase] Failed to restore ${promptId} to version ${version}:`, error);
       return false;
     }
   }

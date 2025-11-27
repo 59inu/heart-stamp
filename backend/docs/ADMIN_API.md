@@ -455,6 +455,89 @@ POST /prompts/cache/clear
 
 ---
 
+### 프롬프트 버전 히스토리 조회
+
+```
+GET /prompts/:id/history
+```
+
+프롬프트의 모든 이전 버전을 조회합니다. 프롬프트를 수정할 때마다 이전 버전이 히스토리에 저장됩니다.
+
+**Path Parameters:**
+
+| 파라미터 | 설명 |
+|---------|------|
+| id | 프롬프트 ID (`comment`, `importance`, `scene`) |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "count": 3,
+  "data": [
+    {
+      "id": 5,
+      "promptId": "comment",
+      "name": "코멘트 생성",
+      "content": "이전 버전의 프롬프트 내용...",
+      "variables": ["responseLength", "emotionTag", "diaryContent"],
+      "version": 2,
+      "createdAt": "2025-01-15T12:00:00",
+      "createdBy": "admin"
+    }
+  ]
+}
+```
+
+> 결과는 버전 내림차순 (최신 → 과거)으로 정렬됩니다.
+
+---
+
+### 프롬프트 특정 버전으로 복원
+
+```
+POST /prompts/:id/restore/:version
+```
+
+히스토리에 저장된 특정 버전으로 프롬프트를 복원합니다. 복원 시 현재 버전은 히스토리에 저장되고, 선택한 버전이 새 버전으로 적용됩니다.
+
+**Path Parameters:**
+
+| 파라미터 | 설명 |
+|---------|------|
+| id | 프롬프트 ID |
+| version | 복원할 버전 번호 |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Prompt 'comment' restored to version 2",
+  "data": {
+    "id": "comment",
+    "name": "코멘트 생성",
+    "content": "복원된 프롬프트 내용...",
+    "variables": ["responseLength", "emotionTag", "diaryContent"],
+    "version": 4,
+    "updatedAt": "2025-01-16T10:00:00",
+    "updatedBy": "admin"
+  }
+}
+```
+
+**Response (404 - 버전 없음):**
+
+```json
+{
+  "success": false,
+  "message": "Version 2 of prompt 'comment' not found"
+}
+```
+
+---
+
 ### 기본 프롬프트 목록
 
 | ID | 이름 | 변수 | 용도 |
