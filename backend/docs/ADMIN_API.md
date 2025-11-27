@@ -937,6 +937,213 @@ GET /analytics/image-correlation
 
 ---
 
+### 어제 vs 오늘 일일 현황 스냅샷
+
+```
+GET /analytics/daily-snapshot
+```
+
+어제와 오늘의 모든 핵심 지표를 비교하여 한 눈에 볼 수 있는 대시보드 데이터를 제공합니다.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "today": {
+      "date": "2025-01-27",
+      "diaries": {
+        "total": 45,
+        "withImage": 8,
+        "avgLength": 245,
+        "activeUsers": 32,
+        "newUsers": 5,
+        "returningUsers": 27
+      },
+      "aiComments": {
+        "total": 12,
+        "sonnet": 10,
+        "haiku": 2,
+        "fallback": 0,
+        "pending": 33,
+        "avgImportanceScore": 14.2
+      },
+      "images": {
+        "completed": 8,
+        "failed": 2,
+        "pending": 3
+      },
+      "cost": {
+        "total": 0.122,
+        "sonnet": 0.1,
+        "haiku": 0.002
+      }
+    },
+    "yesterday": {
+      "date": "2025-01-26",
+      "diaries": {
+        "total": 38,
+        "withImage": 12,
+        "avgLength": 230,
+        "activeUsers": 28,
+        "newUsers": 3,
+        "returningUsers": 25
+      },
+      "aiComments": {
+        "total": 35,
+        "sonnet": 28,
+        "haiku": 7,
+        "fallback": 0,
+        "pending": 3,
+        "avgImportanceScore": 13.8
+      },
+      "images": {
+        "completed": 12,
+        "failed": 1,
+        "pending": 0
+      },
+      "cost": {
+        "total": 0.287,
+        "sonnet": 0.28,
+        "haiku": 0.007
+      }
+    },
+    "comparison": {
+      "diaries": { "diff": 7, "percentage": 18.4 },
+      "activeUsers": { "diff": 4, "percentage": 14.3 },
+      "aiComments": { "diff": -23, "percentage": -65.7 },
+      "images": { "diff": -4, "percentage": -33.3 }
+    },
+    "hourlyTrend": {
+      "today": [
+        { "hour": 0, "count": 2 },
+        { "hour": 1, "count": 1 },
+        { "hour": 22, "count": 8 },
+        { "hour": 23, "count": 5 }
+      ],
+      "yesterday": [
+        { "hour": 0, "count": 1 },
+        { "hour": 1, "count": 3 },
+        { "hour": 22, "count": 10 },
+        { "hour": 23, "count": 6 }
+      ]
+    },
+    "alerts": {
+      "warnings": [
+        {
+          "type": "pending_comments",
+          "count": 3,
+          "message": "어제 일기 중 AI 코멘트 대기: 3개"
+        },
+        {
+          "type": "image_failed",
+          "count": 3,
+          "message": "이미지 생성 실패: 3건 (오늘: 2, 어제: 1)"
+        }
+      ],
+      "errors": [],
+      "info": [
+        {
+          "type": "batch_completed",
+          "time": "03:00",
+          "message": "배치 작업 완료: 어제 일기 35개에 AI 코멘트 생성"
+        }
+      ]
+    }
+  }
+}
+```
+
+**필드 설명:**
+
+**today / yesterday** (일별 데이터):
+| 필드 | 설명 |
+|-----|------|
+| date | 날짜 (YYYY-MM-DD, KST 기준) |
+| diaries.total | 일기 작성 수 |
+| diaries.withImage | 그림일기 수 |
+| diaries.avgLength | 평균 일기 길이 (글자 수) |
+| diaries.activeUsers | 활성 사용자 수 (일기 작성한 사용자) |
+| diaries.newUsers | 신규 사용자 수 (첫 일기) |
+| diaries.returningUsers | 재방문 사용자 수 |
+| aiComments.total | AI 코멘트 생성 수 |
+| aiComments.sonnet | Sonnet 모델 사용 수 |
+| aiComments.haiku | Haiku 모델 사용 수 |
+| aiComments.fallback | Fallback 코멘트 수 |
+| aiComments.pending | 코멘트 대기 중인 일기 수 |
+| aiComments.avgImportanceScore | 평균 중요도 점수 |
+| images.completed | 이미지 생성 완료 수 |
+| images.failed | 이미지 생성 실패 수 |
+| images.pending | 이미지 생성 대기/진행 중 수 |
+| cost.total | 총 비용 (USD) |
+| cost.sonnet | Sonnet 비용 (USD) |
+| cost.haiku | Haiku 비용 (USD) |
+
+**comparison** (비교):
+| 필드 | 설명 |
+|-----|------|
+| diaries | 일기 작성 수 비교 |
+| activeUsers | 활성 사용자 수 비교 |
+| aiComments | AI 코멘트 수 비교 |
+| images | 그림일기 수 비교 |
+| diff | 차이 (오늘 - 어제) |
+| percentage | 증감률 (%) |
+
+**hourlyTrend** (시간대별 추이):
+| 필드 | 설명 |
+|-----|------|
+| today | 오늘 시간대별 작성 수 (0-23시, KST) |
+| yesterday | 어제 시간대별 작성 수 |
+| hour | 시간 (0-23) |
+| count | 해당 시간대 일기 작성 수 |
+
+**alerts** (알림):
+| 필드 | 설명 |
+|-----|------|
+| warnings | 경고 (주의 필요) |
+| errors | 에러 (즉시 조치 필요) |
+| info | 정보성 알림 |
+| type | 알림 타입 |
+| count | 발생 건수 |
+| message | 알림 메시지 |
+| time | 발생 시간 (옵션) |
+
+**알림 타입:**
+- `pending_comments`: AI 코멘트 대기 중
+- `image_failed`: 이미지 생성 실패
+- `fallback_occurred`: Fallback 코멘트 발생 (에러)
+- `batch_completed`: 배치 작업 완료 (정보)
+
+**활용:**
+- 일일 운영 현황 모니터링
+- 어제 대비 오늘 성장/감소 추이 파악
+- 배치 작업 정상 작동 여부 확인
+- 즉시 조치가 필요한 이슈 발견
+- 시간대별 사용자 활동 패턴 분석
+
+**대시보드 구성 예시:**
+```
+┌─────────────────────────────────────┐
+│ 📝 일기 작성                        │
+│ 오늘: 45개  어제: 38개  (+18.4%)  │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ 👥 활성 사용자                      │
+│ 오늘: 32명  어제: 28명  (+14.3%)  │
+└─────────────────────────────────────┘
+
+⚠️ 주의 필요 항목:
+• AI 코멘트 대기: 3개 (어제 일기)
+• 이미지 생성 실패: 3건
+
+✅ 정상 작동 중:
+• 배치 작업: 정상 실행 (03:00)
+```
+
+---
+
 ## 공통 에러 응답
 
 **404 - 리소스 없음:**

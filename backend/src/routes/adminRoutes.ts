@@ -740,4 +740,28 @@ router.get('/analytics/image-correlation',
   }
 );
 
+/**
+ * 어제 vs 오늘 일일 현황 스냅샷
+ * GET /api/admin/analytics/daily-snapshot
+ */
+router.get('/analytics/daily-snapshot',
+  async (req: Request, res: Response) => {
+    try {
+      const data = await AnalyticsService.getDailySnapshot();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error fetching daily snapshot:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch daily snapshot',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

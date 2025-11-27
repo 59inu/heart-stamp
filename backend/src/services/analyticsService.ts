@@ -691,4 +691,254 @@ export class AnalyticsService {
       throw error;
     }
   }
+
+  /**
+   * 어제 vs 오늘 일일 현황 스냅샷
+   */
+  static async getDailySnapshot(): Promise<{
+    today: any;
+    yesterday: any;
+    comparison: any;
+    hourlyTrend: any;
+    alerts: any;
+  }> {
+    try {
+      // KST 기준 오늘/어제 날짜 계산
+      const now = new Date();
+      const kstOffset = 9 * 60; // +9시간
+      const kstNow = new Date(now.getTime() + kstOffset * 60 * 1000);
+
+      const todayStr = kstNow.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      const yesterday = new Date(kstNow);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      // 오늘/어제 데이터 조회 함수
+      const getDayData = async (dateStr: string) => {
+        // 일기 통계
+        const diaryResult = await pool.query(`
+          WITH day_diaries AS (
+            SELECT
+              _id,
+              "userId",
+              "imageGenerationStatus",
+              LENGTH(content) as content_length
+            FROM diaries
+            WHERE date LIKE $1
+              AND "deletedAt" IS NULL
+          )
+          SELECT
+            COUNT(*) as total,
+            COUNT(CASE WHEN "imageGenerationStatus" = 'completed' THEN 1 END) as with_image,
+            AVG(content_length) as avg_length,
+            COUNT(DISTINCT "userId") as active_users
+          FROM day_diaries
+        `, [`${dateStr}%`]);
+
+        const diaryRow = diaryResult.rows[0];
+
+        // 신규 vs 재방문 사용자
+        const userTypeResult = await pool.query(`
+          WITH day_users AS (
+            SELECT DISTINCT "userId"
+            FROM diaries
+            WHERE date LIKE $1 AND "deletedAt" IS NULL
+          ),
+          first_diary_dates AS (
+            SELECT
+              "userId",
+              MIN(date) as first_date
+            FROM diaries
+            WHERE "deletedAt" IS NULL
+            GROUP BY "userId"
+          )
+          SELECT
+            COUNT(CASE WHEN fdd.first_date LIKE $1 THEN 1 END) as new_users,
+            COUNT(CASE WHEN fdd.first_date NOT LIKE $1 THEN 1 END) as returning_users
+          FROM day_users du
+          JOIN first_diary_dates fdd ON du."userId" = fdd."userId"
+        `, [`${dateStr}%`]);
+
+        const userTypeRow = userTypeResult.rows[0];
+
+        // AI 코멘트 통계
+        const aiCommentResult = await pool.query(`
+          SELECT
+            COUNT(CASE WHEN "aiComment" IS NOT NULL THEN 1 END) as total,
+            COUNT(CASE WHEN model = 'sonnet' THEN 1 END) as sonnet,
+            COUNT(CASE WHEN model = 'haiku' THEN 1 END) as haiku,
+            COUNT(CASE WHEN "aiComment" IS NOT NULL AND model IS NULL THEN 1 END) as fallback,
+            COUNT(CASE WHEN "aiComment" IS NULL THEN 1 END) as pending,
+            AVG(CASE WHEN "importanceScore" IS NOT NULL THEN "importanceScore" END) as avg_score
+          FROM diaries
+          WHERE date LIKE $1 AND "deletedAt" IS NULL
+        `, [`${dateStr}%`]);
+
+        const aiRow = aiCommentResult.rows[0];
+
+        // 이미지 생성 통계
+        const imageResult = await pool.query(`
+          SELECT
+            COUNT(CASE WHEN "imageGenerationStatus" = 'completed' THEN 1 END) as completed,
+            COUNT(CASE WHEN "imageGenerationStatus" = 'failed' THEN 1 END) as failed,
+            COUNT(CASE WHEN "imageGenerationStatus" = 'pending' OR "imageGenerationStatus" = 'generating' THEN 1 END) as pending
+          FROM diaries
+          WHERE date LIKE $1 AND "deletedAt" IS NULL
+        `, [`${dateStr}%`]);
+
+        const imageRow = imageResult.rows[0];
+
+        // 비용 계산
+        const COST_PER_SONNET = 0.01;
+        const COST_PER_HAIKU = 0.001;
+        const sonnetCount = parseInt(aiRow.sonnet || 0, 10);
+        const haikuCount = parseInt(aiRow.haiku || 0, 10);
+        const totalCost = (sonnetCount * COST_PER_SONNET) + (haikuCount * COST_PER_HAIKU);
+
+        return {
+          date: dateStr,
+          diaries: {
+            total: parseInt(diaryRow.total || 0, 10),
+            withImage: parseInt(diaryRow.with_image || 0, 10),
+            avgLength: Math.round(parseFloat(diaryRow.avg_length || 0)),
+            activeUsers: parseInt(diaryRow.active_users || 0, 10),
+            newUsers: parseInt(userTypeRow.new_users || 0, 10),
+            returningUsers: parseInt(userTypeRow.returning_users || 0, 10),
+          },
+          aiComments: {
+            total: parseInt(aiRow.total || 0, 10),
+            sonnet: parseInt(aiRow.sonnet || 0, 10),
+            haiku: parseInt(aiRow.haiku || 0, 10),
+            fallback: parseInt(aiRow.fallback || 0, 10),
+            pending: parseInt(aiRow.pending || 0, 10),
+            avgImportanceScore: aiRow.avg_score ? Math.round(parseFloat(aiRow.avg_score) * 10) / 10 : null,
+          },
+          images: {
+            completed: parseInt(imageRow.completed || 0, 10),
+            failed: parseInt(imageRow.failed || 0, 10),
+            pending: parseInt(imageRow.pending || 0, 10),
+          },
+          cost: {
+            total: Math.round(totalCost * 1000) / 1000,
+            sonnet: Math.round(sonnetCount * COST_PER_SONNET * 1000) / 1000,
+            haiku: Math.round(haikuCount * COST_PER_HAIKU * 1000) / 1000,
+          },
+        };
+      };
+
+      // 오늘/어제 데이터 조회
+      const [today, yesterday] = await Promise.all([
+        getDayData(todayStr),
+        getDayData(yesterdayStr),
+      ]);
+
+      // 비교 계산
+      const calcComparison = (todayVal: number, yesterdayVal: number) => {
+        const diff = todayVal - yesterdayVal;
+        const percentage = yesterdayVal > 0
+          ? Math.round((diff / yesterdayVal) * 100 * 10) / 10
+          : (todayVal > 0 ? 100 : 0);
+        return { diff, percentage };
+      };
+
+      const comparison = {
+        diaries: calcComparison(today.diaries.total, yesterday.diaries.total),
+        activeUsers: calcComparison(today.diaries.activeUsers, yesterday.diaries.activeUsers),
+        aiComments: calcComparison(today.aiComments.total, yesterday.aiComments.total),
+        images: calcComparison(today.images.completed, yesterday.images.completed),
+      };
+
+      // 시간대별 트렌드 (KST 기준)
+      const hourlyTrendResult = await pool.query(`
+        SELECT
+          date,
+          EXTRACT(HOUR FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') as hour,
+          COUNT(*) as count
+        FROM diaries
+        WHERE (date LIKE $1 OR date LIKE $2)
+          AND "deletedAt" IS NULL
+        GROUP BY date, EXTRACT(HOUR FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
+        ORDER BY date, hour
+      `, [`${todayStr}%`, `${yesterdayStr}%`]);
+
+      const todayHourly = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
+      const yesterdayHourly = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
+
+      for (const row of hourlyTrendResult.rows) {
+        const hour = parseInt(row.hour, 10);
+        const count = parseInt(row.count, 10);
+        if (row.date.startsWith(todayStr)) {
+          todayHourly[hour].count = count;
+        } else {
+          yesterdayHourly[hour].count = count;
+        }
+      }
+
+      const hourlyTrend = {
+        today: todayHourly,
+        yesterday: yesterdayHourly,
+      };
+
+      // 알림 (Alerts)
+      const alerts: {
+        warnings: Array<{ type: string; count: number; message: string }>;
+        errors: Array<{ type: string; count: number; message: string }>;
+        info: Array<{ type: string; time?: string; message: string }>;
+      } = {
+        warnings: [],
+        errors: [],
+        info: [],
+      };
+
+      // 경고: AI 코멘트 대기 중 (어제 일기)
+      if (yesterday.aiComments.pending > 0) {
+        alerts.warnings.push({
+          type: 'pending_comments',
+          count: yesterday.aiComments.pending,
+          message: `어제 일기 중 AI 코멘트 대기: ${yesterday.aiComments.pending}개`,
+        });
+      }
+
+      // 경고: 이미지 생성 실패
+      const totalImageFailed = today.images.failed + yesterday.images.failed;
+      if (totalImageFailed > 0) {
+        alerts.warnings.push({
+          type: 'image_failed',
+          count: totalImageFailed,
+          message: `이미지 생성 실패: ${totalImageFailed}건 (오늘: ${today.images.failed}, 어제: ${yesterday.images.failed})`,
+        });
+      }
+
+      // 에러: Fallback 발생
+      const totalFallback = today.aiComments.fallback + yesterday.aiComments.fallback;
+      if (totalFallback > 0) {
+        alerts.errors.push({
+          type: 'fallback_occurred',
+          count: totalFallback,
+          message: `Fallback 코멘트 발생: ${totalFallback}건 (오늘: ${today.aiComments.fallback}, 어제: ${yesterday.aiComments.fallback})`,
+        });
+      }
+
+      // 정보: 배치 작업 완료 (어제 일기에 코멘트가 생성되었다면)
+      if (yesterday.aiComments.total > 0) {
+        alerts.info.push({
+          type: 'batch_completed',
+          time: '03:00',
+          message: `배치 작업 완료: 어제 일기 ${yesterday.aiComments.total}개에 AI 코멘트 생성`,
+        });
+      }
+
+      return {
+        today,
+        yesterday,
+        comparison,
+        hourlyTrend,
+        alerts,
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get daily snapshot:', error);
+      throw error;
+    }
+  }
 }
