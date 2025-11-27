@@ -182,32 +182,47 @@ export default function App() {
       }
 
       // 알림 탭 핸들러 (재사용)
-      const handleNotificationTap = async (diaryId: string) => {
-        logger.log('👆 [App] Notification tapped - navigating to diary:', diaryId);
-
-        // 동기화 먼저 수행 (서버에서 최신 데이터 가져오기)
-        const syncResult = await DiaryStorage.syncWithServer();
-        if (syncResult.success) {
-          logger.log('✅ [App] Sync completed before navigation');
-        }
+      const handleNotificationTap = async (type: string, diaryId?: string) => {
+        logger.log('👆 [App] Notification tapped - type:', type, 'diaryId:', diaryId);
 
         // 네비게이션 실행 (준비될 때까지 대기)
-        const waitForNavigation = async (retries = 10) => {
+        const waitForNavigation = async (navigate: () => void, retries = 10) => {
           if (navigationRef.current?.isReady()) {
-            navigationRef.current.navigate('DiaryDetail', { entryId: diaryId });
-            logger.log('✅ [App] Navigated to DiaryDetail');
+            navigate();
             return;
           }
 
           if (retries > 0) {
             await new Promise(resolve => setTimeout(resolve, 100));
-            return waitForNavigation(retries - 1);
+            return waitForNavigation(navigate, retries - 1);
           }
 
           logger.warn('⚠️ [App] Navigation not ready after retries');
         };
 
-        await waitForNavigation();
+        if (type === 'ai_comment_complete' || type === 'image_generated') {
+          if (!diaryId) {
+            logger.warn('⚠️ [App] No diaryId provided for', type);
+            return;
+          }
+
+          // 동기화 먼저 수행 (서버에서 최신 데이터 가져오기)
+          const syncResult = await DiaryStorage.syncWithServer();
+          if (syncResult.success) {
+            logger.log('✅ [App] Sync completed before navigation');
+          }
+
+          await waitForNavigation(() => {
+            navigationRef.current?.navigate('DiaryDetail', { entryId: diaryId });
+            logger.log('✅ [App] Navigated to DiaryDetail');
+          });
+        } else if (type === 'daily_reminder') {
+          // 오늘 날짜로 일기 작성 화면 진입
+          await waitForNavigation(() => {
+            navigationRef.current?.navigate('DiaryWrite', { date: new Date() });
+            logger.log('✅ [App] Navigated to DiaryWrite');
+          });
+        }
       };
 
       // 알림 리스너 설정 - AI 코멘트 완료 알림 수신 시 동기화
@@ -244,9 +259,14 @@ export default function App() {
       const lastResponse = await Notifications.getLastNotificationResponseAsync();
       if (lastResponse) {
         const data = lastResponse.notification.request.content.data;
-        if ((data?.type === 'ai_comment_complete' || data?.type === 'image_generated') && data?.diaryId) {
-          logger.log('📬 [App] App launched from notification tap:', data.diaryId);
-          await handleNotificationTap(String(data.diaryId));
+        const type = data?.type as string;
+
+        if ((type === 'ai_comment_complete' || type === 'image_generated') && data?.diaryId) {
+          logger.log('📬 [App] App launched from notification tap:', type, data.diaryId);
+          await handleNotificationTap(type, String(data.diaryId));
+        } else if (type === 'daily_reminder') {
+          logger.log('📬 [App] App launched from daily reminder tap');
+          await handleNotificationTap(type);
         }
       }
       };

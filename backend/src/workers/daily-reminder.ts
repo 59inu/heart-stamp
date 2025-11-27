@@ -46,7 +46,8 @@ async function main() {
           const success = await PushNotificationService.sendNotification(
             userId,
             '오늘의 일기를 써볼까요? 📝',
-            '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요'
+            '선생님이 일기를 기대하고 있어요. 하루를 돌아보며 일기를 작성해보세요',
+            { type: 'daily_reminder' }
           );
 
           if (success) {
