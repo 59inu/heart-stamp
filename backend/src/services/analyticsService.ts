@@ -14,14 +14,14 @@ export class AnalyticsService {
     weekday: Array<{ day: number; dayName: string; count: number; percentage: number }>;
   }> {
     try {
-      // 시간대별 작성 패턴 (0-23시)
+      // 시간대별 작성 패턴 (0-23시, KST 기준)
       const hourlyResult = await pool.query(`
         SELECT
-          EXTRACT(HOUR FROM "createdAt"::timestamp) as hour,
+          EXTRACT(HOUR FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') as hour,
           COUNT(*) as count
         FROM diaries
         WHERE "deletedAt" IS NULL
-        GROUP BY EXTRACT(HOUR FROM "createdAt"::timestamp)
+        GROUP BY EXTRACT(HOUR FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
         ORDER BY hour
       `);
 
@@ -37,14 +37,14 @@ export class AnalyticsService {
         };
       });
 
-      // 요일별 작성 패턴 (0=일요일, 6=토요일)
+      // 요일별 작성 패턴 (0=일요일, 6=토요일, KST 기준)
       const weekdayResult = await pool.query(`
         SELECT
-          EXTRACT(DOW FROM "createdAt"::timestamp) as dow,
+          EXTRACT(DOW FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') as dow,
           COUNT(*) as count
         FROM diaries
         WHERE "deletedAt" IS NULL
-        GROUP BY EXTRACT(DOW FROM "createdAt"::timestamp)
+        GROUP BY EXTRACT(DOW FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
         ORDER BY dow
       `);
 
