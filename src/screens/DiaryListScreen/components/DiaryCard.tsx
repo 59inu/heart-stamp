@@ -136,8 +136,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   stampImageLarge: {
-    width: 150,
-    height: 150,
+    width: 250,
+    height: 250,
     position: 'absolute',
     opacity: 0.95,
     zIndex: 1,
