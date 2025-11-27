@@ -1047,15 +1047,18 @@ export class DiaryDatabase {
       const result = await pool.query(query, params);
 
       return result.rows.map(row => {
-        const decrypted = decrypt ? decryptFields({ content: row.content, moodTag: row.moodTag }) : null;
+        // moodTag는 항상 복호화 (감정 태그는 민감 정보가 아님)
+        const decryptedMoodTag = row.moodTag ? decryptFields({ moodTag: row.moodTag }).moodTag : null;
+        const decryptedContent = decrypt ? decryptFields({ content: row.content }).content : '[암호화됨]';
+
         return {
           diaryId: row._id,
           userId: row.userId,
           date: row.date,
-          content: decrypt ? decrypted?.content : '[암호화됨]',
+          content: decryptedContent,
           hasComment: row.aiComment !== null,
           hasGeneratedImage: row.imageGenerationStatus === 'completed',
-          moodTag: decrypt ? decrypted?.moodTag : (row.moodTag ? '[암호화됨]' : null),
+          moodTag: decryptedMoodTag,
           createdAt: row.createdAt,
         };
       });
