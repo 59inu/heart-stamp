@@ -710,9 +710,9 @@ export class AnalyticsService {
 
       const todayStr = kstNow.toISOString().split('T')[0]; // YYYY-MM-DD
 
-      const yesterday = new Date(kstNow);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const yesterdayDate = new Date(kstNow);
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
 
       // 오늘/어제 데이터 조회 함수
       const getDayData = async (dateStr: string) => {
