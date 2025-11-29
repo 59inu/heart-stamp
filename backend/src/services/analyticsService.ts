@@ -1,4 +1,5 @@
 import { pool } from './database';
+import { getExcludeUserCondition, EXCLUDED_USER_IDS } from '../utils/analyticsHelper';
 
 /**
  * Analytics Service
@@ -21,6 +22,7 @@ export class AnalyticsService {
           COUNT(*) as count
         FROM diaries
         WHERE "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY EXTRACT(HOUR FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
         ORDER BY hour
       `);
@@ -44,6 +46,7 @@ export class AnalyticsService {
           COUNT(*) as count
         FROM diaries
         WHERE "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY EXTRACT(DOW FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
         ORDER BY dow
       `);
@@ -102,6 +105,7 @@ export class AnalyticsService {
             MAX("createdAt"::timestamp) as last_diary_date
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         )
         SELECT
@@ -127,6 +131,7 @@ export class AnalyticsService {
             MIN("createdAt"::timestamp) as first_diary_date
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         ),
         user_activity AS (
@@ -150,7 +155,7 @@ export class AnalyticsService {
             END) as week4_diaries,
             MAX(d."createdAt"::timestamp) as last_activity
           FROM user_first_diary ufd
-          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL
+          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition()}
           GROUP BY ufd."userId", ufd.first_diary_date
         )
         SELECT
@@ -179,6 +184,7 @@ export class AnalyticsService {
             DATE_TRUNC('week', MIN("createdAt"::timestamp)) as cohort_week
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
             AND "createdAt"::timestamp >= CURRENT_TIMESTAMP - INTERVAL '12 weeks'
           GROUP BY "userId"
         ),
@@ -202,7 +208,7 @@ export class AnalyticsService {
               THEN d."userId"
             END) as week4_retained
           FROM weekly_cohorts wc
-          LEFT JOIN diaries d ON d."userId" = wc."userId" AND d."deletedAt" IS NULL
+          LEFT JOIN diaries d ON d."userId" = wc."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition()}
           GROUP BY wc.cohort_week
         )
         SELECT
@@ -279,6 +285,7 @@ export class AnalyticsService {
         FROM diaries
         WHERE "aiComment" IS NOT NULL
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
           AND "createdAt"::timestamp >= CURRENT_TIMESTAMP - INTERVAL '30 days'
       `);
 
@@ -291,8 +298,8 @@ export class AnalyticsService {
       // 2. 주간/월간 리포트 비용 (전체 누적)
       const reportCostResult = await pool.query(`
         SELECT
-          (SELECT COUNT(*) FROM reports WHERE period = 'weekly' AND "deletedAt" IS NULL) as weekly_reports,
-          (SELECT COUNT(*) FROM reports WHERE period = 'monthly' AND "deletedAt" IS NULL) as monthly_reports
+          (SELECT COUNT(*) FROM reports WHERE period = 'weekly' AND "deletedAt" IS NULL ${getExcludeUserCondition()}) as weekly_reports,
+          (SELECT COUNT(*) FROM reports WHERE period = 'monthly' AND "deletedAt" IS NULL ${getExcludeUserCondition()}) as monthly_reports
       `);
 
       const weeklyReports = parseInt(reportCostResult.rows[0]?.weekly_reports || 0, 10);
@@ -315,6 +322,7 @@ export class AnalyticsService {
         FROM diaries
         WHERE "aiComment" IS NOT NULL
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
           AND "createdAt"::timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'
       `);
 
@@ -353,6 +361,7 @@ export class AnalyticsService {
         WHERE model = 'sonnet'
           AND "importanceScore" IS NOT NULL
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
       `);
 
       const avgSonnetScore = parseFloat(thresholdResult.rows[0]?.avg_sonnet_score || 15);
@@ -428,6 +437,7 @@ export class AnalyticsService {
             COUNT(CASE WHEN "imageGenerationStatus" = 'completed' THEN 1 END) as image_diaries
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         )
         SELECT
@@ -475,6 +485,7 @@ export class AnalyticsService {
             END as segment
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         )
         SELECT
@@ -510,6 +521,7 @@ export class AnalyticsService {
             COUNT(CASE WHEN "imageGenerationStatus" = 'completed' THEN 1 END) > 0 as has_image
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         ),
         user_retention AS (
@@ -532,7 +544,7 @@ export class AnalyticsService {
               THEN d._id
             END) > 0 as week4_active
           FROM user_first_diary ufd
-          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL
+          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition()}
           WHERE ufd.first_diary_date < CURRENT_TIMESTAMP - INTERVAL '35 days'
           GROUP BY ufd."userId", ufd.has_image
         )
@@ -570,6 +582,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE "imageGenerationStatus" = 'completed'
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         ),
         before_after AS (
@@ -588,6 +601,7 @@ export class AnalyticsService {
           FROM diaries d
           JOIN first_image fi ON d."userId" = fi."userId"
           WHERE d."deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY d."userId"
         )
         SELECT
@@ -617,6 +631,7 @@ export class AnalyticsService {
             COUNT(CASE WHEN "imageGenerationStatus" = 'completed' THEN 1 END) as image_diaries
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         ),
         categorized AS (
@@ -662,6 +677,7 @@ export class AnalyticsService {
             COUNT(CASE WHEN "imageGenerationStatus" = 'completed' THEN 1 END) as image_diaries
           FROM diaries
           WHERE "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
         )
         SELECT
@@ -731,6 +747,7 @@ export class AnalyticsService {
             FROM diaries
             WHERE date LIKE $1
               AND "deletedAt" IS NULL
+              ${getExcludeUserCondition()}
           )
           SELECT
             COUNT(*) as total,
@@ -747,7 +764,7 @@ export class AnalyticsService {
           WITH day_users AS (
             SELECT DISTINCT "userId"
             FROM diaries
-            WHERE date LIKE $1 AND "deletedAt" IS NULL
+            WHERE date LIKE $1 AND "deletedAt" IS NULL ${getExcludeUserCondition()}
           ),
           first_diary_dates AS (
             SELECT
@@ -755,6 +772,7 @@ export class AnalyticsService {
               MIN(date) as first_date
             FROM diaries
             WHERE "deletedAt" IS NULL
+              ${getExcludeUserCondition()}
             GROUP BY "userId"
           )
           SELECT
@@ -780,6 +798,7 @@ export class AnalyticsService {
             AND ("createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')::date::text = $2
             AND "aiComment" IS NOT NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
         `, [`${dateStr}%`, dateStr]);
 
         const aiRow = aiCommentResult.rows[0];
@@ -791,6 +810,7 @@ export class AnalyticsService {
           WHERE date LIKE $1
             AND "aiComment" IS NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
         `, [`${dateStr}%`]);
 
         const pendingRow = pendingResult.rows[0];
@@ -802,7 +822,7 @@ export class AnalyticsService {
             COUNT(CASE WHEN "imageGenerationStatus" = 'failed' THEN 1 END) as failed,
             COUNT(CASE WHEN "imageGenerationStatus" = 'pending' OR "imageGenerationStatus" = 'generating' THEN 1 END) as pending
           FROM diaries
-          WHERE date LIKE $1 AND "deletedAt" IS NULL
+          WHERE date LIKE $1 AND "deletedAt" IS NULL ${getExcludeUserCondition()}
         `, [`${dateStr}%`]);
 
         const imageRow = imageResult.rows[0];
@@ -897,6 +917,7 @@ export class AnalyticsService {
         FROM diaries
         WHERE (date LIKE $1 OR date LIKE $2)
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY date, EXTRACT(HOUR FROM "createdAt"::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
         ORDER BY date, hour
       `, [`${todayStr}%`, `${yesterdayStr}%`]);
@@ -970,11 +991,11 @@ export class AnalyticsService {
 
       // 활성 사용자 & 유효 사용자 통계
       const activeResult = await pool.query(
-        'SELECT COUNT(DISTINCT "userId") as count FROM diaries'
+        `SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE 1=1 ${getExcludeUserCondition()}`
       );
 
       const validResult = await pool.query(
-        'SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL'
+        `SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL ${getExcludeUserCondition()}`
       );
 
       return {
@@ -1017,6 +1038,7 @@ export class AnalyticsService {
         FROM diaries
         WHERE mood IS NOT NULL
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY mood
         ORDER BY count DESC
       `);
@@ -1037,6 +1059,7 @@ export class AnalyticsService {
         FROM diaries
         WHERE mood IS NOT NULL
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY mood
         ORDER BY mood
       `);
@@ -1057,6 +1080,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE mood IS NOT NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
         )
         SELECT
           AVG(CASE WHEN mood = 'red' THEN 1 ELSE 0 END) as red_ratio,
@@ -1098,6 +1122,7 @@ export class AnalyticsService {
       // 모든 일기의 moodTag와 createdAt 가져오기 (암호화됨)
       const allDiariesResult = await pool.query(`
         SELECT
+          "userId",
           "moodTag",
           "createdAt"::timestamp as created_at
         FROM diaries
@@ -1124,8 +1149,14 @@ export class AnalyticsService {
       const lastWeekMap: { [key: string]: number } = {};
 
       for (const row of allDiariesResult.rows) {
+        const userId = row.userId;
         const encryptedTag = row.moodTag;
         const createdAt = new Date(row.created_at);
+
+        // EXCLUDED_USER_IDS 필터링
+        if (EXCLUDED_USER_IDS.includes(userId)) {
+          continue;
+        }
 
         let decryptedTag: string;
         try {
@@ -1229,6 +1260,7 @@ export class AnalyticsService {
       // mood와 moodTag 모두 가져오기
       const mappingResult = await pool.query(`
         SELECT
+          "userId",
           mood,
           "moodTag"
         FROM diaries
@@ -1242,8 +1274,14 @@ export class AnalyticsService {
       const moodTotals: { [mood: string]: number } = {};
 
       for (const row of mappingResult.rows) {
+        const userId = row.userId;
         const mood = row.mood;
         const encryptedTag = row.moodTag;
+
+        // EXCLUDED_USER_IDS 필터링
+        if (EXCLUDED_USER_IDS.includes(userId)) {
+          continue;
+        }
 
         let decryptedTag: string;
         try {
@@ -1322,6 +1360,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE mood IS NOT NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY "userId"
           HAVING COUNT(*) >= 5
         )
@@ -1359,6 +1398,7 @@ export class AnalyticsService {
           FROM diaries
           WHERE mood IS NOT NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
             AND "createdAt"::timestamp >= NOW() - INTERVAL '90 days'
           GROUP BY "userId"
           HAVING COUNT(*) >= 3
@@ -1428,6 +1468,7 @@ export class AnalyticsService {
           WHERE mood IS NOT NULL
             AND "aiComment" IS NOT NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY mood
         )
         SELECT
@@ -1457,6 +1498,7 @@ export class AnalyticsService {
           WHERE mood IS NOT NULL
             AND "stampType" IS NOT NULL
             AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
           GROUP BY mood, "stampType"
         ),
         mood_totals AS (

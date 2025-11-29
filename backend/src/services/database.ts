@@ -9,6 +9,7 @@ import {
 } from '../utils/errors';
 import { sleep } from '../utils/retry';
 import { encryptFields, decryptFields } from './encryptionService';
+import { getExcludeUserCondition } from '../utils/analyticsHelper';
 
 // PostgreSQL Connection Pool
 const pool = new Pool({
@@ -798,12 +799,12 @@ export class DiaryDatabase {
     try {
       // 활성 사용자: 일기 작성 이력 있음 (삭제 포함)
       const activeResult = await pool.query(
-        'SELECT COUNT(DISTINCT "userId") as count FROM diaries'
+        `SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE 1=1 ${getExcludeUserCondition()}`
       );
 
       // 유효 사용자: 삭제 안 한 일기 있음
       const validResult = await pool.query(
-        'SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL'
+        `SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL ${getExcludeUserCondition()}`
       );
 
       // 모델별 통계
@@ -813,6 +814,7 @@ export class DiaryDatabase {
           COUNT(*) as count
         FROM diaries
         WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY model
       `);
 
@@ -842,6 +844,7 @@ export class DiaryDatabase {
         WHERE "aiComment" IS NOT NULL
           AND "deletedAt" IS NULL
           AND "createdAt" >= (CURRENT_DATE - INTERVAL '14 days')::text
+          ${getExcludeUserCondition()}
         GROUP BY LEFT("createdAt", 10), model
         ORDER BY date DESC
       `);
@@ -878,6 +881,7 @@ export class DiaryDatabase {
         WHERE "aiComment" IS NOT NULL
           AND "deletedAt" IS NULL
           AND "createdAt" >= (CURRENT_DATE - INTERVAL '12 weeks')::text
+          ${getExcludeUserCondition()}
         GROUP BY DATE_TRUNC('week', "createdAt"::timestamp), model
         ORDER BY week DESC
       `);
@@ -1133,23 +1137,23 @@ export class DiaryDatabase {
     try {
       // 기본 현황
       const totalResult = await pool.query(
-        'SELECT COUNT(*) as count FROM diaries WHERE "deletedAt" IS NULL'
+        `SELECT COUNT(*) as count FROM diaries WHERE "deletedAt" IS NULL ${getExcludeUserCondition()}`
       );
       const totalDiaries = parseInt(totalResult.rows[0].count, 10);
 
       const withCommentResult = await pool.query(
-        'SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL'
+        `SELECT COUNT(*) as count FROM diaries WHERE "aiComment" IS NOT NULL AND "deletedAt" IS NULL ${getExcludeUserCondition()}`
       );
       const withComment = parseInt(withCommentResult.rows[0].count, 10);
 
       const withImageResult = await pool.query(
-        `SELECT COUNT(*) as count FROM diaries WHERE "imageGenerationStatus" = 'completed' AND "deletedAt" IS NULL`
+        `SELECT COUNT(*) as count FROM diaries WHERE "imageGenerationStatus" = 'completed' AND "deletedAt" IS NULL ${getExcludeUserCondition()}`
       );
       const withGeneratedImage = parseInt(withImageResult.rows[0].count, 10);
 
       // 사용자 활동
       const userCountResult = await pool.query(
-        'SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL'
+        `SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL ${getExcludeUserCondition()}`
       );
       const userCount = parseInt(userCountResult.rows[0].count, 10);
       const avgDiariesPerUser = userCount > 0 ? Math.round((totalDiaries / userCount) * 10) / 10 : 0;
@@ -1159,6 +1163,7 @@ export class DiaryDatabase {
         SELECT COUNT(DISTINCT "userId") as count FROM diaries
         WHERE date >= DATE_TRUNC('week', CURRENT_DATE)::text
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
       `);
       const writersThisWeek = parseInt(thisWeekResult.rows[0].count, 10);
 
@@ -1168,6 +1173,7 @@ export class DiaryDatabase {
         WHERE date >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days')::text
           AND date < DATE_TRUNC('week', CURRENT_DATE)::text
           AND "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
       `);
       const writersLastWeek = parseInt(lastWeekResult.rows[0].count, 10);
 
@@ -1176,6 +1182,7 @@ export class DiaryDatabase {
         SELECT mood, COUNT(*) as count
         FROM diaries
         WHERE "deletedAt" IS NULL
+          ${getExcludeUserCondition()}
         GROUP BY mood
       `);
       const moodDistribution = { red: 0, yellow: 0, green: 0, none: 0 };
@@ -1192,6 +1199,7 @@ export class DiaryDatabase {
         FROM diaries
         WHERE "deletedAt" IS NULL
           AND date >= (CURRENT_DATE - INTERVAL '14 days')::text
+          ${getExcludeUserCondition()}
         GROUP BY LEFT(date, 10)
         ORDER BY date DESC
       `);
