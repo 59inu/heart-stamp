@@ -25,6 +25,7 @@ import { MonthYearPicker } from './components/MonthYearPicker';
 import { MoodStatsBar } from './components/MoodStatsBar';
 import { CalendarSection } from './components/CalendarSection';
 import { SelectedDateSection } from './components/SelectedDateSection';
+import { TodayDiaryPrompt } from './components/TodayDiaryPrompt';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'DiaryList'>;
 
@@ -63,7 +64,12 @@ export const DiaryListScreen: React.FC = () => {
 
       const agreementData = JSON.parse(agreement);
       if (agreementData.version !== PRIVACY_POLICY_VERSION) {
-        logger.log('개인정보 처리방침 버전 불일치:', agreementData.version, '→', PRIVACY_POLICY_VERSION);
+        logger.log(
+          '개인정보 처리방침 버전 불일치:',
+          agreementData.version,
+          '→',
+          PRIVACY_POLICY_VERSION
+        );
         setShowPrivacyUpdateModal(true);
       }
     } catch (error) {
@@ -104,6 +110,14 @@ export const DiaryListScreen: React.FC = () => {
       return diaryDate === selectedDate;
     });
   }, [diaries, selectedDate]);
+
+  // 오늘의 일기 존재 여부
+  const todayDiary = useMemo(() => {
+    return diaries.find((diary) => {
+      const diaryDate = format(new Date(diary.date), 'yyyy-MM-dd');
+      return diaryDate === today;
+    });
+  }, [diaries, today]);
 
   // loadDiaries 함수의 최신 참조를 유지하기 위한 ref (이벤트 리스너 메모리 누수 방지)
   const loadDiariesRef = useRef(loadDiaries);
@@ -146,7 +160,9 @@ export const DiaryListScreen: React.FC = () => {
     };
 
     const handleAppForeground = async () => {
-      logger.log('📱 [DiaryListScreen] App foreground event - updating today & checking unread letters...');
+      logger.log(
+        '📱 [DiaryListScreen] App foreground event - updating today & checking unread letters...'
+      );
       // 오늘 날짜 갱신 (자정 넘김 대응)
       setToday(format(new Date(), 'yyyy-MM-dd'));
       await loadUnreadLetterCount();
@@ -226,83 +242,92 @@ export const DiaryListScreen: React.FC = () => {
       <SafeAreaView style={{ flex: 0, backgroundColor: '#fff' }} edges={['top']} />
       <SafeAreaView style={styles.container} edges={[]}>
         <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <AnimatedHeartIcon onPress={handleHeartPress} />
+          <View style={styles.headerLeft}>
+            <AnimatedHeartIcon onPress={handleHeartPress} />
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.mailboxButton} onPress={handleMailboxPress}>
+              <MaterialCommunityIcons name="mailbox" size={24} color="#4B5563" />
+              {hasUnreadMessages && <View style={styles.unreadBadge} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate('Report')}
+            >
+              <MaterialCommunityIcons name="poll" size={22} color="#4B5563" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconButton, styles.iconButtonLast]}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.mailboxButton} onPress={handleMailboxPress}>
-            <MaterialCommunityIcons name="mailbox" size={24} color="#4B5563" />
-            {hasUnreadMessages && <View style={styles.unreadBadge} />}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Report')}>
-            <MaterialCommunityIcons name="poll" size={22} color="#4B5563" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.iconButton, styles.iconButtonLast]}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <MaterialCommunityIcons name="cog" size={22} color="#4B5563" />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
+        >
+          <MonthYearPicker
+            visible={showMonthPicker}
+            currentDate={currentDate}
+            onMonthSelect={handleMonthSelect}
+            onYearChange={handleYearChange}
+            onClose={handleCloseModal}
           />
-        }
-      >
-        <MonthYearPicker
-          visible={showMonthPicker}
-          currentDate={currentDate}
-          onMonthSelect={handleMonthSelect}
-          onYearChange={handleYearChange}
-          onClose={handleCloseModal}
-        />
 
-        <MoodStatsBar
-          moodStats={currentMonthMoodStats}
-          summaryText={moodSummaryText}
-          stampCount={stampCount}
-          onStampPress={handleStampPress}
-        />
+          <MoodStatsBar
+            moodStats={currentMonthMoodStats}
+            summaryText={moodSummaryText}
+            stampCount={stampCount}
+            onStampPress={handleStampPress}
+          />
 
-        <SyncStatusBar onSyncComplete={loadDiaries} />
+          <SyncStatusBar onSyncComplete={loadDiaries} />
 
-        <CalendarSection
-          currentDate={currentDate}
-          markedDates={markedDates}
-          onDateSelect={handleDateSelect}
-          onMonthChange={(date: DateData) => {
-            setCurrentDate(new Date(date.year, date.month - 1, 1));
-          }}
-          onHeaderPress={() => setShowMonthPicker(true)}
-          onTodayPress={() => {
-            const today = new Date();
-            setCurrentDate(today);
-            setSelectedDate(format(today, 'yyyy-MM-dd'));
-          }}
-        />
+          {!todayDiary && (
+            <TodayDiaryPrompt
+              onPress={() => navigation.navigate('DiaryWrite', { date: new Date() })}
+            />
+          )}
 
-        <SelectedDateSection
-          selectedDate={selectedDate}
-          today={today}
-          selectedDiary={selectedDiary}
-          onWriteDiary={handleWriteDiary}
-          onDiaryPress={() => {
-            if (selectedDiary) {
-              navigation.navigate('DiaryDetail', { entryId: selectedDiary._id });
-            }
-          }}
-        />
-      </ScrollView>
+          <CalendarSection
+            currentDate={currentDate}
+            markedDates={markedDates}
+            onDateSelect={handleDateSelect}
+            onMonthChange={(date: DateData) => {
+              setCurrentDate(new Date(date.year, date.month - 1, 1));
+            }}
+            onHeaderPress={() => setShowMonthPicker(true)}
+            onTodayPress={() => {
+              const today = new Date();
+              setCurrentDate(today);
+              setSelectedDate(format(today, 'yyyy-MM-dd'));
+            }}
+          />
+
+          <SelectedDateSection
+            selectedDate={selectedDate}
+            today={today}
+            selectedDiary={selectedDiary}
+            onWriteDiary={handleWriteDiary}
+            onDiaryPress={() => {
+              if (selectedDiary) {
+                navigation.navigate('DiaryDetail', { entryId: selectedDiary._id });
+              }
+            }}
+          />
+        </ScrollView>
 
         {/* 첫 방문 온보딩 */}
         <FirstVisitGuide
@@ -312,10 +337,7 @@ export const DiaryListScreen: React.FC = () => {
         />
 
         {/* 개인정보 처리방침 업데이트 안내 */}
-        <PrivacyUpdateModal
-          visible={showPrivacyUpdateModal}
-          onAgree={handlePrivacyUpdateAgree}
-        />
+        <PrivacyUpdateModal visible={showPrivacyUpdateModal} onAgree={handlePrivacyUpdateAgree} />
       </SafeAreaView>
     </>
   );

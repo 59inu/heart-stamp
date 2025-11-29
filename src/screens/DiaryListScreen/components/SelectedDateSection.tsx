@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { DiaryEntry } from '../../../models/DiaryEntry';
@@ -39,7 +39,7 @@ export const SelectedDateSection: React.FC<SelectedDateSectionProps> = ({
           </View>
           {!selectedDiary && (
             <TouchableOpacity style={styles.addButton} onPress={onWriteDiary} activeOpacity={0.7}>
-              <Ionicons name="pencil" size={20} color="#fff" />
+              <MaterialCommunityIcons name="pencil-plus" size={20} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
