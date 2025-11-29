@@ -701,6 +701,10 @@ export class AnalyticsService {
     comparison: any;
     hourlyTrend: any;
     alerts: any;
+    userStats: {
+      activeUserCount: number;
+      validUserCount: number;
+    };
   }> {
     try {
       // KST 기준 오늘/어제 날짜 계산
@@ -964,12 +968,25 @@ export class AnalyticsService {
         });
       }
 
+      // 활성 사용자 & 유효 사용자 통계
+      const activeResult = await pool.query(
+        'SELECT COUNT(DISTINCT "userId") as count FROM diaries'
+      );
+
+      const validResult = await pool.query(
+        'SELECT COUNT(DISTINCT "userId") as count FROM diaries WHERE "deletedAt" IS NULL'
+      );
+
       return {
         today,
         yesterday,
         comparison,
         hourlyTrend,
         alerts,
+        userStats: {
+          activeUserCount: parseInt(activeResult.rows[0].count, 10),
+          validUserCount: parseInt(validResult.rows[0].count, 10),
+        },
       };
     } catch (error) {
       console.error('❌ [AnalyticsService] Failed to get daily snapshot:', error);

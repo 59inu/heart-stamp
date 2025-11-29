@@ -1,0 +1,68 @@
+env: load .env
+env: export EXPO_PUBLIC_OPENWEATHER_API_KEY EXPO_PUBLIC_SENTRY_DSN EXPO_PUBLIC_API_URL
+========================================
+🔍 [app.config.js] Build Configuration
+----------------------------------------
+APP_VARIANT: undefined
+APP_ENV: production
+isProduction: true
+========================================
+[33m› [1m[@sentry/react-native/expo][22m Missing config for [1morganization, project[22m. Environment variables will be used as a fallback during the build. https://docs.sentry.io/platforms/react-native/manual-setup/[0m
+! Git branch has uncommitted file changes
+› It's recommended to commit all changes before proceeding in case you want to revert generated changes.
+Git status is dirty but the command will continue because the terminal is not interactive.
+- Clearing android, ios
+✔ Cleared android, ios code
+========================================
+🔍 [app.config.js] Build Configuration
+----------------------------------------
+APP_VARIANT: undefined
+APP_ENV: production
+isProduction: true
+========================================
+========================================
+🔍 [app.config.js] Build Configuration
+----------------------------------------
+APP_VARIANT: undefined
+APP_ENV: production
+isProduction: true
+========================================
+========================================
+🔍 [app.config.js] Build Configuration
+----------------------------------------
+APP_VARIANT: undefined
+APP_ENV: production
+isProduction: true
+========================================
+- Creating native directories (./ios and ./android)
+✔ Created native directories
+- Updating package.json
+✔ Updated package.json | no changes
+- Running prebuild
+========================================
+- Running prebuild
+🔍 [app.config.js] Build Configuration
+- Running prebuild
+----------------------------------------
+- Running prebuild
+APP_VARIANT: undefined
+- Running prebuild
+APP_ENV: production
+- Running prebuild
+isProduction: true
+- Running prebuild
+========================================
+- Running prebuild
+✖ Prebuild failed
+Error: [android.dangerous]: withAndroidDangerousBaseMod: Path to google-services.json is not defined. Please specify the `expo.android.googleServicesFile` field in app.json.
+Error: [android.dangerous]: withAndroidDangerousBaseMod: Path to google-services.json is not defined. Please specify the `expo.android.googleServicesFile` field in app.json.
+    at /Users/choibangsil/Desktop/stamp-diary/node_modules/@react-native-firebase/app/plugin/build/android/copyGoogleServices.js:19:23
+    at action (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:199:29)
+    at interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:27)
+    at action (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:204:14)
+    at async interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:21)
+    at async interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:21)
+    at async interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:21)
+    at async interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:21)
+    at async interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:21)
+    at async interceptingMod (/Users/choibangsil/Desktop/stamp-diary/node_modules/@expo/config-plugins/build/plugins/withMod.js:104:21)

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "45917671913",
+    "project_id": "heart-stamp-diary",
+    "storage_bucket": "heart-stamp-diary.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:45917671913:android:d130ea5b8c60ca56083b78",
+        "android_client_info": {
+          "package_name": "com.team59inu.heartstamp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmuT6JS67PtngkuSWAH-xE0zNvzLi-NNU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

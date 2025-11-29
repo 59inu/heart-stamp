@@ -1052,6 +1052,10 @@ GET /analytics/daily-snapshot
           "message": "배치 작업 완료: 어제 일기 35개에 AI 코멘트 생성"
         }
       ]
+    },
+    "userStats": {
+      "activeUserCount": 1234,
+      "validUserCount": 1180
     }
   }
 }
@@ -1110,6 +1114,12 @@ GET /analytics/daily-snapshot
 | count | 발생 건수 |
 | message | 알림 메시지 |
 | time | 발생 시간 (옵션) |
+
+**userStats** (사용자 통계):
+| 필드 | 설명 |
+|-----|------|
+| activeUserCount | 활성 사용자 수 (일기 작성 이력이 있는 사용자, 삭제 포함) |
+| validUserCount | 유효 사용자 수 (삭제하지 않은 일기가 있는 사용자) |
 
 **알림 타입:**
 - `pending_comments`: AI 코멘트 대기 중
