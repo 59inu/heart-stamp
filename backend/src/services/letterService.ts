@@ -101,7 +101,7 @@ export class LetterService {
    * 모든 사용자의 해당 월 일기 작성 횟수 조회
    * (월말 편지 발송용)
    */
-  static async getUsersWithDiaryCount(year: number, month: number, minCount: number = 5): Promise<Array<{ userId: string; count: number }>> {
+  static async getUsersWithDiaryCount(year: number, month: number, minCount: number = 1): Promise<Array<{ userId: string; count: number }>> {
     const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
     const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 

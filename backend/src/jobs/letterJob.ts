@@ -17,7 +17,8 @@ export class LetterJob {
    */
   private static async generatePersonalizedLetter(
     diaries: Array<{ date: string; content: string; mood: string }>,
-    month: number
+    month: number,
+    diaryCount: number
   ): Promise<string> {
     if (!this.claudeService) {
       throw new Error('ClaudeService is not initialized');
@@ -32,9 +33,12 @@ export class LetterJob {
 
     const prompt = `당신은 매일 일기에 코멘트를 달아준 따뜻한 초등학교 담임 선생님입니다.
 학생의 ${month}월 한 달 동안의 일기들을 떠올리며 다정한 안부 편지를 써주세요.
-구체적인 일들을 언급하기 보다는 인상적인 사건 한 두개를 언급하고
+${diaryCount >= 5 ? '600자 내외로' : '350자 내외로'} 작성해주세요.
+구체적인 일들을 직접 인용으로 언급하기 보다는 인상적인 사건들을 언급하고
 전반적인 감정을 보듬어주고 앞으로를 지지하는 응원의 편지를 작성하세요.
-
+귀여워하는 학생에 대한 애틋한 응원과 애정이 드러나게 작성하세요.
+해당 월에 관련된 계절과 날씨등에 대한 언급이 포함되어도 좋습니다.
+${diaryCount < 5 && ' 일기 작성을 독려하세요.'}
 
 ${diariesSummary}
 
@@ -50,11 +54,12 @@ ${diariesSummary}
 - 이모지는 사용하지 마세요
 - **중요: 반드시 완전한 문장으로 끝내세요. 문장 중간에서 끊기지 않도록 주의하세요. 마지막 문장은 마침표(.), 물음표(?), 느낌표(!)로 끝나야 합니다.**
 
-- 편지는 600자 내외로 작성해주세요
 - 편지 마지막에 "- 하트스탬프 선생님" 형식으로 마무리해주세요`;
 
     try {
-      const content = await this.claudeService.generateText(prompt, 'sonnet');
+      // 일기 개수에 따라 모델 선택: 5개 이하는 haiku, 6개 이상은 sonnet
+      const model = diaryCount > 5 ? 'sonnet' : 'haiku';
+      const content = await this.claudeService.generateText(prompt, model);
       return content.trim();
     } catch (error) {
       console.error('❌ [LetterJob] Failed to generate AI letter:', error);
@@ -88,8 +93,8 @@ ${diariesSummary}
 
       console.log(`📬 [LetterJob] Starting monthly letter generation for ${year}-${month.toString().padStart(2, '0')}`);
 
-      // 월 5회 이상 일기를 작성한 사용자 조회
-      const eligibleUsers = await LetterService.getUsersWithDiaryCount(year, month, 5);
+      // 일기를 작성한 모든 사용자 조회
+      const eligibleUsers = await LetterService.getUsersWithDiaryCount(year, month, 1);
 
       console.log(`📊 [LetterJob] Found ${eligibleUsers.length} eligible users`);
 
@@ -108,8 +113,8 @@ ${diariesSummary}
 
           console.log(`📖 [LetterJob] Generating personalized letter for user ${user.userId} (${diaries.length} diaries)...`);
 
-          // AI로 개인화된 편지 생성
-          const content = await this.generatePersonalizedLetter(diaries, month);
+          // AI로 개인화된 편지 생성 (일기 개수 전달)
+          const content = await this.generatePersonalizedLetter(diaries, month, user.count);
 
           // 편지 저장 (푸시는 보내지 않음)
           const letter = await LetterService.createLetter(
