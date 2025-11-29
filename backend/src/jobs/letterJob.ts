@@ -162,7 +162,7 @@ ${diariesSummary}
           await PushNotificationService.sendNotification(
             letter.userId,
             '선생님의 편지가 도착했어요 💌',
-            `${letter.month}월 한 달 동안 수고하셨어요!`,
+            `${letter.month}월 한 달 동안 수고 많았어요!`,
             { type: 'letter_received', letterId: letter.id }
           );
 
