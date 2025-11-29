@@ -645,47 +645,38 @@ router.post('/prompts/:id/restore/:version',
 // ============================================
 
 /**
- * 시간대별/요일별 작성 패턴 분석
- * GET /api/admin/analytics/time-patterns
+ * 일기 통계 통합 조회 (시간 패턴 + 사용자 코호트 + 빈도 분포)
+ * GET /api/admin/analytics/diary-analytics
  */
-router.get('/analytics/time-patterns',
+router.get('/analytics/diary-analytics',
+  query('year').optional().isInt().withMessage('year must be an integer'),
+  query('month').optional().isInt({ min: 1, max: 12 }).withMessage('month must be between 1 and 12'),
   async (req: Request, res: Response) => {
-    try {
-      const data = await AnalyticsService.getTimePatterns();
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (error) {
-      console.error('Error fetching time patterns:', error);
-      res.status(500).json({
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
         success: false,
-        message: 'Failed to fetch time patterns',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Validation failed',
+        errors: errors.array(),
       });
     }
-  }
-);
 
-/**
- * 사용자 세그멘테이션 & 리텐션 분석
- * GET /api/admin/analytics/user-cohorts
- */
-router.get('/analytics/user-cohorts',
-  async (req: Request, res: Response) => {
     try {
-      const data = await AnalyticsService.getUserCohorts();
+      const { year, month } = req.query;
+      const data = await AnalyticsService.getDiaryAnalytics(
+        year ? parseInt(year as string, 10) : undefined,
+        month ? parseInt(month as string, 10) : undefined
+      );
 
       res.json({
         success: true,
         data,
       });
     } catch (error) {
-      console.error('Error fetching user cohorts:', error);
+      console.error('Error fetching diary analytics:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch user cohorts',
+        message: 'Failed to fetch diary analytics',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

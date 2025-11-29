@@ -1545,4 +1545,175 @@ export class AnalyticsService {
       throw error;
     }
   }
+
+  /**
+   * 월간 일기 작성 빈도 분포 분석
+   */
+  static async getMonthlyDiaryFrequency(year?: number, month?: number): Promise<{
+    totalUsers: number;
+    distribution: Array<{
+      diaryCount: number;
+      userCount: number;
+      percentage: number;
+    }>;
+    percentiles: {
+      p10: number;
+      p20: number;
+      p30: number;
+      median: number;
+    };
+  }> {
+    try {
+      const now = new Date();
+      const targetYear = year || now.getFullYear();
+      const targetMonth = month || now.getMonth() + 1;
+
+      // 해당 월의 시작일과 다음달 시작일 계산
+      // DB에 저장된 date 필드는 'YYYY-MM-DD' 문자열 형식이므로 문자열 비교 사용
+      const startDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+
+      let nextMonthYear = targetYear;
+      let nextMonth = targetMonth + 1;
+      if (nextMonth > 12) {
+        nextMonth = 1;
+        nextMonthYear++;
+      }
+      const endDate = `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+      const result = await pool.query(`
+        WITH user_counts AS (
+          SELECT
+            "userId",
+            COUNT(*) as diary_count
+          FROM diaries
+          WHERE date >= $1
+            AND date < $2
+            AND "deletedAt" IS NULL
+            ${getExcludeUserCondition()}
+          GROUP BY "userId"
+        ),
+        frequency_dist AS (
+          SELECT
+            diary_count,
+            COUNT(*) as user_count
+          FROM user_counts
+          GROUP BY diary_count
+        )
+        SELECT
+          diary_count,
+          user_count
+        FROM frequency_dist
+        ORDER BY diary_count ASC
+      `, [startDate, endDate]);
+
+      const distribution = result.rows.map(row => ({
+        diaryCount: parseInt(row.diary_count, 10),
+        userCount: parseInt(row.user_count, 10),
+        percentage: 0, // 나중에 계산
+      }));
+
+      const totalUsers = distribution.reduce((sum, item) => sum + item.userCount, 0);
+
+      // 비율 계산
+      if (totalUsers > 0) {
+        distribution.forEach(item => {
+          item.percentage = Math.round((item.userCount / totalUsers) * 100 * 10) / 10;
+        });
+      }
+
+      // 백분위수 계산을 위한 데이터 펼치기
+      const allCounts: number[] = [];
+      distribution.forEach(item => {
+        for (let i = 0; i < item.userCount; i++) {
+          allCounts.push(item.diaryCount);
+        }
+      });
+      allCounts.sort((a, b) => b - a); // 내림차순 정렬 (상위 % 계산용)
+
+      const getPercentile = (p: number) => {
+        if (allCounts.length === 0) return 0;
+        const index = Math.ceil(allCounts.length * (p / 100)) - 1;
+        return allCounts[Math.max(0, index)];
+      };
+
+      const percentiles = {
+        p10: getPercentile(10),
+        p20: getPercentile(20),
+        p30: getPercentile(30),
+        median: getPercentile(50),
+      };
+
+      return {
+        totalUsers,
+        distribution,
+        percentiles,
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get monthly diary frequency:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 일기 통계 통합 조회 (시간 패턴 + 사용자 코호트 + 빈도 분포)
+   */
+  static async getDiaryAnalytics(year?: number, month?: number): Promise<{
+    timePatterns: {
+      hourly: Array<{ hour: number; count: number; percentage: number }>;
+      weekday: Array<{ day: number; dayName: string; count: number; percentage: number }>;
+    };
+    userCohorts: {
+      segments: {
+        power_users: number;
+        active_users: number;
+        new_users: number;
+        churned_users: number;
+      };
+      retention: {
+        week1: number;
+        week2: number;
+        week4: number;
+        allTime: number;
+      };
+      cohortAnalysis: Array<{
+        cohortWeek: string;
+        newUsers: number;
+        week1Retention: number;
+        week2Retention: number;
+        week4Retention: number;
+      }>;
+    };
+    frequencyDistribution: {
+      totalUsers: number;
+      distribution: Array<{
+        diaryCount: number;
+        userCount: number;
+        percentage: number;
+      }>;
+      percentiles: {
+        p10: number;
+        p20: number;
+        p30: number;
+        median: number;
+      };
+    };
+  }> {
+    try {
+      // 세 가지 분석을 병렬로 실행
+      const [timePatterns, userCohorts, frequencyDistribution] = await Promise.all([
+        this.getTimePatterns(),
+        this.getUserCohorts(),
+        this.getMonthlyDiaryFrequency(year, month),
+      ]);
+
+      return {
+        timePatterns,
+        userCohorts,
+        frequencyDistribution,
+      };
+    } catch (error) {
+      console.error('❌ [AnalyticsService] Failed to get diary analytics:', error);
+      throw error;
+    }
+  }
 }

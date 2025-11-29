@@ -554,13 +554,20 @@ POST /prompts/:id/restore/:version
 
 운영 인사이트를 위한 고급 통계 API입니다.
 
-### 시간대/요일별 작성 패턴 분석
+### 일기 통계 통합 조회
 
 ```
-GET /analytics/time-patterns
+GET /analytics/diary-analytics
 ```
 
-사용자들이 일기를 작성하는 시간대와 요일 패턴을 분석합니다.
+일기 작성 관련 통계를 한 번에 조회합니다. 시간 패턴, 사용자 코호트, 빈도 분포를 통합하여 제공합니다.
+
+**Query Parameters:**
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---------|------|-----|-------|------|
+| year | number | X | 현재 연도 | 빈도 분포 조회 연도 |
+| month | number | X | 현재 월 | 빈도 분포 조회 월 (1-12) |
 
 **Response (200):**
 
@@ -568,116 +575,81 @@ GET /analytics/time-patterns
 {
   "success": true,
   "data": {
-    "hourly": [
-      { "hour": 0, "count": 5, "percentage": 2.3 },
-      { "hour": 1, "count": 2, "percentage": 0.9 },
-      { "hour": 22, "count": 45, "percentage": 20.5 }
-    ],
-    "weekday": [
-      { "day": 0, "dayName": "일요일", "count": 30, "percentage": 14.2 },
-      { "day": 1, "dayName": "월요일", "count": 35, "percentage": 16.5 },
-      { "day": 6, "dayName": "토요일", "count": 25, "percentage": 11.8 }
-    ]
+    "timePatterns": {
+      "hourly": [
+        { "hour": 0, "count": 5, "percentage": 2.3 },
+        { "hour": 22, "count": 45, "percentage": 20.5 }
+      ],
+      "weekday": [
+        { "day": 0, "dayName": "일요일", "count": 30, "percentage": 14.2 }
+      ]
+    },
+    "userCohorts": {
+      "segments": {
+        "power_users": 15,
+        "active_users": 42,
+        "new_users": 128,
+        "churned_users": 23
+      },
+      "retention": {
+        "week1": 65,
+        "week2": 45,
+        "week4": 32,
+        "allTime": 28
+      },
+      "cohortAnalysis": [
+        {
+          "cohortWeek": "2025-W48",
+          "newUsers": 25,
+          "week1Retention": 68,
+          "week2Retention": 48,
+          "week4Retention": 36
+        }
+      ]
+    },
+    "frequencyDistribution": {
+      "totalUsers": 150,
+      "distribution": [
+        { "diaryCount": 1, "userCount": 50, "percentage": 33.3 },
+        { "diaryCount": 30, "userCount": 5, "percentage": 3.3 }
+      ],
+      "percentiles": {
+        "p10": 25,
+        "p20": 15,
+        "p30": 10,
+        "median": 3
+      }
+    }
   }
 }
 ```
 
 **필드 설명:**
 
+**timePatterns** (시간대/요일별 작성 패턴):
 | 필드 | 설명 |
 |-----|------|
 | hourly | 시간대별 작성 패턴 (0-23시) |
-| hour | 시간 (0-23) |
-| weekday | 요일별 작성 패턴 |
-| day | 요일 (0=일요일, 6=토요일) |
-| dayName | 요일 이름 |
-| count | 해당 시간대/요일 작성 수 |
-| percentage | 전체 대비 비율 (%) |
+| weekday | 요일별 작성 패턴 (0=일요일, 6=토요일) |
+
+**userCohorts** (사용자 세그멘테이션 & 리텐션):
+| 필드 | 설명 |
+|-----|------|
+| segments | 사용자 세그먼트 (파워/활성/신규/이탈) |
+| retention | 전체 리텐션율 (1주/2주/4주/전체) |
+| cohortAnalysis | 주차별 코호트 분석 (최근 12주) |
+
+**frequencyDistribution** (월간 작성 빈도 분포):
+| 필드 | 설명 |
+|-----|------|
+| totalUsers | 기간 내 작성자 수 |
+| distribution | 작성 횟수별 사용자 분포 |
+| percentiles | 백분위수 (상위 N% 커트라인) |
 
 **활용:**
-- 사용자가 주로 일기를 작성하는 시간대 파악
-- 푸시 알림 최적 시간 결정
-- 요일별 트래픽 패턴 분석 (주말 vs 평일)
-
----
-
-### 사용자 세그멘테이션 & 리텐션 분석
-
-```
-GET /analytics/user-cohorts
-```
-
-사용자 건강도, 리텐션율, 코호트 분석을 제공합니다.
-
-**Response (200):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "segments": {
-      "power_users": 15,
-      "active_users": 42,
-      "new_users": 128,
-      "churned_users": 23
-    },
-    "retention": {
-      "week1": 65,
-      "week2": 45,
-      "week4": 32,
-      "allTime": 28
-    },
-    "cohortAnalysis": [
-      {
-        "cohortWeek": "2025-W48",
-        "newUsers": 25,
-        "week1Retention": 68,
-        "week2Retention": 48,
-        "week4Retention": 36
-      },
-      {
-        "cohortWeek": "2025-W47",
-        "newUsers": 30,
-        "week1Retention": 70,
-        "week2Retention": 50,
-        "week4Retention": 40
-      }
-    ]
-  }
-}
-```
-
-**필드 설명:**
-
-**segments** (사용자 세그먼트):
-| 필드 | 설명 |
-|-----|------|
-| power_users | 파워 유저 (10개 이상 작성) |
-| active_users | 활성 유저 (3-9개 작성) |
-| new_users | 신규 유저 (1-2개 작성) |
-| churned_users | 이탈 유저 (최근 30일 미작성) |
-
-**retention** (전체 리텐션):
-| 필드 | 설명 |
-|-----|------|
-| week1 | 1주 후 리텐션율 (%) |
-| week2 | 2주 후 리텐션율 (%) |
-| week4 | 4주 후 리텐션율 (%) |
-| allTime | 전체 활성 사용자 비율 (%) |
-
-**cohortAnalysis** (코호트 분석, 최근 12주):
-| 필드 | 설명 |
-|-----|------|
-| cohortWeek | 코호트 주차 (YYYY-W##) |
-| newUsers | 해당 주 신규 사용자 수 |
-| week1Retention | 1주 후 리텐션율 (%) |
-| week2Retention | 2주 후 리텐션율 (%) |
-| week4Retention | 4주 후 리텐션율 (%) |
-
-**활용:**
-- 사용자 건강도 모니터링 (파워/액티브/신규/이탈 비율)
-- 리텐션 추이 파악 (개선/악화 여부)
-- 주차별 코호트 비교로 제품 개선 효과 측정
+- 어드민 사이트 "통계 > 일기" 페이지에서 사용
+- 한 번의 API 호출로 모든 일기 관련 통계 조회
+- 네트워크 효율성 향상 (3번 요청 → 1번 요청)
 
 ---
 
