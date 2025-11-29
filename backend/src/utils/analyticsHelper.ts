@@ -10,10 +10,12 @@ export const EXCLUDED_USER_IDS = [
 
 /**
  * SQL WHERE 절에 추가할 userId 제외 조건
- * @returns "AND "userId" NOT IN (...)" 형태의 문자열. 제외할 사용자가 없으면 빈 문자열 반환.
+ * @param tableAlias 테이블 별칭 (예: 'd', 'ufd'). 생략 시 "userId"만 사용.
+ * @returns "AND table."userId" NOT IN (...)" 형태의 문자열. 제외할 사용자가 없으면 빈 문자열 반환.
  */
-export const getExcludeUserCondition = (): string => {
+export const getExcludeUserCondition = (tableAlias?: string): string => {
   if (EXCLUDED_USER_IDS.length === 0) return '';
   const ids = EXCLUDED_USER_IDS.map(id => `'${id}'`).join(', ');
-  return `AND "userId" NOT IN (${ids})`;
+  const userIdColumn = tableAlias ? `${tableAlias}."userId"` : `"userId"`;
+  return `AND ${userIdColumn} NOT IN (${ids})`;
 };

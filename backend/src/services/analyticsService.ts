@@ -155,7 +155,7 @@ export class AnalyticsService {
             END) as week4_diaries,
             MAX(d."createdAt"::timestamp) as last_activity
           FROM user_first_diary ufd
-          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition()}
+          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition('d')}
           GROUP BY ufd."userId", ufd.first_diary_date
         )
         SELECT
@@ -208,7 +208,7 @@ export class AnalyticsService {
               THEN d."userId"
             END) as week4_retained
           FROM weekly_cohorts wc
-          LEFT JOIN diaries d ON d."userId" = wc."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition()}
+          LEFT JOIN diaries d ON d."userId" = wc."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition('d')}
           GROUP BY wc.cohort_week
         )
         SELECT
@@ -544,7 +544,7 @@ export class AnalyticsService {
               THEN d._id
             END) > 0 as week4_active
           FROM user_first_diary ufd
-          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition()}
+          LEFT JOIN diaries d ON d."userId" = ufd."userId" AND d."deletedAt" IS NULL ${getExcludeUserCondition('d')}
           WHERE ufd.first_diary_date < CURRENT_TIMESTAMP - INTERVAL '35 days'
           GROUP BY ufd."userId", ufd.has_image
         )
