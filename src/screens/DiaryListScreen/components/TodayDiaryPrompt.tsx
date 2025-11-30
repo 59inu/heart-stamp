@@ -32,6 +32,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#D6E2F5',
     gap: 8,
   },
   buttonText: {
