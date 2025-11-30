@@ -26,16 +26,18 @@ export class LetterService {
     userId: string,
     content: string,
     year: number,
-    month: number
+    month: number,
+    title?: string
   ): Promise<Letter> {
     const id = uuidv4();
     const createdAt = new Date().toISOString();
+    const letterTitle = title ?? `${month}월의 편지`;
 
     const result = await pool.query(
-      `INSERT INTO letters (id, "userId", content, year, month, "isRead", "createdAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO letters (id, "userId", title, content, year, month, "isRead", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [id, userId, content, year, month, false, createdAt]
+      [id, userId, letterTitle, content, year, month, false, createdAt]
     );
 
     return result.rows[0];
