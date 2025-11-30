@@ -980,6 +980,7 @@ export class DiaryDatabase {
           date,
           model,
           "aiComment",
+          "importanceScore",
           "createdAt"
         FROM diaries
         WHERE "aiComment" IS NOT NULL
@@ -1017,6 +1018,7 @@ export class DiaryDatabase {
           diaryId: row._id,
           userId: row.userId,
           model: row.model,
+          importanceScore: row.importanceScore,
           createdAt: row.createdAt,
           isFallback,
           aiComment: decrypt ? decryptFields({ aiComment: row.aiComment }).aiComment : '[암호화됨]',
