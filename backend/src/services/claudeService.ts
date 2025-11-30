@@ -114,7 +114,7 @@ export class ClaudeService {
       importanceScore = await this.analyzeImportance(diaryContent);
 
       // 📊 중요도에 따라 모델 선택
-      const IMPORTANCE_THRESHOLD = 25;
+      const IMPORTANCE_THRESHOLD = 20;
       useSonnet = importanceScore.total >= IMPORTANCE_THRESHOLD;
       selectedModel = useSonnet ? 'claude-sonnet-4-20250514' : 'claude-haiku-4-5';
 
